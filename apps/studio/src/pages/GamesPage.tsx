@@ -92,7 +92,6 @@ export function GamesPage() {
       header={
         <PageHeader
           title={TABS.games.label}
-          description={TABS.games.hint}
           primaryAction={
             <Button variant="primary" icon="add" onPress={() => void create()}>
               {LIST.new(GAME.one)}

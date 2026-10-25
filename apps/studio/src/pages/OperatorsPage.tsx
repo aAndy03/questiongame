@@ -67,7 +67,6 @@ export function OperatorsPage({ currentId = null }: OperatorsPageProps) {
       header={
         <PageHeader
           title={TABS.operators.label}
-          description={TABS.operators.hint}
           primaryAction={
             <Button variant="primary" icon="add" onPress={() => void go({ tab: 'operators', mode: 'new' })}>
               {LIST.new(OPERATOR.one)}

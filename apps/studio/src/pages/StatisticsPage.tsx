@@ -57,7 +57,7 @@ export function StatisticsPage({ view, onView, surface = 'tab' }: StatisticsPage
   return (
     <SettingsLayout
       width={surface === 'window' ? 'full' : 'wide'}
-      header={<PageHeader title={TABS.statistics.label} description={here ? STATS.inWorkspace(here) : TABS.statistics.hint} />}
+      header={<PageHeader title={TABS.statistics.label} description={here ? STATS.inWorkspace(here) : undefined} />}
       tabs={
         <div className="flex items-end justify-between gap-4">
           <Tabs

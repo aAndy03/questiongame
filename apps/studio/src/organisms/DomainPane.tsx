@@ -133,82 +133,88 @@ export function DomainPane({ selectedId, onSelect, pickedIds = [], onPickMany }:
   )
 
   return (
-    <div className="flex flex-col gap-3" data-density="compact">
-      <div className="flex items-center justify-between gap-2">
-        <Text variant="studio-heading">{DOMAIN.heading}</Text>
-        <IconButton icon="add" label={DOMAIN.add} size="sm" variant="secondary" onPress={startNew} isDisabled={editing === 'new'} />
+    <div className="flex min-h-0 flex-1 flex-col gap-2" data-density="compact">
+      {/* The head stays put; only the domains scroll (beta.9). */}
+      <div className="flex shrink-0 flex-col gap-2" data-domain-pane-head>
+        <div className="flex items-center justify-between gap-2">
+          <Text variant="studio-heading">{DOMAIN.heading}</Text>
+          <IconButton icon="add" label={DOMAIN.add} size="sm" variant="secondary" onPress={startNew} isDisabled={editing === 'new'} />
+        </div>
+        <ArchiveToggle value={scope} onChange={(v) => v !== 'all' && setScope(v)} />
       </div>
-      <ArchiveToggle value={scope} onChange={(v) => v !== 'all' && setScope(v)} />
-      {editing === 'new' ? form : null}
-      {domains.isLoading && !domains.data ? (
-        <Skeleton shape="row" count={5} />
-      ) : (domains.data ?? []).length === 0 ? (
-        <EmptyState kind={scope === 'archived' ? 'archivedEmpty' : 'empty'} what={DOMAIN.many} compact />
-      ) : (
-        <ul className="flex flex-col gap-0.5" role="listbox" aria-label={DOMAIN.many}>
-          {scope === 'active' ? (
-            <li>
-              <DomainRow
-                name={DOMAIN.all}
-                code=""
-                count={null}
-                incomplete={incomplete.all}
-                isSelected={selectedId === null && pickedIds.length === 0}
-                onSelect={() => (pickedIds.length > 0 && onPickMany ? onPickMany([]) : onSelect(null))}
-              />
-            </li>
-          ) : null}
-          {(domains.data ?? []).map((d) =>
-            editing === d.id ? (
-              <li key={d.id}>{form}</li>
-            ) : (
-              <li key={d.id}>
+      {/* Never sideways: a hovered drop target lifts (scale) and rings inside this 4px. */}
+      <div className="-mx-1 min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-1 pt-0.5 pb-3" data-domain-pane-list>
+        {editing === 'new' ? form : null}
+        {domains.isLoading && !domains.data ? (
+          <Skeleton shape="row" count={5} />
+        ) : (domains.data ?? []).length === 0 ? (
+          <EmptyState kind={scope === 'archived' ? 'archivedEmpty' : 'empty'} what={DOMAIN.many} compact />
+        ) : (
+          <ul className="flex flex-col gap-0.5" role="listbox" aria-label={DOMAIN.many}>
+            {scope === 'active' ? (
+              <li>
                 <DomainRow
-                  name={d.name}
-                  code={d.code}
-                  count={d.questions.length}
-                  incomplete={scope === 'active' ? incomplete.of(d) : undefined}
-                  isSelected={lit.includes(d.id)}
-                  isArchived={d.archivedAt !== null}
-                  // A drop target while questions are dragged (beta.9): active domains only.
-                  drop={scope === 'active' ? { id: d.id, name: d.name, accepting: drag.state !== null, over: drag.state?.over?.id === d.id, pulse: drag.pulse?.id === d.id ? drag.pulse.n : 0 } : undefined}
-                  onSelect={(e) => choose(d.id, e)}
-                  actions={
-                    <ActionMenu
-                      sections={[
-                        { id: 'row', title: MENU.domain, items: [{ id: 'edit', label: LIST.edit, icon: 'edit', disabledReason: d.archivedAt !== null ? LIST.editArchived : null }] },
-                        {
-                          id: 'copy',
-                          title: MENU.copyMove,
-                          items: [
-                            { id: 'duplicate', label: LIST.duplicate, icon: 'duplicate' },
-                            { id: 'copy', label: TRANSFER.copyTo, icon: 'copy' },
-                            { id: 'move', label: TRANSFER.moveTo, icon: 'transfer' },
-                            ...(d.familyId != null ? [{ id: 'unfollow', label: TRANSFER.unfollow, icon: 'unlink' as const }] : []),
-                          ],
-                        },
-                        {
-                          id: 'status',
-                          title: MENU.status,
-                          items: [d.archivedAt !== null ? { id: 'restore', label: LIST.restore, icon: 'restore' } : { id: 'archive', label: LIST.archive, icon: 'archive', isDanger: true }],
-                        },
-                      ]}
-                      onAction={(a) => {
-                        if (a === 'copy' || a === 'move') transfer.open(a, { domains: [d.id] })
-                        if (a === 'duplicate') void run.ok('catalog_duplicate', { kind: 'domain', ids: [d.id] }).then((ok) => ok && toast.success(SHELL.duplicated(1, DOMAIN.one, DOMAIN.many)))
-                        if (a === 'unfollow') void run.ok('catalog_unfollow', { kind: 'domain', id: d.id })
-                        if (a === 'edit') startEdit(d)
-                        if (a === 'archive') archive.archive({ kind: 'domain', ids: [d.id], what: DOMAIN.one })
-                        if (a === 'restore') void archive.restore({ kind: 'domain', ids: [d.id], what: DOMAIN.one })
-                      }}
-                    />
-                  }
+                  name={DOMAIN.all}
+                  code=""
+                  count={null}
+                  incomplete={incomplete.all}
+                  isSelected={selectedId === null && pickedIds.length === 0}
+                  onSelect={() => (pickedIds.length > 0 && onPickMany ? onPickMany([]) : onSelect(null))}
                 />
               </li>
-            ),
-          )}
-        </ul>
-      )}
+            ) : null}
+            {(domains.data ?? []).map((d) =>
+              editing === d.id ? (
+                <li key={d.id}>{form}</li>
+              ) : (
+                <li key={d.id}>
+                  <DomainRow
+                    name={d.name}
+                    code={d.code}
+                    count={d.questions.length}
+                    incomplete={scope === 'active' ? incomplete.of(d) : undefined}
+                    isSelected={lit.includes(d.id)}
+                    isArchived={d.archivedAt !== null}
+                    // A drop target while questions are dragged (beta.9): active domains only.
+                    drop={scope === 'active' ? { id: d.id, name: d.name, accepting: drag.state !== null, over: drag.state?.over?.id === d.id, pulse: drag.pulse?.id === d.id ? drag.pulse.n : 0 } : undefined}
+                    onSelect={(e) => choose(d.id, e)}
+                    actions={
+                      <ActionMenu
+                        sections={[
+                          { id: 'row', title: MENU.domain, items: [{ id: 'edit', label: LIST.edit, icon: 'edit', disabledReason: d.archivedAt !== null ? LIST.editArchived : null }] },
+                          {
+                            id: 'copy',
+                            title: MENU.copyMove,
+                            items: [
+                              { id: 'duplicate', label: LIST.duplicate, icon: 'duplicate' },
+                              { id: 'copy', label: TRANSFER.copyTo, icon: 'copy' },
+                              { id: 'move', label: TRANSFER.moveTo, icon: 'transfer' },
+                              ...(d.familyId != null ? [{ id: 'unfollow', label: TRANSFER.unfollow, icon: 'unlink' as const }] : []),
+                            ],
+                          },
+                          {
+                            id: 'status',
+                            title: MENU.status,
+                            items: [d.archivedAt !== null ? { id: 'restore', label: LIST.restore, icon: 'restore' } : { id: 'archive', label: LIST.archive, icon: 'archive', isDanger: true }],
+                          },
+                        ]}
+                        onAction={(a) => {
+                          if (a === 'copy' || a === 'move') transfer.open(a, { domains: [d.id] })
+                          if (a === 'duplicate') void run.ok('catalog_duplicate', { kind: 'domain', ids: [d.id] }).then((ok) => ok && toast.success(SHELL.duplicated(1, DOMAIN.one, DOMAIN.many)))
+                          if (a === 'unfollow') void run.ok('catalog_unfollow', { kind: 'domain', id: d.id })
+                          if (a === 'edit') startEdit(d)
+                          if (a === 'archive') archive.archive({ kind: 'domain', ids: [d.id], what: DOMAIN.one })
+                          if (a === 'restore') void archive.restore({ kind: 'domain', ids: [d.id], what: DOMAIN.one })
+                        }}
+                      />
+                    }
+                  />
+                </li>
+              ),
+            )}
+          </ul>
+        )}
+      </div>
       {archive.dialog}
       {transfer.dialog}
       {propagating.dialog}

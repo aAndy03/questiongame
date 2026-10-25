@@ -29,7 +29,7 @@ export function SettingsPage({ inner }: SettingsPageProps) {
   return (
     <SettingsLayout
       aside={selected === 'settings' ? <SectionIndex entries={SETTINGS_GROUPS.map((g) => ({ id: `settings-${g.id}`, title: g.title }))} /> : undefined}
-      header={<PageHeader title={TABS.settings.label} description={TABS.settings.hint} />}
+      header={<PageHeader title={TABS.settings.label} />}
       tabs={
         <Tabs
           variant="secondary"

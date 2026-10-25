@@ -69,7 +69,6 @@ export function TeamsPage({ currentId = null }: TeamsPageProps) {
       header={
         <PageHeader
           title={TABS.teams.label}
-          description={TABS.teams.hint}
           primaryAction={
             <Button variant="primary" icon="add" onPress={() => void go({ tab: 'teams', mode: 'new' })}>
               {LIST.new(TEAM.one)}

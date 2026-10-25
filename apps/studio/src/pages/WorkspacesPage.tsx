@@ -223,7 +223,6 @@ export function WorkspacesPage() {
       header={
         <PageHeader
           title={WORKSPACE.pageTitle}
-          description={WORKSPACE.pageDescription}
           primaryAction={
             <Button variant="primary" icon="add" onPress={() => setDialog({ kind: 'new' })}>
               {WORKSPACE.newWorkspace}

@@ -191,7 +191,6 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
       header={
         <PageHeader
           title={TABS.library.label}
-          description={TABS.library.hint}
           primaryAction={
             <Button variant="primary" icon="add" onPress={() => void go(newRoute)}>
               {LIST.new(QUESTION.one)}

@@ -20,7 +20,7 @@ export function SplitLayout({ header, primary, secondary }: SplitLayoutProps) {
     >
       {header}
       <div className="grid min-h-0 flex-1 grid-cols-[14rem_minmax(0,1fr)] gap-6">
-        <div className="flex min-h-0 flex-col overflow-y-auto">{primary}</div>
+        <div className="flex min-h-0 flex-col">{primary}</div>
         <div className="flex min-h-0 min-w-0 flex-col">{secondary}</div>
       </div>
     </motion.div>
