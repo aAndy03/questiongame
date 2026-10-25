@@ -3110,6 +3110,7 @@ e2e:
     beta-stable-running.e2e.ts: "null"
     beta-start-empty.e2e.ts: "null"
     beta5.e2e.ts: "[]"
+    drag-domains.e2e.ts: "[]"
     first-run.e2e.ts: "null"
     games.e2e.ts: "[]"
     groups-tags.e2e.ts: "[]"
@@ -3169,4 +3170,4 @@ fixtures:
   - scoreboard
   - scoreboard-tie
   - team-order
-mismatches: ["e2e spec drag-domains.e2e.ts: missing from SEEDS in e2e/support/folders.ts"]
+mismatches: []

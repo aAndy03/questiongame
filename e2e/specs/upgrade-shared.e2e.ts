@@ -36,6 +36,8 @@ describe('an update from beta.1', () => {
     await onStudio()
     // The seed was last seen by beta.1, so every later build opens What's new over it.
     await sees('What’s new in questiongame', 30_000)
+    // beta.9: every release is listed, the newest shown; beta.2 came with this update, marked new.
+    await press('2.0.0-beta.2, new')
     await sees('No more shared library')
     await press('Got it')
     await browser.waitUntil(async () => !(await body()).includes('What’s new in questiongame'), { timeoutMsg: 'What’s new did not close' })

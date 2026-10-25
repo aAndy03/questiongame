@@ -16,6 +16,8 @@ describe('an update', () => {
     // Beta 2.0: the library moved into one unnamed workspace; the operator names it.
     await nameWorkspace('Quiz club')
     await sees('What’s new in questiongame', 30_000)
+    // beta.9: every release is listed, the newest shown; 1.0.2 came with this update, marked new.
+    await press('1.0.2, new')
     await sees('More than one question at the same difficulty')
 
     const backups = readdirSync(path.join(e2eFolders()[0], 'backups'))
