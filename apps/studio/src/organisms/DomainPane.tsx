@@ -118,8 +118,8 @@ export function DomainPane({ selectedId, onSelect, pickedIds = [], onPickMany }:
   }
 
   const form = (
-    <Panel variant="secondary" className="flex flex-col gap-3">
-      <DomainForm value={draft} onChange={setDraft} autoFocus others={(domains.data ?? []).filter((d) => d.id !== editing && d.archivedAt === null)} />
+    <Panel variant="secondary" className="flex flex-col gap-2.5 p-2.5">
+      <DomainForm dense value={draft} onChange={setDraft} autoFocus others={(domains.data ?? []).filter((d) => d.id !== editing && d.archivedAt === null)} />
       {editing && editing !== 'new' ? <CopiesBlock kind="domain" id={editing} /> : null}
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="tertiary" onPress={() => setEditing(null)} isDisabled={saving}>
@@ -266,7 +266,7 @@ function DomainRow({
         }
       }}
       className={[
-        'group flex min-h-11 cursor-pointer items-center gap-2 rounded-[calc(var(--radius)/1.5)] py-1 pr-1 pl-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]',
+        'group flex min-h-9 cursor-pointer items-center gap-1.5 rounded-[calc(var(--radius)/1.5)] py-0.5 pr-0.5 pl-2 outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]',
         drop?.over
           ? 'scale-[1.02] bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]'
           : isSelected
@@ -283,7 +283,7 @@ function DomainRow({
           {name}
         </Text>
         {code ? (
-          <Text variant="studio-mono" tone="muted" className="leading-tight" truncate>
+          <Text variant="studio-mono" tone="muted" className="text-[0.6875rem] leading-tight" truncate>
             {code}
           </Text>
         ) : null}
@@ -298,7 +298,7 @@ function DomainRow({
       ) : null}
       {/* The count in one column down the pane (P20): every row keeps the menu's slot, filled or not. */}
       <PulsingCount count={count} pulse={drop?.pulse ?? 0} />
-      <div className="flex w-8 shrink-0 justify-end opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
+      <div className="flex w-7 shrink-0 justify-end opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
         {actions}
       </div>
     </div>
@@ -316,7 +316,7 @@ function PulsingCount({ count, pulse }: { count: number | null; pulse: number })
   return (
     <motion.span
       key={seen.played}
-      className="w-8 shrink-0 text-right"
+      className="w-6 shrink-0 text-right"
       initial={seen.played > 0 && !still ? { scale: 1.45, color: 'var(--accent)' } : false}
       animate={{ scale: 1, color: 'var(--muted)' }}
       transition={{ duration: 0.45, ease: 'easeOut' }}

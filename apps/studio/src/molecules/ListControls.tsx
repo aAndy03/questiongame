@@ -365,7 +365,7 @@ export function PageFooter({ page, pageCount, text, pageSize, onPage, onPageSize
       <div className={status ? 'flex items-center gap-2' : 'flex items-center gap-3'}>
         {/* In a narrow status bar the page size goes first, then the page
             numbers; the summary and ‹ › always stay (beta.9). */}
-        <div className={status ? 'hidden @[52rem]/status:block' : 'contents'}>
+        <div className={status ? '@max-[52rem]/status:hidden' : 'contents'}>
           <SegmentedField
             label={LIST.rowsPerPage}
             hideLabel
@@ -383,11 +383,11 @@ export function PageFooter({ page, pageCount, text, pageSize, onPage, onPageSize
           </Pagination.Item>
           {pageLinks(page, pageCount).map((p, i) =>
             p === 'gap' ? (
-              <Pagination.Item key={`gap-${i}`} className={status ? 'hidden @[40rem]/status:flex' : ''}>
+              <Pagination.Item key={`gap-${i}`} className={status ? '@max-[40rem]/status:hidden' : ''}>
                 <Pagination.Ellipsis />
               </Pagination.Item>
             ) : (
-              <Pagination.Item key={p} className={status ? 'hidden @[40rem]/status:flex' : ''}>
+              <Pagination.Item key={p} className={status ? '@max-[40rem]/status:hidden' : ''}>
                 <Pagination.Link isActive={p === page} {...(p === page ? { 'aria-current': 'page' as const } : {})} aria-label={LIST.page(p)} onPress={() => onPage(p)}>
                   {p}
                 </Pagination.Link>
@@ -415,15 +415,17 @@ export interface GroupHeaderProps {
   actions?: ReactNode
   /** The stuck variant (beta.9): 28px, caption type — drawn only while the header is stuck. */
   compact?: boolean | undefined
+  /** No rule under it (beta.9): in a dialog, where space separates, not lines. */
+  plain?: boolean | undefined
 }
 
 /** A full-width header row: "History · 48", "(continued)" on a later page, a toggle. */
-export function GroupHeader({ label, count, continued, collapsed, onToggle, actions, compact }: GroupHeaderProps) {
+export function GroupHeader({ label, count, continued, collapsed, onToggle, actions, compact, plain }: GroupHeaderProps) {
   return (
     <div
       role="heading"
       aria-level={3}
-      className={['flex items-center gap-2 border-b border-[var(--separator)] px-2', compact ? 'h-7' : 'h-10'].join(' ')}
+      className={['flex items-center gap-2 px-2', plain ? '' : 'border-b border-[var(--separator)]', compact ? 'h-7' : 'h-10'].join(' ')}
       data-group-header
       data-compact={compact ? '' : undefined}
     >

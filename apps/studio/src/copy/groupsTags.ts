@@ -46,7 +46,6 @@ export const GROUPS_TAGS = {
   // Manage tags
   manageButton: 'Question tags…',
   manageTitle: 'Question tags',
-  manageBody: 'Every tag on this workspace’s questions.',
   noTagsYet: 'No tags yet. Add them on a question, or to many at once from the selection’s Edit menu.',
   carried: (n: number) => `${n} ${n === 1 ? 'question' : 'questions'}`,
   renameTitle: (tag: string) => `Rename ${tag}`,

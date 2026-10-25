@@ -197,9 +197,11 @@ describe('the rest of the roadmap line (beta.5)', () => {
     await waitFor(() => expect(useNavStore.getState().route).toEqual({ tab: 'games' }))
   })
 
+  // beta.9: the page has no subtitle; the sidebar's switcher names the workspace it counts.
   it('Statistics names the workspace it counts', async () => {
     const first = fake.workspaces[0]
     await at({ tab: 'statistics' } as Route)
-    expect(await screen.findByText(new RegExp(`Plays in ${first?.name ?? ''}`), {}, { timeout: 5000 })).toBeTruthy()
+    await waitFor(() => expect(document.querySelector<HTMLElement>('[data-workspace-switcher]')!.textContent).toContain(first?.name ?? ''), { timeout: 5000 })
+    expect(document.querySelector('main')!.textContent).not.toMatch(/Plays in/)
   })
 })

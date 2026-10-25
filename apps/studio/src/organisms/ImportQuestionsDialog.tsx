@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Modal } from '@heroui/react'
+import { Modal, Tabs } from '@heroui/react'
 import { useDebouncedValue } from '@tanstack/react-pacer'
 import { Button, IconButton, MeaningChip, SelectField, Text, TextAreaField } from '@/atoms'
 import { DifficultyChip, GapNotice, ImportRowForm, IncompleteMark, InlineNotice, optionKey, type ImportDraft } from '@/molecules'
@@ -14,6 +14,7 @@ import type { ListItem } from '@/host/listView'
 import { useCatalogList, useImportPreview, useTags } from '@/host/queries'
 import { type ImportOverrides, type ImportReport, type ImportRow, type ImportRowBody } from '@/host/types'
 import { PickList, type PickerRow } from './PickList'
+import { DialogPages, StatusSlotProvider } from './StatusSlot'
 
 export interface ImportQuestionsDialogProps {
   isOpen: boolean
@@ -59,7 +60,8 @@ const importable = (r: ImportRow) => r.status === 'complete' || r.status === 'in
 export function ImportQuestionsDialog({ isOpen, onOpenChange, defaultDomainId }: ImportQuestionsDialogProps) {
   const [text, setText] = useState('')
   const [fileName, setFileName] = useState<string | null>(null)
-  const [showText, setShowText] = useState(false)
+  // The rows, or the file's text to edit (beta.9: tabs, not a box pushed in above the list).
+  const [tab, setTab] = useState<'rows' | 'text'>('rows')
   const [domainId, setDomainId] = useState<string | null>(defaultDomainId)
   const [edits, setEdits] = useState<ReadonlyMap<number, ImportDraft>>(new Map())
   const [skip, setSkip] = useState<ReadonlySet<number>>(new Set())
@@ -161,7 +163,7 @@ export function ImportQuestionsDialog({ isOpen, onOpenChange, defaultDomainId }:
 
   const close = () => {
     replaceText('', null)
-    setShowText(false)
+    setTab('rows')
     onOpenChange(false)
   }
   const commit = async () => {
@@ -184,187 +186,236 @@ export function ImportQuestionsDialog({ isOpen, onOpenChange, defaultDomainId }:
     } catch {
       // No clipboard in this webview: the template goes where it can be copied by hand.
       replaceText(IMPORT.template, null)
-      setShowText(true)
+      setTab('text')
     }
   }
   const filterStatus = (status: ImportRow['status']) =>
     useChromeStore.getState().setListState('importQuestions', { filters: { status: [status] }, page: 1 })
 
   const current = report?.rows.find((r) => r.index === openRow) ?? null
-  const source = (
-    <>
-      <input
-        ref={file}
-        type="file"
-        accept="application/json,.json"
-        className="hidden"
-        aria-label={IMPORT.choose}
-        onChange={(e) => {
-          const picked = e.target.files?.[0]
-          e.target.value = ''
-          if (picked) void picked.text().then((t) => replaceText(t, picked.name))
-        }}
-      />
-      <Button variant="secondary" icon="import" onPress={() => file.current?.click()}>
-        {hasText ? IMPORT.changeFile : IMPORT.choose}
-      </Button>
-      <Button variant="ghost" icon="copy" onPress={() => void copyTemplate()}>
-        {IMPORT.copyTemplate}
-      </Button>
-    </>
-  )
   const domainSelect = (
     <SelectField
       label={IMPORT.defaultDomain}
       value={domainId ?? NO_DOMAIN}
       onChange={(v) => setDomainId(v === NO_DOMAIN ? null : v)}
       options={[{ value: NO_DOMAIN, label: IMPORT.noDomain }, ...(domains.data ?? []).map((d) => ({ value: d.id, label: d.name, description: d.code }))]}
-      className="w-72"
+      className="w-full"
     />
   )
-  const textBox = <TextAreaField label={IMPORT.paste} value={text} onChange={(t) => replaceText(t, fileName)} rows={hasText ? 6 : 10} description={IMPORT.pasteHint} />
+  const textBox = (rows: number) => (
+    <TextAreaField label={IMPORT.paste} hideLabel={hasText} value={text} onChange={(t) => replaceText(t, fileName)} rows={rows} description={IMPORT.pasteHint} className="min-h-0 flex-1 [&_textarea]:h-full [&_textarea]:font-mono" />
+  )
+
+  // What the file holds, as one column of counts: each a button that filters
+  // the list to it, so the list itself keeps the height (beta.9).
+  const summary = report ? (
+    <section className="flex flex-col gap-1.5" data-import-summary aria-label={IMPORT.inFile}>
+      <Text variant="studio-label">{IMPORT.inFile}</Text>
+      {(['complete', 'incomplete', 'duplicate', 'rejected'] as const)
+        .filter((s) => s === 'complete' || report.counts[s] > 0)
+        .map((s) =>
+          s === 'complete' ? (
+            <Text key={s} variant="studio-caption" tone="muted" className="px-2.5" tabular>
+              {IMPORT.count(report.counts[s], s)}
+            </Text>
+          ) : (
+            <Button key={s} size="sm" variant="tertiary" className="justify-start" onPress={() => filterStatus(s)}>
+              {IMPORT.count(report.counts[s], s)}
+            </Button>
+          ),
+        )}
+      {report.counts.skipped ? (
+        <Text variant="studio-caption" tone="muted" className="px-2.5" tabular>
+          {IMPORT.leftOutCount(report.counts.skipped)}
+        </Text>
+      ) : null}
+      {report.newDomains.length > 0 ? (
+        <div className="flex flex-col gap-1 pt-1">
+          <Text variant="studio-caption" tone="muted">
+            {IMPORT.newDomainsTitle(report.newDomains.length)}
+          </Text>
+          <span className="flex flex-wrap gap-1">
+            {report.newDomains.map((d) => (
+              <MeaningChip key={d.name} meaning="tag">
+                {d.name}
+              </MeaningChip>
+            ))}
+          </span>
+        </div>
+      ) : null}
+    </section>
+  ) : null
+
+  const list = report ? (
+    <div className="relative flex min-h-0 flex-1 gap-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <PickList
+          spec={spec}
+          items={items}
+          chosen={chosen}
+          onChosen={onChosen}
+          disabledReason={(id) => {
+            const r = report.rows.find((x) => String(x.index) === id)
+            if (!r || importable(r)) return null
+            return r.status === 'duplicate' ? (r.duplicateRow !== null ? IMPORT.duplicateRow(r.duplicateRow) : IMPORT.duplicateOf(r.duplicateOf ?? '')) : r.reason ? IMPORT.reason[r.reason] : IMPORT.status.rejected
+          }}
+          count={IMPORT.toImport(willImport, report.rows.length)}
+          onOpen={(id) => setOpenRow((now) => (now === Number(id) ? null : Number(id)))}
+          currentId={openRow === null ? null : String(openRow)}
+          searchText={(i) => [i.data.row.stem, ...(i.data.row.body?.options.map((o) => o.text) ?? []), ...i.data.row.tags, ...i.data.row.domains].join(' ')}
+        />
+      </div>
+      {current ? (
+        <RowPane
+          key={`${current.index}:${debounced.length}`}
+          row={current}
+          draft={edits.get(current.index) ?? (current.body ? draftOf(current.body) : null)}
+          isEdited={edits.has(current.index)}
+          knownTags={(tags.data ?? []).map((t) => t.tag)}
+          knownDomains={[...(domains.data ?? []).map((d) => d.name), ...report.newDomains.map((d) => d.name)]}
+          onApply={(d, next) => {
+            setEdits((now) => new Map(now).set(current.index, d))
+            if (next) {
+              const after = report.rows.find((r) => r.index > current.index && r.body !== null)
+              setOpenRow(after?.index ?? null)
+            }
+          }}
+          onRevert={() =>
+            setEdits((now) => {
+              const m = new Map(now)
+              m.delete(current.index)
+              return m
+            })
+          }
+          onSkip={(out) =>
+            setSkip((now) => {
+              const s = new Set(now)
+              if (out) s.add(current.index)
+              else s.delete(current.index)
+              return s
+            })
+          }
+          onClose={() => setOpenRow(null)}
+        />
+      ) : null}
+    </div>
+  ) : null
 
   return (
     // A loaded file is not lost to a stray click outside or Esc: only Cancel drops it (P20).
     <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => (open ? onOpenChange(true) : close())} isDismissable={!hasText} isKeyboardDismissDisabled={hasText}>
       <Modal.Container size="lg">
-        <Modal.Dialog className={['w-full max-w-[min(80rem,calc(100vw-4rem))]', hasText ? 'h-[min(56rem,calc(100vh-4rem))]' : ''].join(' ')}>
-          <Modal.CloseTrigger />
-          <Modal.Header>
-            <Modal.Heading>{IMPORT.title}</Modal.Heading>
-          </Modal.Header>
-          <Modal.Body className="@container/import flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-            {noticesAt(notices, 'import').map((n) => (
-              <InlineNotice key={n.id} notice={n} onAction={() => dismiss(n.id)} onDismiss={() => dismiss(n.id)} compact />
-            ))}
-            {!hasText ? (
-              <div className="flex flex-col gap-4">
-                <Text as="p" variant="studio-body" tone="muted">
-                  {IMPORT.hint}
-                </Text>
-                <div className="flex flex-wrap items-center gap-2">{source}</div>
-                {textBox}
-                <Text as="p" variant="studio-caption" tone="muted">
-                  {IMPORT.fields}
-                </Text>
-                {domainSelect}
-              </div>
-            ) : (
-              <>
-                {/* The source in one line: the file, its rows, where rows with no domain go. */}
-                <div className="flex shrink-0 flex-wrap items-end gap-3">
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <Text variant="studio-subheading" truncate>
-                      {IMPORT.fileRows(fileName, report?.rows.length ?? 0)}
-                    </Text>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {source}
-                      <Button variant="ghost" icon="edit" onPress={() => setShowText((v) => !v)}>
-                        {showText ? IMPORT.hideText : IMPORT.editText}
+        {/* One height, file or not, so loading one does not make the frame jump (beta.9). */}
+        <Modal.Dialog className="h-[min(56rem,calc(100vh-4rem))] w-full max-w-[min(80rem,calc(100vw-4rem))]">
+          {/* The list's pages ride in the footer (beta.9), as a page's ride in the status bar. */}
+          <StatusSlotProvider>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>{IMPORT.title}</Modal.Heading>
+            </Modal.Header>
+            {/*
+              Two columns, not one stack (beta.9): the source and what the file
+              holds on the left, read once; the rows — or the text — on the
+              right, with the height to themselves.
+            */}
+            <Modal.Body className="@container/import flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+              {noticesAt(notices, 'import').map((n) => (
+                <InlineNotice key={n.id} notice={n} onAction={() => dismiss(n.id)} onDismiss={() => dismiss(n.id)} compact />
+              ))}
+              <div className="flex min-h-0 flex-1 flex-col gap-4 @4xl/import:flex-row @4xl/import:gap-6">
+                <aside className="flex shrink-0 flex-col gap-4 @4xl/import:w-64 @4xl/import:overflow-y-auto" data-import-source>
+                  <section className="flex flex-col gap-2">
+                    {hasText ? (
+                      <Text variant="studio-subheading" truncate>
+                        {IMPORT.fileRows(fileName, report?.rows.length ?? 0)}
+                      </Text>
+                    ) : null}
+                    {hasText ? null : (
+                      <Text as="p" variant="studio-caption" tone="muted">
+                        {IMPORT.hint}
+                      </Text>
+                    )}
+                    <input
+                      ref={file}
+                      type="file"
+                      accept="application/json,.json"
+                      className="hidden"
+                      aria-label={IMPORT.choose}
+                      onChange={(e) => {
+                        const picked = e.target.files?.[0]
+                        e.target.value = ''
+                        if (picked) void picked.text().then((t) => replaceText(t, picked.name))
+                      }}
+                    />
+                    <div className="flex flex-wrap gap-2 @4xl/import:flex-col @4xl/import:items-stretch">
+                      <Button variant="secondary" icon="import" className="@4xl/import:justify-start" onPress={() => file.current?.click()}>
+                        {hasText ? IMPORT.changeFile : IMPORT.choose}
+                      </Button>
+                      <Button variant="ghost" icon="copy" className="@4xl/import:justify-start" onPress={() => void copyTemplate()}>
+                        {IMPORT.copyTemplate}
                       </Button>
                     </div>
-                  </div>
-                  <div className="flex-1" />
+                  </section>
                   {domainSelect}
-                </div>
-                {showText ? <div className="shrink-0">{textBox}</div> : null}
-                {refusal ? (
-                  <Text as="p" variant="studio-body" tone="danger">
-                    {refusal}
-                  </Text>
-                ) : report ? (
-                  <div className="relative flex min-h-0 flex-1 gap-4">
-                    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                      <PickList
-                        spec={spec}
-                        items={items}
-                        chosen={chosen}
-                        onChosen={onChosen}
-                        disabledReason={(id) => {
-                          const r = report.rows.find((x) => String(x.index) === id)
-                          if (!r || importable(r)) return null
-                          return r.status === 'duplicate' ? (r.duplicateRow !== null ? IMPORT.duplicateRow(r.duplicateRow) : IMPORT.duplicateOf(r.duplicateOf ?? '')) : r.reason ? IMPORT.reason[r.reason] : IMPORT.status.rejected
-                        }}
-                        count={IMPORT.toImport(willImport, report.rows.length)}
-                        onOpen={(id) => setOpenRow((now) => (now === Number(id) ? null : Number(id)))}
-                        currentId={openRow === null ? null : String(openRow)}
-                        searchText={(i) => [i.data.row.stem, ...(i.data.row.body?.options.map((o) => o.text) ?? []), ...i.data.row.tags, ...i.data.row.domains].join(' ')}
-                        above={
-                          <div className="flex shrink-0 flex-wrap items-center gap-2" data-import-summary>
-                            <Text variant="studio-caption" tone="muted">
-                              {IMPORT.summary(report.counts, report.newDomains.length)}
+                  {summary}
+                  {hasText ? null : (
+                    <Text as="p" variant="studio-caption" tone="muted">
+                      {IMPORT.fields}
+                    </Text>
+                  )}
+                </aside>
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+                  {!hasText ? (
+                    textBox(14)
+                  ) : (
+                    <>
+                      {/* Real panels (beta.9), so each tab names what it controls. */}
+                      <Tabs variant="secondary" className="flex min-h-0 flex-1 flex-col gap-2" selectedKey={tab} onSelectionChange={(k) => setTab(k === 'text' ? 'text' : 'rows')}>
+                        <Tabs.ListContainer className="self-start">
+                          <Tabs.List aria-label={IMPORT.view}>
+                            <Tabs.Tab id="rows">
+                              {IMPORT.rowsTab(report?.rows.length ?? 0)}
+                              <Tabs.Indicator />
+                            </Tabs.Tab>
+                            <Tabs.Tab id="text">
+                              {IMPORT.textTab}
+                              <Tabs.Indicator />
+                            </Tabs.Tab>
+                          </Tabs.List>
+                        </Tabs.ListContainer>
+                        <Tabs.Panel id="rows" className="flex min-h-0 flex-1 flex-col">
+                          {refusal ? (
+                            <Text as="p" variant="studio-body" tone="danger">
+                              {refusal}
                             </Text>
-                            {(['duplicate', 'rejected', 'incomplete'] as const)
-                              .filter((s) => report.counts[s] > 0)
-                              .map((s) => (
-                                <Button key={s} size="sm" variant="tertiary" onPress={() => filterStatus(s)}>
-                                  {IMPORT.count(report.counts[s], s)}
-                                </Button>
-                              ))}
-                            {report.newDomains.length > 0 ? (
-                              <Text variant="studio-caption" tone="muted">
-                                {IMPORT.newDomains(report.newDomains.map((d) => d.name))}
-                              </Text>
-                            ) : null}
-                          </div>
-                        }
-                      />
-                    </div>
-                    {current ? (
-                      <RowPane
-                        key={`${current.index}:${debounced.length}`}
-                        row={current}
-                        draft={edits.get(current.index) ?? (current.body ? draftOf(current.body) : null)}
-                        isEdited={edits.has(current.index)}
-                        knownTags={(tags.data ?? []).map((t) => t.tag)}
-                        knownDomains={[...(domains.data ?? []).map((d) => d.name), ...report.newDomains.map((d) => d.name)]}
-                        onApply={(d, next) => {
-                          setEdits((now) => new Map(now).set(current.index, d))
-                          if (next) {
-                            const after = report.rows.find((r) => r.index > current.index && r.body !== null)
-                            setOpenRow(after?.index ?? null)
-                          }
-                        }}
-                        onRevert={() =>
-                          setEdits((now) => {
-                            const m = new Map(now)
-                            m.delete(current.index)
-                            return m
-                          })
-                        }
-                        onSkip={(out) =>
-                          setSkip((now) => {
-                            const s = new Set(now)
-                            if (out) s.add(current.index)
-                            else s.delete(current.index)
-                            return s
-                          })
-                        }
-                        onClose={() => setOpenRow(null)}
-                      />
-                    ) : null}
-                  </div>
-                ) : (
-                  <Text as="p" variant="studio-caption" tone="muted">
-                    {IMPORT.empty}
-                  </Text>
-                )}
-              </>
-            )}
-          </Modal.Body>
-          <Modal.Footer>
-            {report ? (
-              <Text variant="studio-caption" tone="muted" className="mr-auto">
-                {IMPORT.toImport(willImport, report.rows.length)}
-              </Text>
-            ) : null}
-            <Button variant="tertiary" onPress={close} isDisabled={pending}>
-              {CONFIRM.cancel}
-            </Button>
-            <Button variant="primary" onPress={() => void commit()} isPending={pending} isDisabled={willImport === 0 || !settled}>
-              {IMPORT.submit(willImport)}
-            </Button>
-          </Modal.Footer>
+                          ) : report ? (
+                            list
+                          ) : (
+                            <Text as="p" variant="studio-caption" tone="muted">
+                              {IMPORT.empty}
+                            </Text>
+                          )}
+                        </Tabs.Panel>
+                        <Tabs.Panel id="text" className="flex min-h-0 flex-1 flex-col">
+                          {textBox(14)}
+                        </Tabs.Panel>
+                      </Tabs>
+                    </>
+                  )}
+                </div>
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              {/* The pages of the rows; the count of what is imported is the button's. */}
+              <DialogPages />
+              <Button variant="tertiary" onPress={close} isDisabled={pending}>
+                {CONFIRM.cancel}
+              </Button>
+              <Button variant="primary" onPress={() => void commit()} isPending={pending} isDisabled={willImport === 0 || !settled}>
+                {IMPORT.submit(willImport)}
+              </Button>
+            </Modal.Footer>
+          </StatusSlotProvider>
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>
@@ -401,7 +452,7 @@ function RowPane({
   return (
     <aside
       aria-label={IMPORT.rowTitle(row.index)}
-      className="absolute inset-y-0 right-0 z-20 flex w-[min(26rem,100%)] flex-col gap-3 overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-xl @5xl/import:static @5xl/import:w-[26rem] @5xl/import:shrink-0 @5xl/import:rounded-none @5xl/import:border-0 @5xl/import:border-l @5xl/import:border-[var(--separator)] @5xl/import:bg-transparent @5xl/import:pl-4 @5xl/import:shadow-none"
+      className="absolute inset-y-0 right-0 z-20 flex w-[min(26rem,100%)] flex-col gap-3 overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-xl @5xl/import:static @5xl/import:w-[26rem] @5xl/import:shrink-0 @5xl/import:rounded-none @5xl/import:border-0 @5xl/import:bg-transparent @5xl/import:pl-4 @5xl/import:shadow-none"
       data-import-row
     >
       <div className="flex items-center justify-between gap-2">

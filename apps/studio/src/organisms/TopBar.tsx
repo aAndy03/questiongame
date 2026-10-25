@@ -47,10 +47,23 @@ export function TopBar() {
         <IconButton icon="back" label={CHROME.back} size="sm" isDisabled={back.length === 0} onPress={() => void goBack()} />
         <IconButton icon="forward" label={CHROME.forward} size="sm" isDisabled={forward.length === 0} onPress={() => void goForward()} />
       </div>
-      <div className="flex min-w-0 flex-1 items-center justify-center gap-1">
-        <PlayStatusPill status={play?.status ?? null} recipeName={recipe.data?.name ?? null} />
-        {/* Beside the game it unloads (P21.5), on Control with the other tools. */}
-        {onControl ? <UnloadGame /> : null}
+      <div className="min-w-0 flex-1" />
+      {/*
+        The pill is centred on the **window** (beta.9), not on what is left of
+        the header between the sidebar and the tools: Control's tools coming
+        and going, or the sidebar folding, no longer move it. Unload hangs off
+        its right edge, so it does not move it either.
+      */}
+      <div className="pointer-events-none fixed left-1/2 top-0 z-10 flex h-12 -translate-x-1/2 items-center" data-status-pill>
+        <div className="pointer-events-auto relative flex items-center">
+          <PlayStatusPill status={play?.status ?? null} recipeName={recipe.data?.name ?? null} />
+          {/* Beside the game it unloads (P21.5), on Control with the other tools. */}
+          {onControl ? (
+            <div className="absolute left-full ml-1">
+              <UnloadGame />
+            </div>
+          ) : null}
+        </div>
       </div>
       <div className="flex items-center gap-1">
         {/* Control's own tools, only while Control is open (P21.4). */}
@@ -88,7 +101,7 @@ export function TopBar() {
           </Dropdown.Popover>
         </Dropdown>
         <Dropdown>
-          <HeroButton variant="ghost" size="sm" aria-label={CHROME.operator} className="rounded-full pl-1 pr-2">
+          <HeroButton variant="ghost" size="sm" aria-label={CHROME.operator} className="max-w-[12rem] rounded-full pl-1 pr-2">
             <OperatorBadge name={active?.displayName ?? null} isActive={active !== null} />
             <Icon name="chevronDown" size="sm" className="opacity-60" />
           </HeroButton>

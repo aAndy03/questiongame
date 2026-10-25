@@ -49,10 +49,11 @@ export function StatisticsPage({ view, onView, surface = 'tab' }: StatisticsPage
   const setListView = useChromeStore((s) => s.setView)
   const selected: StatsView = view ?? 'live'
   const generation = useWorkspaceGeneration()
-  // Which workspace these numbers are (beta.5); with All workspaces the filter bar says so.
+  // The window has no sidebar to name its workspace, so it says it under its
+  // title (beta.5); the tab, beside the sidebar, has no subtitle (beta.9).
   const workspaces = useKnownWorkspaces()
   const current = workspaces?.workspaces.find((w) => w.id === workspaces.current)
-  const here = current ? (current.name ?? WORKSPACE.unnamed) : null
+  const here = surface === 'window' && current ? (current.name ?? WORKSPACE.unnamed) : null
 
   return (
     <SettingsLayout

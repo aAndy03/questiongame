@@ -122,7 +122,6 @@ export function QuestionTagsManager({ isOpen, onClose, onShowInList }: QuestionT
         isOpen={isOpen}
         onClose={onClose}
         title={GROUPS_TAGS.manageTitle}
-        description={GROUPS_TAGS.manageBody}
         hook="data-manage-tags"
         empty={list.length === 0 ? <EmptyState kind="empty" what={GROUPS_TAGS.questionTagsWhat} detail={GROUPS_TAGS.noTagsYet} /> : undefined}
         list={

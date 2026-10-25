@@ -41,7 +41,7 @@ export const STATS = {
     workspace: 'Workspace',
   } as Readonly<Record<string, string>>,
 
-  /** The page's line under its title: which workspace it counts (beta.5). */
+  /** The Statistics window's line under its title (beta.5): which workspace it counts. The tab has none since beta.9 — its sidebar names it. */
   inWorkspace: (name: string) => `Plays in ${name} — or every workspace, with All workspaces.`,
 
   filters: {

@@ -35,11 +35,11 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
       en: [
         {
           title: 'Drag questions onto a domain',
-          body: 'On Domains & Questions, drag a question, or the questions you ticked, onto a domain in the Domains pane to add them to it; hold Ctrl (⌘ on a Mac) as you let go to move them there instead, out of every other domain. Only a release right on a domain counts: let go anywhere else, or press Escape, and nothing changes. A short note says what was added, what was already there and what was left out. Add to domain… and Move to domain… in a question’s menu and in Edit… do the same from the keyboard.',
+          body: 'On Domains & Questions, drag a question, or the questions you ticked, onto a domain in the Domains pane to add them to it; hold Ctrl (⌘ on a Mac) as you let go to move them there instead, out of every other domain. As you drag, a small chip says how many domains they are in now, and with Ctrl how many the move will replace. Only a release right on a domain counts: let go anywhere else, or press Escape, and nothing changes. A short note says what was added, what was already there and what was left out. Add to domain… and Move to domain… in a question’s menu and in Edit… do the same from the keyboard.',
         },
         {
           title: 'See where the search hit',
-          body: 'The words you search for are marked in the list, in the pickers and in the question opened beside the list. When a question is found by one of its answers, its explanation or a tag, its row says where: Found in answers.',
+          body: 'The words you search for are marked in the list, in the pickers and in the question opened beside the list. When a question is found by one of its answers or its explanation, its row shows them, marked, cut so the word you searched for is always in view.',
         },
         {
           title: 'Keep your place',
@@ -47,17 +47,21 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         },
         {
           title: 'More room for the list',
-          body: 'Lists run down to the bottom of the window, and their pages (1–50 of 1,022, the page size, the page links) sit in the status bar. Page subtitles are gone, the spacing is tighter, and in the Domains pane only the domains scroll: the heading, the add button and Active · Archived stay put.',
+          body: 'Lists run down to the bottom of the window, and their pages (1–50 of 1,022, the page size, the page links) sit in the status bar. Page subtitles are gone and the spacing is tighter. The Domains pane is narrower, with smaller rows and a smaller form, and only the domains scroll in it. The game status pill stays in the middle of the window.',
+        },
+        {
+          title: 'Import, laid out wide',
+          body: 'Import questions puts the file, where its rows go and what it holds in a column on the left, and its rows, or its text in a tab of its own, beside them, with the pages at the bottom. Copy template now explains the file to whoever fills it in, an AI assistant included: that the examples are not a pattern, that the right answer can stand anywhere, how to spread difficulties and what makes a question incomplete.',
         },
       ],
       ro: [
         {
           title: 'Trage întrebările pe un domeniu',
-          body: 'În Domains & Questions, trage o întrebare, sau întrebările bifate, pe un domeniu din panoul Domains ca să le adaugi în el; ține apăsat Ctrl (⌘ pe Mac) când le lași ca să le muți acolo, scoase din toate celelalte domenii. Contează doar o eliberare chiar pe un domeniu: dacă le lași în altă parte sau apeși Escape, nu se schimbă nimic. O notă scurtă spune ce s-a adăugat, ce era deja acolo și ce a rămas pe dinafară. Add to domain… și Move to domain… din meniul unei întrebări și din Edit… fac același lucru de la tastatură.',
+          body: 'În Domains & Questions, trage o întrebare, sau întrebările bifate, pe un domeniu din panoul Domains ca să le adaugi în el; ține apăsat Ctrl (⌘ pe Mac) când le lași ca să le muți acolo, scoase din toate celelalte domenii. În timp ce tragi, o etichetă mică spune în câte domenii sunt acum, iar cu Ctrl câte va înlocui mutarea. Contează doar o eliberare chiar pe un domeniu: dacă le lași în altă parte sau apeși Escape, nu se schimbă nimic. O notă scurtă spune ce s-a adăugat, ce era deja acolo și ce a rămas pe dinafară. Add to domain… și Move to domain… din meniul unei întrebări și din Edit… fac același lucru de la tastatură.',
         },
         {
           title: 'Vezi unde a găsit căutarea',
-          body: 'Cuvintele căutate sunt marcate în listă, în ferestrele de alegere și în întrebarea deschisă lângă listă. Când o întrebare e găsită după un răspuns, după explicație sau după o etichetă, rândul ei spune unde: Found in answers.',
+          body: 'Cuvintele căutate sunt marcate în listă, în ferestrele de alegere și în întrebarea deschisă lângă listă. Când o întrebare e găsită după un răspuns sau după explicație, rândul ei le arată, marcate, tăiate astfel încât cuvântul căutat să se vadă mereu.',
         },
         {
           title: 'Nu-ți pierzi locul',
@@ -65,7 +69,11 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         },
         {
           title: 'Mai mult loc pentru listă',
-          body: 'Listele merg până jos în fereastră, iar paginile lor (1–50 of 1,022, mărimea paginii, linkurile de pagină) stau în bara de stare. Subtitlurile paginilor au dispărut, spațiile sunt mai strânse, iar în panoul Domains se derulează doar domeniile: titlul, butonul de adăugare și Active · Archived rămân pe loc.',
+          body: 'Listele merg până jos în fereastră, iar paginile lor (1–50 of 1,022, mărimea paginii, linkurile de pagină) stau în bara de stare. Subtitlurile paginilor au dispărut, iar spațiile sunt mai strânse. Panoul Domains e mai îngust, cu rânduri și formular mai mici, și în el se derulează doar domeniile. Eticheta cu starea jocului rămâne în mijlocul ferestrei.',
+        },
+        {
+          title: 'Import, pe toată lățimea',
+          body: 'Import questions pune fișierul, unde merg rândurile și ce conține într-o coloană în stânga, iar rândurile, sau textul într-un tab separat, lângă ele, cu paginile jos. Copy template explică acum fișierul celui care îl completează, inclusiv unui asistent AI: că exemplele nu sunt un tipar, că răspunsul corect poate sta oriunde, cum să împartă dificultățile și ce face o întrebare incompletă.',
         },
       ],
     },

@@ -1058,6 +1058,21 @@ mod tests {
         plan.report.rows.iter().map(|row| row.status).collect()
     }
 
+    /// Studio's *Copy template* (beta.9): its `guide` is skipped, every
+    /// example comes in with nothing ignored, and only the last is incomplete.
+    #[test]
+    fn the_template_reads_whole_and_its_guide_is_skipped() {
+        let text = include_str!("../../../../fixtures/import/template.json");
+        let plan = run(text, &[], &[], None).unwrap();
+        let rows = &plan.report.rows;
+        assert_eq!(rows.len(), 5);
+        assert!(rows.iter().all(|r| r.ignored.is_empty()), "{rows:?}");
+        assert_eq!(
+            statuses(&plan),
+            [RowStatus::Complete, RowStatus::Complete, RowStatus::Complete, RowStatus::Complete, RowStatus::Incomplete]
+        );
+    }
+
     #[test]
     fn a_whole_row_is_complete_and_lands_in_its_domain() {
         let text = r#"{ "format": "questiongame.questions", "version": 1, "questions": [

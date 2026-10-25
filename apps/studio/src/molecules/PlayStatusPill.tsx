@@ -22,7 +22,7 @@ export function PlayStatusPill({ status, recipeName }: PlayStatusPillProps) {
   const label = status ? PLAY_STATUS[status] : PLAY_STATUS.none
   return (
     <span
-      className="inline-flex h-7 max-w-xs items-center gap-2 rounded-full border border-[var(--border)] px-2.5"
+      className="inline-flex h-7 max-w-[14rem] items-center gap-2 rounded-full border border-[var(--border)] px-2.5 xl:max-w-xs"
       style={{ background: 'var(--surface)' }}
     >
       <StatusDot tone={status ? TONE[status] : 'neutral'} pulse={status === 'playing'} />

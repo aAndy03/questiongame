@@ -5,6 +5,7 @@ import { PICKER } from '@/copy'
 import { useChromeStore, EMPTY_LIST_STATE } from '@/chrome/chrome'
 import type { ListItem, ListSpec } from '@/host/listView'
 import { PickList, type PickerRow } from './PickList'
+import { DialogPages, StatusSlotProvider } from './StatusSlot'
 
 export type { PickerRow } from './PickList'
 
@@ -77,59 +78,63 @@ export function PickerDialog<T>({ isOpen, onClose, title, spec, items, initial, 
       <Modal.Container size="lg">
         {/* The window's width and a fixed height (P20): filtering never makes the frame jump. */}
         <Modal.Dialog className="h-[min(52rem,calc(100vh-4rem))] w-full max-w-[min(72rem,calc(100vw-4rem))]">
-          <Modal.CloseTrigger />
-          <Modal.Header>
-            <Modal.Heading>{title}</Modal.Heading>
-          </Modal.Header>
-          <Modal.Body className="@container/pickdialog flex min-h-0 flex-1 overflow-hidden">
-            <div className="grid min-h-0 w-full flex-1 grid-cols-1 gap-4 @[52rem]/pickdialog:grid-cols-[minmax(0,1fr)_18rem]">
-              <PickList spec={spec} items={items} chosen={chosen} onChosen={setChosen} disabledReason={disabledReason} count={PICKER.chosen(chosen.length)} columns={columns} />
-              <aside aria-label={PICKER.chosenTitle} className="hidden min-h-0 flex-col gap-2 border-l border-[var(--separator)] pl-4 @[52rem]/pickdialog:flex" data-chosen-pane>
-                <Text as="h3" variant="studio-subheading">
-                  {`${PICKER.chosenTitle} · ${chosen.length}`}
-                </Text>
-                {chosen.length === 0 ? (
-                  <Text variant="studio-caption" tone="muted">
-                    {PICKER.noneChosen}
+          {/* The list's pages ride in the footer (beta.9), as a page's ride in the status bar. */}
+          <StatusSlotProvider>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading>{title}</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="@container/pickdialog flex min-h-0 flex-1 overflow-hidden">
+              <div className="grid min-h-0 w-full flex-1 grid-cols-1 gap-6 @[52rem]/pickdialog:grid-cols-[minmax(0,1fr)_18rem]">
+                <PickList spec={spec} items={items} chosen={chosen} onChosen={setChosen} disabledReason={disabledReason} count={PICKER.chosen(chosen.length)} columns={columns} />
+                <aside aria-label={PICKER.chosenTitle} className="hidden min-h-0 flex-col gap-2 @[52rem]/pickdialog:flex" data-chosen-pane>
+                  <Text as="h3" variant="studio-subheading">
+                    {`${PICKER.chosenTitle} · ${chosen.length}`}
                   </Text>
-                ) : (
-                  <ol className="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
-                    {ordered.slice(0, CHOSEN_SHOWN).map((id, i) => {
-                      const row = byId.get(id)
-                      return (
-                        <li key={id} className="flex min-h-9 items-center gap-2 rounded px-1.5 py-1 hover:bg-[var(--surface-secondary)]">
-                          <Text variant="studio-mono" tone="muted" className="w-6 shrink-0 text-right" tabular>
-                            {i + 1}
+                  {chosen.length === 0 ? (
+                    <Text variant="studio-caption" tone="muted">
+                      {PICKER.noneChosen}
+                    </Text>
+                  ) : (
+                    <ol className="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
+                      {ordered.slice(0, CHOSEN_SHOWN).map((id, i) => {
+                        const row = byId.get(id)
+                        return (
+                          <li key={id} className="flex min-h-9 items-center gap-2 rounded px-1.5 py-1 hover:bg-[var(--surface-secondary)]">
+                            <Text variant="studio-mono" tone="muted" className="w-6 shrink-0 text-right" tabular>
+                              {i + 1}
+                            </Text>
+                            {/* Two lines, not one cut short: the pane is 22rem and a stem is a sentence (P20). */}
+                            <Text variant="studio-body" className="line-clamp-2 min-w-0 flex-1 break-words" title={row?.title ?? id}>
+                              {row?.title ?? id}
+                            </Text>
+                            {row?.chips}
+                            <IconButton icon="close" size="sm" label={PICKER.unchoose(row?.title ?? id)} onPress={() => setChosen((now) => now.filter((x) => x !== id))} />
+                          </li>
+                        )
+                      })}
+                      {ordered.length > CHOSEN_SHOWN ? (
+                        <li className="px-1.5 py-1">
+                          <Text variant="studio-caption" tone="muted">
+                            {PICKER.moreChosen(ordered.length - CHOSEN_SHOWN)}
                           </Text>
-                          {/* Two lines, not one cut short: the pane is 22rem and a stem is a sentence (P20). */}
-                          <Text variant="studio-body" className="line-clamp-2 min-w-0 flex-1 break-words" title={row?.title ?? id}>
-                            {row?.title ?? id}
-                          </Text>
-                          {row?.chips}
-                          <IconButton icon="close" size="sm" label={PICKER.unchoose(row?.title ?? id)} onPress={() => setChosen((now) => now.filter((x) => x !== id))} />
                         </li>
-                      )
-                    })}
-                    {ordered.length > CHOSEN_SHOWN ? (
-                      <li className="px-1.5 py-1">
-                        <Text variant="studio-caption" tone="muted">
-                          {PICKER.moreChosen(ordered.length - CHOSEN_SHOWN)}
-                        </Text>
-                      </li>
-                    ) : null}
-                  </ol>
-                )}
-              </aside>
-            </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="tertiary" onPress={onClose} isDisabled={isPending}>
-              {PICKER.cancel}
-            </Button>
-            <Button variant="primary" onPress={() => void apply()} isPending={isPending} isDisabled={!changed}>
-              {PICKER.apply}
-            </Button>
-          </Modal.Footer>
+                      ) : null}
+                    </ol>
+                  )}
+                </aside>
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              <DialogPages />
+              <Button variant="tertiary" onPress={onClose} isDisabled={isPending}>
+                {PICKER.cancel}
+              </Button>
+              <Button variant="primary" onPress={() => void apply()} isPending={isPending} isDisabled={!changed}>
+                {PICKER.apply}
+              </Button>
+            </Modal.Footer>
+          </StatusSlotProvider>
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>

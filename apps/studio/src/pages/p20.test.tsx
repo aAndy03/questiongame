@@ -1085,6 +1085,18 @@ describe('the Statistics window and tab (P20)', () => {
     expect(document.querySelector('[data-stats-window]')).not.toBeNull()
   })
 
+  it('T10-W1b the window, with no sidebar, still names its workspace under its title (beta.9)', async () => {
+    load(openPlay(ALPHA_BETA))
+    window.history.pushState({}, '', '/?stats')
+    render(<App />)
+    await waitFor(() => expect(calls('stats_query').length).toBeGreaterThan(0))
+    await act(async () => {
+      await fake.invoke('workspace_rename', { id: fake.currentWorkspace, name: 'Friday club' })
+    })
+    expect(await screen.findByText(/Plays in Friday club/)).toBeTruthy()
+    expect(calls('workspace_list')).toHaveLength(0)
+  })
+
   it('T10-W2 the window is full width; the tab keeps a bounded column', async () => {
     load(openPlay(ALPHA_BETA))
     window.history.pushState({}, '', '/?stats')
@@ -1111,13 +1123,14 @@ describe('the Statistics window and tab (P20)', () => {
       await useNavStore.getState().go({ tab: 'statistics', view: 'live' })
     })
     const first = fake.workspaces.find((w) => w.id === fake.currentWorkspace)
-    expect(await screen.findByText(new RegExp(`Plays in ${first?.name ?? WORKSPACE.unnamed}`))).toBeTruthy()
+    // beta.9: no subtitle; the sidebar's switcher names it.
+    await waitFor(() => expect(document.querySelector<HTMLElement>('[data-workspace-switcher]')!.textContent).toContain(first?.name ?? WORKSPACE.unnamed))
     expect(calls('workspace_list')).toHaveLength(before)
 
     await act(async () => {
       await fake.invoke('workspace_rename', { id: fake.currentWorkspace, name: 'Friday club' })
     })
-    expect(await screen.findByText(/Plays in Friday club/)).toBeTruthy()
+    await waitFor(() => expect(document.querySelector<HTMLElement>('[data-workspace-switcher]')!.textContent).toContain('Friday club'))
     expect(calls('workspace_list')).toHaveLength(before)
   })
 })

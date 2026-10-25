@@ -12,7 +12,7 @@ import {
   type StageScreen,
   type TextKey,
 } from '@questiongame/contract'
-import { Button, Panel, StatusDot, Text } from '@/atoms'
+import { Button, StatusDot, Text } from '@/atoms'
 import { DecorDials, NodeInspector, ScreenTabs, TextInspector, canvasOverlay, canvasScreen, type CanvasView } from '@/molecules'
 import { SCREENS_TAB } from '@/copy'
 import { useHostCommand } from '@/host/commands'
@@ -156,8 +156,9 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
   ) : null
 
   const inspector = (
+    // Sections on the aside itself, space between them: no card on a card, no rule (beta.9).
     <div className="flex flex-col gap-4">
-      <Panel variant="secondary" className="flex flex-col gap-3">
+      <section className="flex flex-col gap-3" data-inspector>
         <div className="flex items-center justify-between">
           <Text variant="studio-heading">{SCREENS_TAB.inspector}</Text>
           <Text variant="studio-caption" tone="muted">
@@ -182,8 +183,8 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
           onReset={() => selected && setNode(selected, null)}
         />
         )}
-      </Panel>
-      <Panel variant="secondary" className="flex flex-col gap-3">
+      </section>
+      <section className="flex flex-col gap-3 pt-4" data-decor>
         <div className="flex flex-col gap-0.5">
           <Text variant="studio-heading">{SCREENS_TAB.decor}</Text>
           <Text variant="studio-caption" tone="muted">
@@ -191,7 +192,7 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
           </Text>
         </div>
         <DecorDials decor={layout.decor} onDecorChange={setDecor} screen={screen} box={layout.screens[screen]} onBoxChange={setBox} />
-      </Panel>
+      </section>
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"

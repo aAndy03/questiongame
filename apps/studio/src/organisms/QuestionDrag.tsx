@@ -12,6 +12,19 @@ export interface QuestionDragState {
   readonly over: { readonly id: string; readonly name: string } | null
   /** Ctrl (⌘ on a Mac) held: the drop moves rather than adds. */
   readonly move: boolean
+  /** Every domain the carried questions are in now, archived ones too — what a Move replaces. */
+  readonly homes: readonly { readonly id: string; readonly name: string }[]
+}
+
+/**
+ * The chip's second line (beta.9): how many domains the carried questions are
+ * in, while they would be added; how many a Move replaces (every one but the
+ * target), once Ctrl is down.
+ */
+export function chipNote(s: QuestionDragState): { readonly text: string; readonly replaces: number | null } {
+  if (!s.move) return { text: DRAG.inDomains(s.homes.length), replaces: null }
+  const replaces = s.homes.filter((h) => h.id !== s.over?.id).length
+  return { text: DRAG.replaces(replaces), replaces }
 }
 
 interface Context {
@@ -56,6 +69,8 @@ export interface QuestionDragProviderProps {
   children: ReactNode
   /** The questions a grab carries: the selection when the grabbed row is in it, else that row. */
   idsFor(id: string): readonly string[]
+  /** The domains those questions are in now (all of them, archived too), for the chip's count. */
+  homesOf?: ((ids: readonly string[]) => readonly { readonly id: string; readonly name: string }[]) | undefined
   /** One write; `false` when the host refused (the notice says why). */
   onDrop(ids: readonly string[], domainId: string, domainName: string, move: boolean): Promise<boolean>
 }
@@ -94,7 +109,7 @@ export function domainAt(p: { readonly x: number; readonly y: number }): { id: s
  * held at the release moves instead of adding; the chip says which as the key
  * goes down and up.
  */
-export function QuestionDragProvider({ children, idsFor, onDrop }: QuestionDragProviderProps) {
+export function QuestionDragProvider({ children, idsFor, homesOf, onDrop }: QuestionDragProviderProps) {
   const [state, setState] = useState<QuestionDragState | null>(null)
   // The handlers below are the provider's, bound once: they read the drag through this.
   const live = useRef<QuestionDragState | null>(null)
@@ -180,7 +195,8 @@ export function QuestionDragProvider({ children, idsFor, onDrop }: QuestionDragP
           startSwallowing()
           moveKey.current = Boolean(native?.ctrlKey || native?.metaKey)
           setSettle(null)
-          setState({ ids: idsFor(id), over: null, move: moveKey.current })
+          const ids = idsFor(id)
+          setState({ ids, over: null, move: moveKey.current, homes: homesOf?.(ids) ?? [] })
         }}
         onDragMove={(event) => {
           const native = event.nativeEvent as PointerEvent | undefined
@@ -214,7 +230,7 @@ export function QuestionDragProvider({ children, idsFor, onDrop }: QuestionDragP
         : createPortal(
             <AnimatePresence>
               {state ? (
-                <Chip key="live" chipRef={chip} at={last.current} label={label(state)} move={state.move} over={state.over !== null} />
+                <Chip key="live" chipRef={chip} at={last.current} label={label(state)} note={chipNote(state)} move={state.move} over={state.over !== null} />
               ) : settle ? (
                 <motion.div
                   key={`settle-${settle.key}`}
@@ -241,15 +257,15 @@ export function QuestionDragProvider({ children, idsFor, onDrop }: QuestionDragP
 
 const chipAt = (at: Point) => `translate(${at.x + 14}px, ${at.y + 14}px)`
 
-function Chip({ chipRef, at, label, move, over }: { chipRef: Ref<HTMLDivElement>; at: Point; label: string; move: boolean; over: boolean }) {
+function Chip({ chipRef, at, label, note, move, over }: { chipRef: Ref<HTMLDivElement>; at: Point; label: string; note: ReturnType<typeof chipNote>; move: boolean; over: boolean }) {
   return (
     <div ref={chipRef} className="pointer-events-none fixed left-0 top-0 z-[100]" style={{ transform: chipAt(at) }} data-drag-chip>
-      <ChipBody label={label} move={move} over={over} />
+      <ChipBody label={label} note={note} move={move} over={over} />
     </div>
   )
 }
 
-function ChipBody({ label, move, over }: { label: string; move: boolean; over: boolean }) {
+function ChipBody({ label, note, move, over }: { label: string; note?: ReturnType<typeof chipNote> | undefined; move: boolean; over: boolean }) {
   return (
     <div
       className={[
@@ -259,6 +275,19 @@ function ChipBody({ label, move, over }: { label: string; move: boolean; over: b
     >
       <Icon name={move ? 'transfer' : over ? 'add' : 'question'} size="sm" style={{ width: 14, height: 14 }} />
       <span className="whitespace-nowrap">{label}</span>
+      {/* What the drop does to the domains they are in: a count while adding;
+          while moving, what it replaces — warned, since they leave them all. */}
+      {note ? (
+        <span
+          className={[
+            'whitespace-nowrap rounded-full px-1.5 py-px text-[0.6875rem] tabular-nums',
+            note.replaces ? 'bg-[var(--warning)] text-[var(--warning-foreground)]' : 'bg-[color-mix(in_oklab,currentColor_14%,transparent)]',
+          ].join(' ')}
+          data-drag-note={note.replaces === null ? 'in' : 'replaces'}
+        >
+          {note.text}
+        </span>
+      ) : null}
     </div>
   )
 }

@@ -19,18 +19,20 @@ export interface DomainFormProps {
   disabledReason?: string | null | undefined
   /** Embedded inside `DomainPicker`'s create-in-place: no description. */
   compact?: boolean | undefined
+  /** Tighter, for a narrow pane (beta.9): the same fields, closer together; their size comes from `data-density="compact"`. */
+  dense?: boolean | undefined
   autoFocus?: boolean | undefined
   /** The other domains of this workspace: a name they already use is said (beta.3). */
   others?: readonly { readonly name: string }[] | undefined
 }
 
 /** Name · code · description. The same form in the Domains pane and inside `DomainPicker` (spec §2.22). */
-export function DomainForm({ value, onChange, errors, isDisabled, disabledReason, compact, autoFocus, others }: DomainFormProps) {
+export function DomainForm({ value, onChange, errors, isDisabled, disabledReason, compact, dense, autoFocus, others }: DomainFormProps) {
   const set = (patch: Partial<DomainFormValue>) => onChange({ ...value, ...patch })
   return (
-    <div className="@container/domain-form flex flex-col gap-4">
+    <div className={['@container/domain-form flex flex-col', dense ? 'gap-2.5' : 'gap-4'].join(' ')}>
       {/* Name over code in a narrow box (the Domains pane, an editor's side); side by side from 24rem (P20). */}
-      <div className="grid grid-cols-1 gap-4 @[24rem]/domain-form:grid-cols-[1fr_10rem]">
+      <div className={['grid grid-cols-1 @[24rem]/domain-form:grid-cols-[1fr_10rem]', dense ? 'gap-2.5' : 'gap-4'].join(' ')}>
         <TextField
           label={DOMAIN.name}
           value={value.name}

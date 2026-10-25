@@ -283,3 +283,29 @@ export function highlightRanges(text: string, query: string | null | undefined):
 /** Does any of the search's words start a word of this text? */
 export const matchesSearch = (text: string | null | undefined, query: string | null | undefined): boolean =>
   Boolean(text) && highlightRanges(text as string, query).length > 0;
+
+/**
+ * A text cut so its first search hit is in view (beta.9): when the hit starts
+ * past `lead` characters, the text starts a word or so before it, after an
+ * ellipsis. The end is left to the line's own truncation, so the hit is the
+ * last thing to go. No hit, or none past `lead`: the text as it is.
+ */
+export function snippetAround(text: string, query: string | null | undefined, lead = 16): string {
+  const first = highlightRanges(text, query)[0];
+  if (!first || first[0] <= lead) return text;
+  // About `lead` characters of what comes before it, from the start of the
+  // word they fall in — unless that word is long, then from the next one.
+  // A word is letters and digits, as the search reads it: a hyphen, a newline,
+  // a ` · ` or an emoji is a break. Never starts on a break, so never on a
+  // separator or half an emoji.
+  const isWord = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}]/u.test(c);
+  const hit = first[0];
+  const at = hit - lead;
+  let back = at;
+  while (back > 0 && isWord(text[back - 1])) back--;
+  let ahead = at;
+  while (ahead < hit && isWord(text[ahead])) ahead++;
+  let from = at - back <= lead / 2 ? back : ahead;
+  while (from < hit && !isWord(text[from]) && !/\p{Extended_Pictographic}/u.test(text.slice(from, from + 2))) from++;
+  return from === 0 ? text : `…${text.slice(from)}`;
+}

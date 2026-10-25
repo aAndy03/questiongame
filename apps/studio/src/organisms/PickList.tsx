@@ -6,6 +6,7 @@ import { useListState } from '@/chrome/chrome'
 import { footerText, listView, rangeBetween, type ListItem, type ListSpec } from '@/host/listView'
 import { useListView, type ListViewApi } from '@/host/useListView'
 import { ListToolbar } from './ListToolbar'
+import { InStatusBar } from './StatusSlot'
 
 /** What a picker row shows. */
 export interface PickerRow {
@@ -113,6 +114,9 @@ export function PickList<T>({ spec, items, chosen, onChosen, disabledReason, cou
     else untickAll(span)
   }
   /** Checked when nothing more in it can be ticked; mixed when some is. */
+  const footer = (variant: 'page' | 'status') => (
+    <PageFooter page={page.page} pageCount={page.pageCount} text={footerText(page, spec.noun)} pageSize={view.state.pageSize} onPage={view.setPage} onPageSize={view.setPageSize} variant={variant} />
+  )
   const groupCheckbox = (ids: readonly string[], label: string) => {
     const some = ids.some((id) => set.has(id))
     const full = some && ids.every((id) => set.has(id) || reason(id) !== null)
@@ -154,7 +158,7 @@ export function PickList<T>({ spec, items, chosen, onChosen, disabledReason, cou
                     <>
                       <span className="pl-2">{groupCheckbox(groupIds.get(e.group.key) ?? [], PICKER.selectGroup(e.group.label))}</span>
                       <div className="min-w-0 flex-1">
-                        <GroupHeader label={e.group.label} count={e.group.count} continued={e.group.continued} collapsed={e.group.collapsed} onToggle={() => view.toggleCollapsed(e.group.key)} compact={stuck} />
+                        <GroupHeader label={e.group.label} count={e.group.count} continued={e.group.continued} collapsed={e.group.collapsed} onToggle={() => view.toggleCollapsed(e.group.key)} compact={stuck} plain />
                       </div>
                     </>
                   )}
@@ -177,9 +181,8 @@ export function PickList<T>({ spec, items, chosen, onChosen, disabledReason, cou
           </ul>
         )}
       </div>
-      <div className="shrink-0">
-        <PageFooter page={page.page} pageCount={page.pageCount} text={footerText(page, spec.noun)} pageSize={view.state.pageSize} onPage={view.setPage} onPageSize={view.setPageSize} />
-      </div>
+      {/* The pages ride in the dialog's footer when it has a slot for them (beta.9), as a page's ride in the status bar. */}
+      <InStatusBar inline={<div className="shrink-0">{footer('page')}</div>}>{footer('status')}</InStatusBar>
     </div>
   )
 }

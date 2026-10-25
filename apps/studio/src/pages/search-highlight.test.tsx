@@ -12,7 +12,7 @@ import { receivePlayState } from '@/host/playState'
 /**
  * beta.9: the search in force is marked where it hits — the row, the opened
  * question beside the list — and a row whose hit sits somewhere it does not
- * show says where (*Found in answers*).
+ * show shows it: the answers themselves, cut so the hit is in view.
  */
 beforeEach(() => {
   useNavStore.setState({ route: HOME, back: [], forward: [], guard: null })
@@ -40,6 +40,11 @@ async function search(text: string) {
 const marks = () => [...document.querySelectorAll('mark[data-hit]')].map((m) => m.textContent)
 
 describe('search highlight (beta.9)', () => {
+  it('cuts the answers so a hit far along stays in view', async () => {
+    const { snippetAround } = await import('@questiongame/text')
+    expect(snippetAround('Alexandria · Antioch · Carthage · Constantinople · Rome', 'rome').startsWith('…')).toBe(true)
+  })
+
   it('marks a hit in the title and says nothing about where', async () => {
     await search('byzantine')
     await screen.findByText((_, el) => el?.tagName === 'MARK' && /byzantine/i.test(el.textContent ?? ''))
@@ -47,21 +52,26 @@ describe('search highlight (beta.9)', () => {
     expect(document.querySelector('[data-found]')).toBeNull()
   })
 
-  it('says Found in answers when the hit is only in an answer, and marks it in the options', async () => {
+  it('shows the answers when the hit is only in one, marked, in place of the subtitle', async () => {
     await search('rome')
-    const found = await screen.findByText('Found in answers')
-    expect(found).toBeTruthy()
+    const found = await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[data-found]')
+      expect(el?.textContent).toBe('Constantinople · Rome · Athens')
+      return el!
+    })
+    expect(found.querySelector('mark')?.textContent).toBe('Rome')
+    expect(document.body.textContent).not.toMatch(/Found in/)
     expect(marks()).toContain('Rome')
   })
 
   it('says where the words the stem lacks were found, when one word is in the stem', async () => {
     await search('byzantine rome')
-    expect(await screen.findByText('Found in answers')).toBeTruthy()
+    await waitFor(() => expect(document.querySelector('[data-found]')?.textContent).toBe('Constantinople · Rome · Athens'))
   })
 
   it('marks the hit in the opened question beside the list', async () => {
     await search('rome')
-    await screen.findByText('Found in answers')
+    await waitFor(() => expect(document.querySelector('[data-found]')).toBeTruthy())
     const row = screen.getByRole('checkbox', { name: /^Select Which city was the capital/ }).closest<HTMLElement>('[role="button"]')!
     fireEvent.click(row)
     await screen.findByText('Options')
@@ -71,7 +81,7 @@ describe('search highlight (beta.9)', () => {
 
   it('marks nothing once the search is cleared', async () => {
     await search('rome')
-    await screen.findByText('Found in answers')
+    await waitFor(() => expect(document.querySelector('[data-found]')).toBeTruthy())
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: '' } })
     await waitFor(() => expect(marks()).toEqual([]))
   })

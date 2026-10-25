@@ -2881,6 +2881,7 @@ packages:
         highlightRanges: {doc: "Where a search's words stand in a text (beta.9): `[start, end)` ranges of the **original** text, sorted and merged.", kind: function, sig: "(text: string, query: string | null | undefined): readonly (readonly [number, number])[]"}
         matchesSearch: {doc: "Does any of the search's words start a word of this text?", kind: const, sig: "#28fc96bd"}
         searchTerms: {doc: "The query's words, folded; nothing for a blank query.", kind: function, sig: "(query: string | null | undefined): readonly string[]"}
+        snippetAround: {doc: "A text cut so its first search hit is in view (beta.9): when the hit starts past `lead` characters, the text starts a word or so before it, after an ellipsis.", kind: function, sig: "(text: string, query: string | null | undefined, lead = 16): string"}
         variantTokens: {doc: "Resolve a variant to its tokens.", kind: function, sig: "(variant: TextVariant): VariantTokens"}
       packages/text/src/studio.tsx:
         StudioTransition: {kind: function, sig: "({ transition, children }: StudioTransitionProps)"}

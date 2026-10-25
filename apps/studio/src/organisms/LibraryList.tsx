@@ -25,7 +25,7 @@ export interface RecordView {
   readonly meta?: readonly ReactNode[] | undefined
   readonly isArchived?: boolean | undefined
   readonly isOverridden?: boolean | undefined
-  /** *Found in: …* — a search hit the row does not show (beta.9); set by the page while searching. */
+  /** A search hit outside the title (beta.9): the answers, the explanation or a tag, cut to show it; set by the page while searching. */
   readonly found?: string | undefined
 }
 

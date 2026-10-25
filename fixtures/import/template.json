@@ -1,0 +1,55 @@
+{
+  "format": "questiongame.questions",
+  "version": 1,
+  "guide": [
+    "This is a questiongame question file: questions for a quiz show, read on a big screen and answered by teams. Studio reads `format`, `version` and `questions`; it skips this `guide`, so it can stay in the file or be left out.",
+    "Answer with one JSON document of this shape: the same `format` and `version`, and every question in `questions`. Plain JSON: no comments, no trailing commas. At most 2,000 questions in one file.",
+    "The examples below show the shapes a row can take, not a pattern to copy. Vary everything they could have made look fixed: where the right answer stands, how many options there are, the difficulties, the domains, the language.",
+    "`question` (text): one question, short enough to read aloud in one breath, with one clear answer. Write it in the show's language.",
+    "`options` (2 or more; 3 to 5 is usual): each is either text, which is a wrong answer, or an object `{ \"text\": \"…\", \"correct\": true }`. They are shown in the order written.",
+    "Where the right answer stands is up to you, and it should not be predictable: spread it across first, second, third and last place over the file, roughly evenly. Do not always put it first.",
+    "Mark at least one option correct. Mark several and it becomes a multiple-answer question: a team must pick every correct one, and only those, unless the game's rules give part marks for a partial pick. The order of the answers a team picks does not matter.",
+    "Wrong options should be believable: the same kind of thing as the right answer, of similar length and form, none of them a joke or an obvious giveaway. Avoid 'all of the above' and 'none of the above'.",
+    "`difficulty` (a whole number, 1 to 100): 1–33 is easy, 34–66 medium, 67–100 hard. Depending on the game's rules it can also set what a right answer scores.",
+    "A game walks each domain from easy to hard, one question per difficulty. Inside one domain, give questions different difficulties and spread them (10, 20, 30… or 15, 35, 55…) rather than giving many the same number.",
+    "`domains` (a list): the domains the question belongs to, by name (\"History\") or by code (\"HIS_204\"). A domain in use (not archived) is joined by its name or code; anything else creates a domain of that name, so give codes only when you know them, and names otherwise. A question can be in several. Leave it out and it goes to the domain chosen in the import dialog.",
+    "`tags` (a list, up to 20, each at most 40 characters): topics, sources, eras, for finding and grouping questions in Studio. They are never shown on the show's screen.",
+    "`explanation` (text, optional): one or two sentences on why the answer is right, for the operator.",
+    "A row only needs a question or one option to come in. One that lacks a difficulty, a correct answer, a second option or a domain comes in incomplete, to be finished in Studio, and cannot be played until then. Give every field when you can.",
+    "Anything else on a row (ids, images, audio, scores, groups) is not read and is listed as ignored. A question that repeats one in the library or an earlier row of the file (the same text, the same options, the same right answers) is skipped."
+  ],
+  "questions": [
+    {
+      "question": "Which city was the capital of the Byzantine Empire?",
+      "options": ["Rome", { "text": "Constantinople", "correct": true }, "Athens", "Alexandria"],
+      "difficulty": 20,
+      "domains": ["History"],
+      "tags": ["Byzantium", "Capitals"],
+      "explanation": "Constantine refounded Byzantium as Constantinople in 330."
+    },
+    {
+      "question": "Care este capitala Australiei?",
+      "options": ["Sydney", "Melbourne", "Perth", { "text": "Canberra", "correct": true }],
+      "difficulty": 45,
+      "domains": ["Geografie"],
+      "tags": ["Capitale", "Oceania"]
+    },
+    {
+      "question": "Which two of these are prime numbers?",
+      "options": [{ "text": "2", "correct": true }, "4", { "text": "7", "correct": true }, "9"],
+      "difficulty": 30,
+      "domains": ["Mathematics"]
+    },
+    {
+      "question": "Which planet has the shortest year?",
+      "options": ["Venus", "Mars", { "text": "Mercury", "correct": true }],
+      "difficulty": 70,
+      "domains": ["Science", "Space"],
+      "explanation": "Mercury goes round the Sun in 88 days."
+    },
+    {
+      "question": "A row with only text and options comes in incomplete, to be finished in Studio.",
+      "options": ["Yes", "No"]
+    }
+  ]
+}

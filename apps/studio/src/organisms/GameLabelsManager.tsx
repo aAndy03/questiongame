@@ -115,7 +115,6 @@ export function GameLabelsManager({ isOpen, onClose, onShowInList }: GameLabelsM
         isOpen={isOpen}
         onClose={onClose}
         title={GAME_LABELS.manageTitle}
-        description={GAME_LABELS.manageBody}
         hook="data-game-labels-manager"
         list={
           <div className="flex flex-col gap-4">

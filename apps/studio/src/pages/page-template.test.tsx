@@ -35,7 +35,7 @@ const go = (route: Route) =>
   })
 
 describe('no page subtitles (beta.9)', () => {
-  it.each(['teams', 'library', 'games', 'operators', 'settings'] as const)('%s has its title and no subtitle', async (tab) => {
+  it.each(['teams', 'library', 'games', 'operators', 'settings', 'statistics'] as const)('%s has its title and no subtitle', async (tab) => {
     render(<App />)
     await go({ tab } as Route)
     expect(await screen.findByRole('heading', { level: 1, name: TABS[tab].label })).toBeTruthy()
@@ -56,5 +56,16 @@ describe('the Domains pane (beta.9)', () => {
     expect(scroller.contains(head)).toBe(false)
     expect(head.querySelector('[aria-label="Add domain"]')).toBeTruthy()
     expect(head.textContent).toContain('Active')
+  })
+})
+
+describe('the play status pill (beta.9)', () => {
+  it('is centred on the window, not on the header between the sidebar and the tools', async () => {
+    render(<App />)
+    await go({ tab: 'control' } as Route)
+    const pill = document.querySelector<HTMLElement>('[data-status-pill]')!
+    expect(pill.className).toContain('fixed')
+    expect(pill.className).toContain('left-1/2')
+    expect(pill.className).toContain('-translate-x-1/2')
   })
 })

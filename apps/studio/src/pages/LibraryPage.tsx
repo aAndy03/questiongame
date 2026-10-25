@@ -6,8 +6,8 @@ import { ListArea, SplitLayout } from '@/templates'
 import { useArchiveScope, useChromeStore, useListState, usePrefs } from '@/chrome/chrome'
 import { useNavStore } from '@/chrome/nav'
 import { toast } from '@/chrome/toast'
-import { DOMAIN, DRAG, IMPORT, LIST, MENU, QUESTION, SEARCH, SHARE, SHELL, TABS, VIEWS, fmt } from '@/copy'
-import { matchesSearch, searchTerms } from '@questiongame/text'
+import { DOMAIN, DRAG, IMPORT, LIST, MENU, QUESTION, SHARE, SHELL, TABS, VIEWS, fmt } from '@/copy'
+import { matchesSearch, searchTerms, snippetAround } from '@questiongame/text'
 import { TRANSFER } from '@/copy/workspaces'
 import { GROUPS_TAGS } from '@/copy/groupsTags'
 import { activeMemberIds, questionGaps } from '@/host/question'
@@ -168,9 +168,16 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
    * are left out and said; one write; the toast says what landed and what was
    * already there.
    */
-  const dropOn = async (ids: readonly string[], domainId: string, domainName: string, move: boolean): Promise<boolean> => {
+  // What a drop writes: the carried questions that are not archived.
+  const liveOf = (ids: readonly string[]) => {
     const byId = new Map((questions.data ?? []).map((q) => [q.id, q]))
-    const live = ids.filter((id) => { const q = byId.get(id); return q !== undefined && !isArchived(q) })
+    return ids.filter((id) => {
+      const q = byId.get(id)
+      return q !== undefined && !isArchived(q)
+    })
+  }
+  const dropOn = async (ids: readonly string[], domainId: string, domainName: string, move: boolean): Promise<boolean> => {
+    const live = liveOf(ids)
     const leftOut = ids.length - live.length
     if (live.length === 0) {
       toast.info(DRAG.archivedLeft(leftOut))
@@ -184,9 +191,15 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
   }
   // A grab carries the selection when the grabbed row is in it, else that row alone.
   const idsFor = (id: string) => grabbed(id, lv.selection.ids, inViewOrder)
+  // Every domain they are in, archived too: what the chip counts, and what a Move leaves —
+  // of the questions the drop writes, so archived ones, left out, count for nothing.
+  const homesOf = (ids: readonly string[]) => {
+    const carried = new Set(liveOf(ids))
+    return (domains.data ?? []).filter((d) => d.questions.some((m) => carried.has(m.questionId))).map((d) => ({ id: d.id, name: d.name }))
+  }
 
   return (
-    <QuestionDragProvider idsFor={idsFor} onDrop={dropOn}>
+    <QuestionDragProvider idsFor={idsFor} homesOf={homesOf} onDrop={dropOn}>
     <SplitLayout
       header={
         <PageHeader
@@ -410,9 +423,14 @@ function foundIn(q: { readonly stem: string; readonly options: readonly { readon
   // Only the words the stem lacks: *byzantine rome* with Byzantine in the stem says where Rome was.
   const query = searchTerms(search).filter((t) => !matchesSearch(q.stem, t)).join(' ')
   if (!query) return undefined
-  const where: string[] = []
-  if (q.options.some((o) => matchesSearch(o.text, query))) where.push(SEARCH.answers)
-  if (matchesSearch(q.explanation ?? null, query)) where.push(SEARCH.explanation)
-  if ((q.tags ?? []).some((t) => matchesSearch(t, query))) where.push(SEARCH.tags)
-  return where.length > 0 ? SEARCH.foundIn(where) : undefined
+  // The answers themselves (beta.9, in place of *Found in answers*), cut so
+  // the hit shows; else the explanation's words around it. A tag hit is its
+  // chip, marked where it stands, or past the three chips a row shows, here.
+  const answers = q.options.map((o) => o.text).join(' · ')
+  if (matchesSearch(answers, query)) return snippetAround(answers, query)
+  if (q.explanation && matchesSearch(q.explanation, query)) return snippetAround(q.explanation, query)
+  const tags = q.tags ?? []
+  if (tags.slice(0, 3).some((t) => matchesSearch(t, query))) return undefined
+  const hits = tags.filter((t) => matchesSearch(t, query))
+  return hits.length > 0 ? hits.join(' · ') : undefined
 }

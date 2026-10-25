@@ -35,3 +35,19 @@ export function InStatusBar({ children, inline }: { children: ReactNode; inline:
   if (!slot) return <>{inline}</>
   return slot.el ? createPortal(children, slot.el) : null
 }
+
+/**
+ * A dialog's own status bar (beta.9): the slot at the start of its footer, for
+ * the pages of the list in it. The dialog wraps its content in a
+ * `StatusSlotProvider`, so its list's pages land here and not in the app's.
+ * Not a `@container/status`: the fold that hides the page size and numbers
+ * in a narrow status bar (the `@max-[…]` queries on `status`) never applies
+ * in a dialog.
+ */
+export function DialogPages() {
+  return (
+    <div className="flex min-w-0 flex-1 items-center" data-dialog-pages>
+      <StatusSlot />
+    </div>
+  )
+}

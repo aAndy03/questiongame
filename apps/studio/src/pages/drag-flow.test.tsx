@@ -186,18 +186,43 @@ describe('what does not drop (beta.9)', () => {
   })
 })
 
+/** The chip's label and its note. */
+const chip = () => {
+  const el = document.querySelector('[data-drag-chip]')
+  return el ? [el.querySelector('span.whitespace-nowrap')?.textContent, el.querySelector('[data-drag-note]')?.textContent] : null
+}
+
 describe('the chip (beta.9)', () => {
+  it('counts every domain the carried questions are in, and what a Move over one of them replaces', async () => {
+    await onLibrary()
+    fireEvent.click(screen.getByRole('checkbox', { name: /^Select What does the L/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /^Select Which city was the capital/ }))
+    const h = dnd.handlers!
+    pointAt('dom-tech')
+    act(() => h.onDragStart({ operation: { source: { id: 'q-t1' } }, ...pointer(false) }))
+    act(() => h.onDragMove(pointer(false)))
+    // Technology and History between them.
+    expect(chip()).toEqual(['Add 2 to Technology', 'in 2 domains'])
+    act(() => h.onDragMove(pointer(true)))
+    // Moving into Technology replaces History alone.
+    expect(chip()).toEqual(['Move 2 to Technology', 'replaces 1 domain'])
+    expect(document.querySelector('[data-drag-note]')?.getAttribute('data-drag-note')).toBe('replaces')
+    await act(async () => {
+      h.onDragEnd({ canceled: true })
+    })
+  })
+
   it('follows the drag and says Add, or Move once Ctrl is down', async () => {
     await onLibrary()
     const h = dnd.handlers!
     pointAt('dom-sport')
     act(() => h.onDragStart({ operation: { source: { id: 'q-t1' } }, ...pointer(false) }))
     act(() => h.onDragMove(pointer(false)))
-    expect(document.querySelector('[data-drag-chip]')?.textContent).toBe('Add 1 to Sport')
+    expect(chip()).toEqual(['Add 1 to Sport', 'in 1 domain'])
     act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Control', ctrlKey: true })))
-    expect(document.querySelector('[data-drag-chip]')?.textContent).toBe('Move 1 to Sport')
+    expect(chip()).toEqual(['Move 1 to Sport', 'replaces 1 domain'])
     act(() => void window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Control', ctrlKey: false })))
-    expect(document.querySelector('[data-drag-chip]')?.textContent).toBe('Add 1 to Sport')
+    expect(chip()).toEqual(['Add 1 to Sport', 'in 1 domain'])
     await act(async () => {
       h.onDragEnd({ canceled: true })
     })

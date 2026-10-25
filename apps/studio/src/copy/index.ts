@@ -157,7 +157,6 @@ export const GAME_LABELS = {
   noTagHere: 'None of them has a game tag',
   manage: 'Folders and game tags…',
   manageTitle: 'Folders and game tags',
-  manageBody: 'How the Games list is organised. Neither is part of a show.',
   folders: 'Folders',
   gameTags: 'Game tags',
   foldersWhat: 'folders',
@@ -501,19 +500,15 @@ export const PICKER = {
   moreChosen: (n: number) => `and ${n} more`,
 } as const
 
-/** beta.9: where a search hit sits when the row does not show it. */
-export const SEARCH = {
-  answers: 'answers',
-  explanation: 'explanation',
-  tags: 'question tags',
-  foundIn: (where: readonly string[]) => `Found in ${where.join(', ')}`,
-} as const
-
 /** beta.9: dragging questions onto a domain in the Domains pane. */
 export const DRAG = {
   carrying: (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'question' : 'questions'}`,
   addTo: (n: number, domain: string) => `Add ${n.toLocaleString('en-US')} to ${domain}`,
   moveTo: (n: number, domain: string) => `Move ${n.toLocaleString('en-US')} to ${domain}`,
+  /** The chip's count while adding (beta.9): the domains they are in now. */
+  inDomains: (n: number) => (n === 0 ? 'in no domain yet' : `in ${n.toLocaleString('en-US')} ${n === 1 ? 'domain' : 'domains'}`),
+  /** While moving: the domains they leave. */
+  replaces: (n: number) => (n === 0 ? 'replaces none' : `replaces ${n.toLocaleString('en-US')} ${n === 1 ? 'domain' : 'domains'}`),
   added: (n: number, domain: string) => `Added ${n.toLocaleString('en-US')} ${n === 1 ? 'question' : 'questions'} to ${domain}`,
   moved: (n: number, domain: string) => `Moved ${n.toLocaleString('en-US')} ${n === 1 ? 'question' : 'questions'} to ${domain}`,
   allThere: (n: number, domain: string) => (n === 1 ? `That question is already in ${domain}` : `All ${n.toLocaleString('en-US')} are already in ${domain}`),
@@ -547,25 +542,20 @@ export const IMPORT = {
   changeFile: 'Choose another file',
   paste: 'Or paste the file',
   pasteHint: 'The preview follows what is in the box.',
-  editText: 'Edit the text',
-  hideText: 'Hide the text',
+  /** The two views of a loaded file (beta.9). */
+  view: 'View',
+  rowsTab: (n: number) => `Rows · ${n.toLocaleString('en-US')}`,
+  textTab: 'Text',
+  /** The column of counts beside the rows (beta.9). */
+  inFile: 'In this file',
+  leftOutCount: (n: number) => `${n.toLocaleString('en-US')} left out`,
+  newDomainsTitle: (n: number) => (n === 1 ? 'Creates 1 domain' : `Creates ${n.toLocaleString('en-US')} domains`),
   fileRows: (name: string | null, n: number) => `${name ?? 'Pasted text'} · ${n === 1 ? '1 row' : `${n.toLocaleString('en-US')} rows`}`,
   copyTemplate: 'Copy template',
   templateCopied: 'Template copied',
   defaultDomain: 'Questions without a domain go to',
   noDomain: 'No domain',
   empty: 'Choose a file or paste one to see what it holds.',
-  summary: (c: ImportCounts, newDomains: number): string =>
-    [
-      `${c.complete} complete`,
-      c.incomplete ? `${c.incomplete} incomplete` : null,
-      c.duplicate ? `${c.duplicate} ${c.duplicate === 1 ? 'duplicate' : 'duplicates'}` : null,
-      c.rejected ? `${c.rejected} rejected` : null,
-      c.skipped ? `${c.skipped} left out` : null,
-      newDomains ? `${newDomains} new ${newDomains === 1 ? 'domain' : 'domains'}` : null,
-    ]
-      .filter(Boolean)
-      .join(' · '),
   /** One count, as a button that filters the list to it (P20). */
   count: (n: number, status: 'complete' | 'incomplete' | 'duplicate' | 'rejected') =>
     `${n.toLocaleString('en-US')} ${{ complete: 'complete', incomplete: 'incomplete', duplicate: n === 1 ? 'duplicate' : 'duplicates', rejected: 'rejected' }[status]}`,
@@ -577,7 +567,6 @@ export const IMPORT = {
         ? 'more than 20 question tags, or one over 40 characters, ignored'
         : { unknown: 'unknown field, ignored', wrong_type: 'wrong type, ignored', out_of_range: 'outside 1–100, ignored', empty: 'empty, ignored' }[i.why]
     }`,
-  newDomains: (names: readonly string[]) => `New domains: ${names.join(', ')}`,
   landsIn: (landing: readonly string[]) => `In ${landing.join(' · ')}`,
   tags: (tags: readonly string[]) => `Question tags: ${tags.join(', ')}`,
   /** What a duplicate repeats: a question here, or an earlier row of the same file. */
@@ -612,35 +601,62 @@ export const IMPORT = {
   rowDomainsHint: 'Names or codes, as in a file. A name no domain has becomes a new domain.',
   ignoredTitle: 'Ignored in the file',
   /** The document 05_STUDIO_DESIGN.md §17.2 describes, ready to fill in. */
+  /**
+   * The template (beta.9): a `guide` the readers skip, written for whoever
+   * fills the file in (an AI agent included), and examples that vary what a
+   * copier would otherwise take as fixed, like where the right answer stands.
+   */
   template: `{
   "format": "questiongame.questions",
   "version": 1,
+  "guide": [
+    "This is a questiongame question file: questions for a quiz show, read on a big screen and answered by teams. Studio reads \`format\`, \`version\` and \`questions\`; it skips this \`guide\`, so it can stay in the file or be left out.",
+    "Answer with one JSON document of this shape: the same \`format\` and \`version\`, and every question in \`questions\`. Plain JSON: no comments, no trailing commas. At most 2,000 questions in one file.",
+    "The examples below show the shapes a row can take, not a pattern to copy. Vary everything they could have made look fixed: where the right answer stands, how many options there are, the difficulties, the domains, the language.",
+    "\`question\` (text): one question, short enough to read aloud in one breath, with one clear answer. Write it in the show's language.",
+    "\`options\` (2 or more; 3 to 5 is usual): each is either text, which is a wrong answer, or an object \`{ \\"text\\": \\"…\\", \\"correct\\": true }\`. They are shown in the order written.",
+    "Where the right answer stands is up to you, and it should not be predictable: spread it across first, second, third and last place over the file, roughly evenly. Do not always put it first.",
+    "Mark at least one option correct. Mark several and it becomes a multiple-answer question: a team must pick every correct one, and only those, unless the game's rules give part marks for a partial pick. The order of the answers a team picks does not matter.",
+    "Wrong options should be believable: the same kind of thing as the right answer, of similar length and form, none of them a joke or an obvious giveaway. Avoid 'all of the above' and 'none of the above'.",
+    "\`difficulty\` (a whole number, 1 to 100): 1–33 is easy, 34–66 medium, 67–100 hard. Depending on the game's rules it can also set what a right answer scores.",
+    "A game walks each domain from easy to hard, one question per difficulty. Inside one domain, give questions different difficulties and spread them (10, 20, 30… or 15, 35, 55…) rather than giving many the same number.",
+    "\`domains\` (a list): the domains the question belongs to, by name (\\"History\\") or by code (\\"HIS_204\\"). A domain in use (not archived) is joined by its name or code; anything else creates a domain of that name, so give codes only when you know them, and names otherwise. A question can be in several. Leave it out and it goes to the domain chosen in the import dialog.",
+    "\`tags\` (a list, up to 20, each at most 40 characters): topics, sources, eras, for finding and grouping questions in Studio. They are never shown on the show's screen.",
+    "\`explanation\` (text, optional): one or two sentences on why the answer is right, for the operator.",
+    "A row only needs a question or one option to come in. One that lacks a difficulty, a correct answer, a second option or a domain comes in incomplete, to be finished in Studio, and cannot be played until then. Give every field when you can.",
+    "Anything else on a row (ids, images, audio, scores, groups) is not read and is listed as ignored. A question that repeats one in the library or an earlier row of the file (the same text, the same options, the same right answers) is skipped."
+  ],
   "questions": [
     {
+      "question": "Which city was the capital of the Byzantine Empire?",
+      "options": ["Rome", { "text": "Constantinople", "correct": true }, "Athens", "Alexandria"],
+      "difficulty": 20,
+      "domains": ["History"],
+      "tags": ["Byzantium", "Capitals"],
+      "explanation": "Constantine refounded Byzantium as Constantinople in 330."
+    },
+    {
       "question": "Care este capitala Australiei?",
-      "options": [
-        { "text": "Canberra", "correct": true },
-        { "text": "Sydney" },
-        "Melbourne",
-        "Perth"
-      ],
-      "difficulty": 50,
+      "options": ["Sydney", "Melbourne", "Perth", { "text": "Canberra", "correct": true }],
+      "difficulty": 45,
       "domains": ["Geografie"],
-      "tags": ["Capitale", "Oceania"],
-      "explanation": "Optional."
+      "tags": ["Capitale", "Oceania"]
     },
     {
-      "question": "Which two of these are primes?",
-      "options": [
-        { "text": "2", "correct": true },
-        { "text": "3", "correct": true },
-        "4"
-      ],
+      "question": "Which two of these are prime numbers?",
+      "options": [{ "text": "2", "correct": true }, "4", { "text": "7", "correct": true }, "9"],
       "difficulty": 30,
-      "domains": ["MAT_086"]
+      "domains": ["Mathematics"]
     },
     {
-      "question": "A row with only text and options comes in incomplete.",
+      "question": "Which planet has the shortest year?",
+      "options": ["Venus", "Mars", { "text": "Mercury", "correct": true }],
+      "difficulty": 70,
+      "domains": ["Science", "Space"],
+      "explanation": "Mercury goes round the Sun in 88 days."
+    },
+    {
+      "question": "A row with only text and options comes in incomplete, to be finished in Studio.",
       "options": ["Yes", "No"]
     }
   ]

@@ -48,7 +48,11 @@ export interface RecordRowProps {
   isCarried?: boolean | undefined
   /** The search in force (beta.9): marked in the title, the subtitle and the note. */
   highlight?: string | null | undefined
-  /** Where a search hit that the row does not show sits — *Found in: explanation* (beta.9). */
+  /**
+   * A search hit outside the title (beta.9): the answers, or the explanation's
+   * words, cut so the hit shows. It takes the subtitle's place, marked, and in
+   * a table it shows at every width — it is why the row is here.
+   */
   found?: string | undefined
 }
 
@@ -156,19 +160,14 @@ export function RecordRow({
             <Text variant="studio-body" tone={tone} className="line-clamp-3 break-words font-medium" highlight={highlight}>
               {title}
             </Text>
-            {subtitle ? (
-              <Text variant="studio-caption" tone="muted" truncate highlight={highlight}>
-                {subtitle}
+            {found ?? subtitle ? (
+              <Text variant="studio-caption" tone="muted" truncate highlight={highlight} {...(found ? { 'data-found': '' } : {})}>
+                {found ?? subtitle}
               </Text>
             ) : null}
             {note ? (
               <Text variant="studio-caption" tone="muted" truncate highlight={highlight}>
                 {note}
-              </Text>
-            ) : null}
-            {found ? (
-              <Text variant="studio-caption" tone="muted" truncate className="italic" data-found>
-                {found}
               </Text>
             ) : null}
           </div>
@@ -231,13 +230,13 @@ export function RecordRow({
         <Text variant="studio-label" tone={tone} truncate className="min-w-[8rem] flex-1" highlight={highlight}>
           {title}
         </Text>
-        {/* Always shown, whatever the width: it is why the row is here (beta.9). */}
+        {/* Always shown, whatever the width, in the subtitle's place: it is why the row is here (beta.9). */}
         {found ? (
-          <span className="shrink-0" data-found>
-            <Text variant="studio-caption" tone="muted" className="italic">
+          <div className="w-[35%] min-w-0 shrink-0" data-found>
+            <Text variant="studio-caption" tone="muted" truncate highlight={highlight}>
               {found}
             </Text>
-          </span>
+          </div>
         ) : null}
         {/*
           The wrapper hides them, not the Text: a truncated Text sets an inline
@@ -252,7 +251,7 @@ export function RecordRow({
             </Text>
           </div>
         ) : null}
-        {subtitle ? (
+        {subtitle && !found ? (
           <div className="hidden min-w-0 max-w-[30%] @5xl/list:block">
             <Text variant="studio-caption" tone="muted" truncate highlight={highlight}>
               {subtitle}

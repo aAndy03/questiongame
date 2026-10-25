@@ -16,7 +16,7 @@ describe('Text module', () => {
   })
 })
 
-import { highlightRanges, matchesSearch, searchTerms } from './index'
+import { highlightRanges, matchesSearch, searchTerms, snippetAround } from './index'
 
 const marked = (text: string, q: string) => highlightRanges(text, q).map(([a, b]) => text.slice(a, b))
 
@@ -56,5 +56,27 @@ describe('highlight (beta.9)', () => {
     expect(matchesSearch('Sydney', 'syd')).toBe(true)
     expect(matchesSearch('Sydney', 'ney')).toBe(false)
     expect(matchesSearch(null, 'x')).toBe(false)
+  })
+})
+
+describe('a snippet keeps the hit in view (beta.9)', () => {
+  it('leaves a text whose hit is near its start as it is', () => {
+    expect(snippetAround('Rome · Athens', 'rome')).toBe('Rome · Athens')
+    expect(snippetAround('Constantinople · Rome', 'rom', 20)).toBe('Constantinople · Rome')
+  })
+  it('starts at the word before a hit far in, after an ellipsis', () => {
+    const answers = 'Alexandria · Antioch · Carthage · Constantinople · Rome · Athens'
+    const cut = snippetAround(answers, 'rome')
+    expect(cut.startsWith('…')).toBe(true)
+    expect(cut.endsWith('Rome · Athens')).toBe(true)
+    expect(cut).toBe('…Constantinople · Rome · Athens')
+  })
+  it('breaks on any non-letter, never starts on a separator, never splits an emoji', () => {
+    expect(snippetAround('ABCDEFGHIJKLMNOPQRSTUVWXYZ-Rome', 'rome')).toBe('…Rome')
+    expect(snippetAround('Alpha · Beta · 😀😀 · Rome', 'rome', 8)).toBe('…😀😀 · Rome')
+    expect(snippetAround('one\nline two and more\nRome', 'rome', 6)).toBe('…and more\nRome')
+  })
+  it('leaves a text without a hit as it is', () => {
+    expect(snippetAround('Alexandria · Antioch · Carthage', 'rome')).toBe('Alexandria · Antioch · Carthage')
   })
 })
