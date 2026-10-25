@@ -41,6 +41,14 @@ pub enum BulkEdit {
     RemoveFromDomain {
         domain_id: DomainId,
     },
+    /// Into this domain and **out of every other** — archived ones too — so
+    /// each question ends in the target alone (beta.9: a drag with Ctrl held,
+    /// *Move to domain…*). One write; a question already only there is
+    /// unchanged. Like every bulk edit it may leave a board with a clash,
+    /// which Load reports (§2.31).
+    MoveToDomain {
+        domain_id: DomainId,
+    },
     SetDifficulty {
         difficulty: Option<u8>,
     },
@@ -260,6 +268,42 @@ fn apply(
                 }
             }
             membership(tx, &domain, &mut report, now_ms)?;
+        }
+        BulkEdit::MoveToDomain { domain_id } => {
+            let mut target = store::domain_get(tx, domain_id)?;
+            let mut next = target.questions.iter().map(|m| m.sort_key + 1).max().unwrap_or(0);
+            // Every other domain holding any of them, each written once.
+            let mut others: Vec<super::model::Domain> = Vec::new();
+            for q in &questions {
+                for d in store::domains_holding(tx, q.id.as_str())? {
+                    if d.id != *domain_id && !others.iter().any(|o| o.id == d.id) {
+                        others.push(d);
+                    }
+                }
+            }
+            for q in &questions {
+                let joins = !target.questions.iter().any(|m| m.question_id == q.id);
+                if joins {
+                    target.questions.push(DomainMember { question_id: q.id.clone(), sort_key: next, group_id: None });
+                    next += 1;
+                }
+                let leaves = others.iter().any(|d| d.questions.iter().any(|m| m.question_id == q.id));
+                if joins || leaves {
+                    report.changed.push(q.id.clone());
+                } else {
+                    report.unchanged.push(q.id.clone());
+                }
+            }
+            if !report.changed.is_empty() {
+                for d in &mut others {
+                    let before = d.questions.len();
+                    d.questions.retain(|m| !report.changed.contains(&m.question_id));
+                    if d.questions.len() != before {
+                        store::domain_upsert(tx, d, now_ms)?;
+                    }
+                }
+            }
+            membership(tx, &target, &mut report, now_ms)?;
         }
         BulkEdit::RemoveFromDomain { domain_id } => {
             let mut domain = store::domain_get(tx, domain_id)?;

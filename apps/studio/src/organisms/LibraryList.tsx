@@ -7,6 +7,7 @@ import { crumb } from '@/chrome/diagnostics'
 import { footerText, isActive, type ListEntry } from '@/host/listView'
 import type { ListViewApi } from '@/host/useListView'
 import type { ArchiveScope } from '@/host/types'
+import { DraggableQuestion } from './QuestionDrag'
 
 /**
  * What a record list needs from a row to draw it. Each tab maps its entity to
@@ -70,6 +71,11 @@ export interface LibraryListProps {
   onRetry?: (() => void) | undefined
   /** A group header's menu, by the group's key; nothing for a header without one. */
   headerActions?: ((key: string, label: string) => ReactNode) | undefined
+  /**
+   * Rows can be grabbed and dropped on a domain (beta.9, Domains & Questions;
+   * inside a `QuestionDragProvider`). No handle and no sign: the row is the grip.
+   */
+  draggable?: boolean | undefined
 }
 
 const VIRTUAL_ABOVE = 200
@@ -110,6 +116,7 @@ export function LibraryList({
   bulk,
   onRetry,
   headerActions,
+  draggable,
 }: LibraryListProps) {
   const { page, selection, state } = view
   const where = `${what} rows=${total ?? 'none'} layout=${layout}`
@@ -150,11 +157,15 @@ export function LibraryList({
     const { row } = entry
     const record = row.item.view
     position += 1
-    return (
+    // Fixed now: `draw` may run later, inside the draggable, after the loop moved on.
+    const index = layout === 'table' ? offset + position : undefined
+    const draw = (rowRef?: (el: Element | null) => void, carried?: boolean) => (
       <RecordRow
         key={row.key}
+        rowRef={rowRef}
+        isCarried={carried}
         layout={layout}
-        index={layout === 'table' ? offset + position : undefined}
+        index={index}
         leading={record.leading}
         title={record.title}
         subtitle={record.subtitle}
@@ -171,6 +182,13 @@ export function LibraryList({
         onSelectGesture={bulk ? (range) => selection.pick(row.item.id, range) : undefined}
         onOpen={onOpen ? () => onOpen(row.item.id) : undefined}
       />
+    )
+    return draggable ? (
+      <DraggableQuestion key={row.key} id={row.item.id}>
+        {(ref, carried) => draw(ref, carried)}
+      </DraggableQuestion>
+    ) : (
+      draw()
     )
   }
 

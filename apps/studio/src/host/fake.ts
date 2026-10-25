@@ -29,6 +29,7 @@ import type {
   AudioSettings,
   BoardSettings,
   CatalogItem,
+  Domain,
   ControlSettings,
   Disabled,
   FeatureRoots,
@@ -1572,6 +1573,30 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
           members = members.filter((m) => !changed.includes(m.questionId))
         }
         if (changed.length > 0) writes.push(() => void upsert({ kind: 'domain', item: { ...d, questions: members } }))
+        break
+      }
+      // The host's MoveToDomain, mirrored: into the target, out of every other
+      // domain in view, archived ones too.
+      case 'move_to_domain': {
+        const target = domainInView(edit.domainId)
+        const others = [...library.values()]
+          .filter((r) => r.kind === 'domain' && r.item.id !== target.id && inView(key('domain', r.item.id)))
+          .map((r) => r.item as Domain)
+        const members = [...target.questions]
+        let next = Math.max(-1, ...members.map((m) => m.sortKey)) + 1
+        for (const id of unique) {
+          const joins = !members.some((m) => m.questionId === id)
+          if (joins) members.push({ questionId: id, sortKey: next++, groupId: null })
+          const leaves = others.some((d) => d.questions.some((m) => m.questionId === id))
+          ;(joins || leaves ? changed : unchanged).push(id)
+        }
+        if (changed.length > 0) {
+          for (const d of others) {
+            const kept = d.questions.filter((m) => !changed.includes(m.questionId))
+            if (kept.length !== d.questions.length) writes.push(() => void upsert({ kind: 'domain', item: { ...d, questions: kept } }))
+          }
+          writes.push(() => void upsert({ kind: 'domain', item: { ...target, questions: members } }))
+        }
         break
       }
     }

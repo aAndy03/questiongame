@@ -83,6 +83,9 @@ export const GROUPS_TAGS = {
   bulkGroup: 'Set domain group…',
   bulkAdd: 'Add to domain…',
   bulkRemove: 'Remove from domain',
+  /** beta.9: into one domain and out of every other. */
+  bulkMove: 'Move to domain…',
+  moveBody: 'Each question leaves every other domain it is in, so it ends in this one alone.',
   bulkDifficulty: 'Set difficulty…',
   pickTag: 'Question tag',
   pickTagHint: 'A tag already used, or a new one.',
@@ -98,6 +101,7 @@ export const GROUPS_TAGS = {
   notInDomain: (n: number) => `${n} not in this domain.`,
   alreadyInDomain: 'in that domain',
   alreadyOut: 'not in this domain',
+  alreadyOnlyIn: 'only in that domain',
   alreadyDifficulty: 'at that difficulty',
   removeBody: 'They stay in the library and in their other domains.',
   difficultyNote: 'A board holding two at one difficulty says so when the game loads.',

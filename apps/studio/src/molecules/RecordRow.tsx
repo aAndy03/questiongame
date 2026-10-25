@@ -42,6 +42,10 @@ export interface RecordRowProps {
    */
   index?: number | undefined
   onOpen?: (() => void) | undefined
+  /** The row's element, for a drag that grabs the row itself (beta.9: questions onto a domain). */
+  rowRef?: ((el: Element | null) => void) | undefined
+  /** Being carried in a drag: dimmed where it stands. */
+  isCarried?: boolean | undefined
 }
 
 /**
@@ -67,6 +71,8 @@ export function RecordRow({
   isCurrent,
   index,
   onOpen,
+  rowRef,
+  isCarried,
 }: RecordRowProps) {
   const selectable = onSelectChange !== undefined
   const tone = isArchived ? 'muted' : 'default'
@@ -80,6 +86,7 @@ export function RecordRow({
     isSelected ? 'bg-[var(--accent)]/8' : '',
     isOverridden ? 'border-l-2 border-l-[var(--accent)]' : '',
     isArchived ? 'opacity-70' : '',
+    isCarried ? 'opacity-40' : '',
   ].join(' ')
 
   // Shift held when the checkbox was pressed: React Aria's onChange has no
@@ -117,6 +124,7 @@ export function RecordRow({
   if (layout === 'grid') {
     return (
       <div
+        ref={rowRef}
         role={onOpen ? 'button' : undefined}
         tabIndex={onOpen ? 0 : undefined}
         onClick={click}
@@ -181,6 +189,7 @@ export function RecordRow({
 
   return (
     <div
+      ref={rowRef}
       role={onOpen ? 'button' : 'row'}
       tabIndex={onOpen ? 0 : undefined}
       onClick={click}

@@ -501,6 +501,22 @@ export const PICKER = {
   moreChosen: (n: number) => `and ${n} more`,
 } as const
 
+/** beta.9: dragging questions onto a domain in the Domains pane. */
+export const DRAG = {
+  carrying: (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'question' : 'questions'}`,
+  addTo: (n: number, domain: string) => `Add ${n.toLocaleString('en-US')} to ${domain}`,
+  moveTo: (n: number, domain: string) => `Move ${n.toLocaleString('en-US')} to ${domain}`,
+  added: (n: number, domain: string) => `Added ${n.toLocaleString('en-US')} ${n === 1 ? 'question' : 'questions'} to ${domain}`,
+  moved: (n: number, domain: string) => `Moved ${n.toLocaleString('en-US')} ${n === 1 ? 'question' : 'questions'} to ${domain}`,
+  allThere: (n: number, domain: string) => (n === 1 ? `That question is already in ${domain}` : `All ${n.toLocaleString('en-US')} are already in ${domain}`),
+  allOnlyThere: (n: number, domain: string) => (n === 1 ? `That question is already only in ${domain}` : `All ${n.toLocaleString('en-US')} are already only in ${domain}`),
+  alreadyThere: (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'was' : 'were'} already there`,
+  archivedLeft: (n: number) => `${n.toLocaleString('en-US')} archived ${n === 1 ? 'was' : 'were'} left out`,
+  /** The row menu's way to the same two writes. */
+  addToDomain: 'Add to domain…',
+  moveToDomain: 'Move to domain…',
+} as const
+
 /** beta.8: *Share* on Domains & Questions — the picked questions as the text *Import questions…* reads. */
 export const SHARE = {
   action: 'Share',

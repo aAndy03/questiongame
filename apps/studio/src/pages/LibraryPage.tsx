@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button, MeaningChip, Text } from '@/atoms'
 import { ActionMenu, DifficultyChip, IncompleteMark, PageHeader } from '@/molecules'
-import { DomainPane, ImportQuestionsDialog, LibraryList, ListToolbar, QuestionDetail, useArchive, useTransfer, useBulkEdit, DomainGroupsManager, QuestionTagsManager, useGroupEditing, useShareQuestions, type RecordView } from '@/organisms'
+import { DomainPane, ImportQuestionsDialog, LibraryList, ListToolbar, QuestionDetail, useArchive, useTransfer, useBulkEdit, DomainGroupsManager, QuestionTagsManager, useGroupEditing, useShareQuestions, QuestionDragProvider, dropSummary, grabbed, type RecordView } from '@/organisms'
 import { ListArea, SplitLayout } from '@/templates'
 import { useArchiveScope, useChromeStore, useListState, usePrefs } from '@/chrome/chrome'
 import { useNavStore } from '@/chrome/nav'
 import { toast } from '@/chrome/toast'
-import { DOMAIN, IMPORT, LIST, MENU, QUESTION, SHARE, SHELL, TABS, VIEWS, fmt } from '@/copy'
+import { DOMAIN, DRAG, IMPORT, LIST, MENU, QUESTION, SHARE, SHELL, TABS, VIEWS, fmt } from '@/copy'
 import { TRANSFER } from '@/copy/workspaces'
 import { GROUPS_TAGS } from '@/copy/groupsTags'
 import { activeMemberIds, questionGaps } from '@/host/question'
 import { questionsSpec, type QuestionItem } from '@/host/listSpecs'
 import type { ListItem } from '@/host/listView'
 import { useCatalogList, useListHits, useTags } from '@/host/queries'
-import { answerMode, isArchived } from '@/host/types'
+import { answerMode, isArchived, type BulkReport } from '@/host/types'
 import { useListView } from '@/host/useListView'
 import { useHostCommand } from '@/host/commands'
 
@@ -153,7 +153,31 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
   if (groupsOpen && !(domain && domain.archivedAt === null)) setGroupsOpen(false)
   const newRoute = { tab: 'library' as const, mode: 'new' as const, ...(domainId ? { domainId } : {}) }
 
+  /**
+   * A drop on a domain (beta.9): the grabbed row, or the whole selection when
+   * it is in it (hidden rows too — the strip counted them). Archived questions
+   * are left out and said; one write; the toast says what landed and what was
+   * already there.
+   */
+  const dropOn = async (ids: readonly string[], domainId: string, domainName: string, move: boolean): Promise<boolean> => {
+    const byId = new Map((questions.data ?? []).map((q) => [q.id, q]))
+    const live = ids.filter((id) => { const q = byId.get(id); return q !== undefined && !isArchived(q) })
+    const leftOut = ids.length - live.length
+    if (live.length === 0) {
+      toast.info(DRAG.archivedLeft(leftOut))
+      return false
+    }
+    const report = await run<BulkReport>('catalog_bulk_edit', { ids: live, edit: { op: move ? 'move_to_domain' : 'add_to_domain', domainId }, preview: false })
+    if (report === null) return false
+    const said = dropSummary(report, leftOut, move, domainName)
+    ;(said.changed ? toast.success : toast.info)(said.text)
+    return said.changed
+  }
+  // A grab carries the selection when the grabbed row is in it, else that row alone.
+  const idsFor = (id: string) => grabbed(id, lv.selection.ids, inViewOrder)
+
   return (
+    <QuestionDragProvider idsFor={idsFor} onDrop={dropOn}>
     <SplitLayout
       header={
         <PageHeader
@@ -222,6 +246,7 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
             }
           >
             <LibraryList
+              draggable
               view={lv}
               total={scoped?.length}
               scope={scope}
@@ -271,6 +296,7 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
                       items: [
                         { id: 'duplicate', label: LIST.duplicate, icon: 'duplicate' },
                         { id: 'share', label: SHARE.action, icon: 'share' },
+                        ...(row.isArchived ? [] : [{ id: 'add_domain', label: DRAG.addToDomain, icon: 'add' as const }, { id: 'move_domain', label: DRAG.moveToDomain, icon: 'transfer' as const }]),
                         { id: 'copy', label: TRANSFER.copyTo, icon: 'copy' },
                         { id: 'move', label: TRANSFER.moveTo, icon: 'transfer' },
                         ...(questions.data?.find((q) => q.id === row.id)?.familyId != null ? [{ id: 'unfollow', label: TRANSFER.unfollow, icon: 'unlink' as const }] : []),
@@ -286,6 +312,10 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
                     if (a === 'copy' || a === 'move') transfer.open(a, { questions: [row.id] })
                     if (a === 'duplicate') void duplicate([row.id])
                     if (a === 'share') void sharing.share([row.id])
+                    // beta.9: the keyboard way to what a drag onto a domain does.
+                    const one = (questions.data ?? []).filter((q) => q.id === row.id)
+                    if (a === 'add_domain') bulkEdit.start('add_to_domain', [row.id], { domain: domain && domain.archivedAt === null ? domain : null, questions: one })
+                    if (a === 'move_domain') bulkEdit.start('move_to_domain', [row.id], { domain: domain && domain.archivedAt === null ? domain : null, questions: one })
                     if (a === 'unfollow') void run.ok('catalog_unfollow', { kind: 'question', id: row.id })
                     const at = domainId ? { domainId } : {}
                     if (a === 'open') void go({ tab: 'library', questionId: row.id, mode: 'view', ...at })
@@ -363,5 +393,6 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
         </>
       }
     />
+    </QuestionDragProvider>
   )
 }

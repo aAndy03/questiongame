@@ -27,6 +27,8 @@ export interface BulkEditContext {
 export interface BulkEditController {
   menu(ids: readonly string[], ctx: BulkEditContext): ReactNode
   dialog: ReactNode
+  /** Open one edit straight away — a question row's *Add to domain…* / *Move to domain…* (beta.9). */
+  start(op: BulkEdit['op'], ids: readonly string[], ctx: BulkEditContext): void
 }
 
 const TITLE: Record<Op, string> = {
@@ -35,6 +37,7 @@ const TITLE: Record<Op, string> = {
   group: GROUPS_TAGS.bulkGroup,
   add_to_domain: GROUPS_TAGS.bulkAdd,
   remove_from_domain: GROUPS_TAGS.bulkRemove,
+  move_to_domain: GROUPS_TAGS.bulkMove,
   set_difficulty: GROUPS_TAGS.bulkDifficulty,
 }
 
@@ -67,7 +70,8 @@ export function useBulkEdit(): BulkEditController {
       case 'group':
         return ctx.domain && choice !== null ? { op: 'group', domainId: ctx.domain.id, groupId: choice === '~none' ? null : choice } : null
       case 'add_to_domain':
-        return choice ? { op: 'add_to_domain', domainId: choice } : null
+      case 'move_to_domain':
+        return choice ? { op: open.op, domainId: choice } : null
       case 'remove_from_domain':
         return ctx.domain ? { op: 'remove_from_domain', domainId: ctx.domain.id } : null
       case 'set_difficulty':
@@ -144,6 +148,7 @@ export function useBulkEdit(): BulkEditController {
       group: GROUPS_TAGS.alreadyGrouped,
       add_to_domain: GROUPS_TAGS.alreadyInDomain,
       remove_from_domain: GROUPS_TAGS.alreadyOut,
+      move_to_domain: GROUPS_TAGS.alreadyOnlyIn,
       set_difficulty: GROUPS_TAGS.alreadyDifficulty,
     }[open.op]
     return GROUPS_TAGS.already(n, what)
@@ -196,6 +201,15 @@ export function useBulkEdit(): BulkEditController {
                   onChange={setChoice}
                   options={(domains.data ?? []).filter((d) => d.id !== ctx.domain?.id).map((d) => ({ value: d.id, label: d.name }))}
                 />
+              ) : null}
+              {/* beta.9: any active domain — the one in view too, which takes them out of the rest. */}
+              {open?.op === 'move_to_domain' ? (
+                <>
+                  <SelectField label={GROUPS_TAGS.pickDomain} value={choice} onChange={setChoice} options={(domains.data ?? []).map((d) => ({ value: d.id, label: d.name }))} />
+                  <Text as="p" variant="studio-caption" tone="muted">
+                    {GROUPS_TAGS.moveBody}
+                  </Text>
+                </>
               ) : null}
               {open?.op === 'remove_from_domain' ? (
                 <Text as="p" variant="studio-body" tone="muted">
@@ -261,6 +275,7 @@ export function useBulkEdit(): BulkEditController {
         items: [
           ...(inside ? [{ id: 'group', label: GROUPS_TAGS.bulkGroup, icon: 'folder' as const }] : []),
           { id: 'add_to_domain', label: GROUPS_TAGS.bulkAdd, icon: 'add' },
+          { id: 'move_to_domain', label: GROUPS_TAGS.bulkMove, icon: 'transfer' },
           ...(inside ? [{ id: 'remove_from_domain', label: GROUPS_TAGS.bulkRemove, icon: 'remove' as const }] : []),
         ],
       },
@@ -280,5 +295,5 @@ export function useBulkEdit(): BulkEditController {
     )
   }
 
-  return { menu, dialog }
+  return { menu, dialog, start }
 }

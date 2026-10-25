@@ -12,6 +12,8 @@ import { toast } from '@/chrome/toast'
 import { useTransfer } from './useTransfer'
 import { usePropagatingSave } from './usePropagatingSave'
 import { TRANSFER } from '@/copy/workspaces'
+import { motion, useReducedMotion } from 'motion/react'
+import { dropTarget, useQuestionDrag } from './QuestionDrag'
 
 export interface DomainPaneProps {
   selectedId: string | null
@@ -56,6 +58,7 @@ export function DomainPane({ selectedId, onSelect, pickedIds = [], onPickMany }:
     }
   }, [questions.data, domains.data])
   const archive = useArchive()
+  const drag = useQuestionDrag()
   // Where Shift+click spans from: the last domain clicked.
   const anchor = useRef<string | null>(selectedId)
   const lit = pickedIds.length > 0 ? pickedIds : selectedId ? [selectedId] : []
@@ -167,6 +170,8 @@ export function DomainPane({ selectedId, onSelect, pickedIds = [], onPickMany }:
                   incomplete={scope === 'active' ? incomplete.of(d) : undefined}
                   isSelected={lit.includes(d.id)}
                   isArchived={d.archivedAt !== null}
+                  // A drop target while questions are dragged (beta.9): active domains only.
+                  drop={scope === 'active' ? { id: d.id, name: d.name, accepting: drag.state !== null, over: drag.state?.over?.id === d.id, pulse: drag.pulse?.id === d.id ? drag.pulse.n : 0 } : undefined}
                   onSelect={(e) => choose(d.id, e)}
                   actions={
                     <ActionMenu
@@ -220,6 +225,7 @@ function DomainRow({
   isArchived,
   onSelect,
   actions,
+  drop,
 }: {
   name: string
   code: string
@@ -231,6 +237,11 @@ function DomainRow({
   /** The click, for its Ctrl/⌘ and Shift; `null` from the keyboard. */
   onSelect: (e: MouseEvent | null) => void
   actions?: React.ReactNode
+  /**
+   * A place questions can be dropped (beta.9): outlined while a drag is on,
+   * lit and lifted under the pointer, its count pulsing once after a drop.
+   */
+  drop?: { id: string; name: string; accepting: boolean; over: boolean; pulse: number } | undefined
 }) {
   return (
     <div
@@ -250,9 +261,16 @@ function DomainRow({
       }}
       className={[
         'group flex min-h-11 cursor-pointer items-center gap-2 rounded-[calc(var(--radius)/1.5)] py-1 pr-1 pl-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]',
-        isSelected ? 'bg-[var(--accent)]/12' : 'hover:bg-[var(--surface-secondary)]',
+        drop?.over
+          ? 'scale-[1.02] bg-[var(--accent)]/20 ring-2 ring-[var(--accent)]'
+          : isSelected
+            ? 'bg-[var(--accent)]/12'
+            : 'hover:bg-[var(--surface-secondary)]',
+        drop?.accepting && !drop.over ? 'outline outline-1 -outline-offset-1 outline-dashed outline-[var(--border)]' : '',
+        'transition-[transform,background-color,box-shadow] duration-150',
         isArchived ? 'opacity-70' : '',
       ].join(' ')}
+      {...(drop ? dropTarget(drop.id, drop.name) : {})}
     >
       <div className="flex min-w-0 flex-1 flex-col">
         <Text variant="studio-label" tone={isSelected ? 'accent' : 'default'} truncate>
@@ -273,12 +291,29 @@ function DomainRow({
         </span>
       ) : null}
       {/* The count in one column down the pane (P20): every row keeps the menu's slot, filled or not. */}
-      <Text variant="studio-caption" tone="muted" tabular className="w-8 shrink-0 text-right">
-        {count ?? ''}
-      </Text>
+      <PulsingCount count={count} pulse={drop?.pulse ?? 0} />
       <div className="flex w-8 shrink-0 justify-end opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
         {actions}
       </div>
     </div>
+  )
+}
+
+/** A domain's count, which pulses once each time a drop lands on it (beta.9). */
+function PulsingCount({ count, pulse }: { count: number | null; pulse: number }) {
+  const still = useReducedMotion()
+  return (
+    <motion.span
+      key={pulse}
+      className="w-8 shrink-0 text-right"
+      initial={pulse > 0 && !still ? { scale: 1.45, color: 'var(--accent)' } : false}
+      animate={{ scale: 1, color: 'var(--muted)' }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
+      data-domain-count
+    >
+      <Text variant="studio-caption" tone="muted" tabular>
+        {count ?? ''}
+      </Text>
+    </motion.span>
   )
 }

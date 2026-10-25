@@ -1445,7 +1445,7 @@ host_api:
     "catalog::backup::UNSTAMPED_VERSION": {doc: "What an unstamped library was last opened by.", kind: const, sig: "const UNSTAMPED_VERSION: &str = \"1.0.1\""}
     "catalog::backup::compact_copy": {doc: "A compact copy of the library at `from`, written to `to` (P13.1): how questiongame Beta takes the stable library.", kind: fn, sig: "fn compact_copy(from: &Path, to: &Path) -> CatalogResult<()>"}
   crates/host/src/catalog/bulk.rs:
-    "catalog::bulk::BulkEdit": {doc: "One edit for every selected question.", kind: enum, sig: "enum BulkEdit { Tag { tag: String } | Untag { tag: String } | Group { domain_id: DomainId, group_id: Option<DomainGroupId> } | AddToDomain { domain_id: DomainId } | RemoveFromDomain { domain_id: DomainId } | SetDifficulty { difficulty: Option<u8> } }"}
+    "catalog::bulk::BulkEdit": {doc: "One edit for every selected question.", kind: enum, sig: "enum BulkEdit { Tag { tag: String } | Untag { tag: String } | Group { domain_id: DomainId, group_id: Option<DomainGroupId> } | AddToDomain { domain_id: DomainId } | RemoveFromDomain { domain_id: DomainId } | MoveToDomain { domain_id: DomainId } | SetDifficulty { difficulty: Option<u8> } }"}
     "catalog::bulk::BulkReport": {doc: "What a bulk edit did — or, previewed, would do.", kind: struct, sig: "struct BulkReport { changed: Vec<QuestionId>, unchanged: Vec<QuestionId> }"}
     "catalog::bulk::CatalogService::catalog_bulk_edit": {doc: "Apply `edit` to every question in `ids`.", kind: method, sig: "fn catalog_bulk_edit(&self, ids: &[QuestionId], edit: &BulkEdit, write: bool, now_ms: u64) -> CatalogResult<BulkReport>"}
     "catalog::bulk::CatalogService::tag_delete": {doc: "*Manage tags* ▸ Delete: the tag leaves every question in view.", kind: method, sig: "fn tag_delete(&self, tag: &str, write: bool, now_ms: u64) -> CatalogResult<BulkReport>"}
@@ -2145,7 +2145,7 @@ studio_calls:
     beta_welcome_get: [apps/studio/src/host/queries.ts]
     catalog_archive: [apps/studio/src/organisms/useArchive.tsx]
     catalog_archive_many: [apps/studio/src/organisms/useArchive.tsx]
-    catalog_bulk_edit: [apps/studio/src/organisms/useBulkEdit.tsx]
+    catalog_bulk_edit: [apps/studio/src/organisms/useBulkEdit.tsx, apps/studio/src/pages/LibraryPage.tsx]
     catalog_duplicate:
       - apps/studio/src/organisms/DomainPane.tsx
       - apps/studio/src/pages/LibraryPage.tsx
@@ -3124,6 +3124,7 @@ e2e:
     e2e/specs/beta-stable-running.e2e.ts: ["questiongame Beta while questiongame is running > asks to close it first, then copies"]
     e2e/specs/beta-start-empty.e2e.ts: ["questiongame Beta, started empty > goes to first run"]
     e2e/specs/beta5.e2e.ts: ["beta.5 > duplicates a team here, and lists workspaces with search"]
+    e2e/specs/drag-domains.e2e.ts: ["drag questions onto a domain > adds on a release over a domain, and writes nothing on a release elsewhere"]
     e2e/specs/first-run.e2e.ts: ["first run > sets up an operator and the Demo"]
     e2e/specs/games.e2e.ts:
       - "games parity > builds a roster and a board through the pickers, edits a difficulty, and refuses an archived team"
@@ -3162,4 +3163,4 @@ fixtures:
   - scoreboard
   - scoreboard-tie
   - team-order
-mismatches: []
+mismatches: ["e2e spec drag-domains.e2e.ts: missing from SEEDS in e2e/support/folders.ts"]

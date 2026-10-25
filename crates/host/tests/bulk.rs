@@ -475,3 +475,65 @@ fn mt7_manage_tags_touches_only_questions_in_view() {
     c.workspace_switch(&b).unwrap();
     assert_eq!(get_q(&c, "qb").tags, ["Rome"]);
 }
+
+// ---- beta.9: Move to domain (a drag with Ctrl held, *Move to domain…*) ----
+
+/// D3 = {q1, q4}, D4 (archived) = {q1}: q1 sits in D1, D3 and the archived D4.
+fn spread(c: &CatalogService) {
+    let member = |q: &str, k: i64| DomainMember { question_id: QuestionId::from(q), sort_key: k, group_id: None };
+    let mut d3 = Domain::new("d3", "Science", "SCI");
+    d3.questions = vec![member("q1", 0), member("q4", 1)];
+    c.catalog_upsert(&d3.into(), NOW).unwrap();
+    let mut d4 = Domain::new("d4", "Old", "OLD");
+    d4.questions = vec![member("q1", 0)];
+    c.catalog_upsert(&d4.into(), NOW).unwrap();
+    c.catalog_archive(CatalogKind::Domain, "d4", NOW).unwrap();
+}
+
+#[test]
+fn move_to_domain_leaves_every_other_domain_archived_ones_too() {
+    let c = setup();
+    spread(&c);
+    let report = edit(&c, &["q1"], BulkEdit::MoveToDomain { domain_id: DomainId::from("d2") });
+    assert_eq!(report.changed, ids(&["q1"]));
+    assert_eq!(members(&c, "d2"), ["q1"]);
+    assert!(!members(&c, "d1").contains(&"q1".to_string()));
+    assert!(!members(&c, "d3").contains(&"q1".to_string()));
+    assert!(members(&c, "d4").is_empty(), "the archived domain lets it go too");
+    // The rest of each domain is untouched.
+    assert_eq!(members(&c, "d1"), ["q2", "q3"]);
+    assert_eq!(members(&c, "d3"), ["q4"]);
+}
+
+#[test]
+fn move_to_domain_counts_a_question_already_only_there_as_unchanged_and_keeps_its_place() {
+    let c = setup();
+    edit(&c, &["q4"], BulkEdit::AddToDomain { domain_id: DomainId::from("d2") });
+    let report = edit(&c, &["q2", "q4"], BulkEdit::MoveToDomain { domain_id: DomainId::from("d2") });
+    assert_eq!(report.unchanged, ids(&["q4"]));
+    assert_eq!(report.changed, ids(&["q2"]));
+    assert_eq!(members(&c, "d2"), ["q4", "q2"], "joins at the end; one already there keeps its place");
+}
+
+#[test]
+fn move_to_the_domain_a_question_is_in_still_takes_it_out_of_the_others() {
+    let c = setup();
+    spread(&c);
+    // q1 is in D1 already: it stays there, once, and leaves D3 and D4.
+    let report = edit(&c, &["q1"], BulkEdit::MoveToDomain { domain_id: DomainId::from("d1") });
+    assert_eq!(report.changed, ids(&["q1"]));
+    assert_eq!(members(&c, "d1").iter().filter(|q| *q == "q1").count(), 1);
+    assert_eq!(members(&c, "d3"), ["q4"]);
+}
+
+#[test]
+fn move_to_domain_preview_writes_nothing() {
+    let c = setup();
+    spread(&c);
+    let report = c
+        .catalog_bulk_edit(&ids(&["q1"]), &BulkEdit::MoveToDomain { domain_id: DomainId::from("d2") }, false, NOW)
+        .unwrap();
+    assert_eq!(report.changed, ids(&["q1"]));
+    assert!(members(&c, "d2").is_empty());
+    assert!(members(&c, "d1").contains(&"q1".to_string()));
+}

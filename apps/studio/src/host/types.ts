@@ -120,6 +120,8 @@ export type BulkEdit =
   | { readonly op: 'group'; readonly domainId: string; readonly groupId: string | null }
   | { readonly op: 'add_to_domain'; readonly domainId: string }
   | { readonly op: 'remove_from_domain'; readonly domainId: string }
+  /** beta.9: into this domain and out of every other (archived ones too). */
+  | { readonly op: 'move_to_domain'; readonly domainId: string }
   | { readonly op: 'set_difficulty'; readonly difficulty: number | null }
 
 /** One change to the labels of every selected game (P20): `recipe_bulk_edit`. */
