@@ -16,7 +16,7 @@ export function SplitLayout({ header, primary, secondary }: SplitLayoutProps) {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.14, ease: [0.2, 0, 0, 1] }}
-      className="flex h-full min-h-0 flex-col gap-6 p-6"
+      className="flex h-full min-h-0 flex-col gap-3 px-6 pt-4"
     >
       {header}
       <div className="grid min-h-0 flex-1 grid-cols-[14rem_minmax(0,1fr)] gap-6">

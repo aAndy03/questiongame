@@ -8,6 +8,7 @@ import { footerText, isActive, type ListEntry } from '@/host/listView'
 import type { ListViewApi } from '@/host/useListView'
 import type { ArchiveScope } from '@/host/types'
 import { DraggableQuestion } from './QuestionDrag'
+import { InStatusBar } from './StatusSlot'
 
 /**
  * What a record list needs from a row to draw it. Each tab maps its entity to
@@ -266,6 +267,18 @@ export function LibraryList({
     )
   }
 
+  const footer = (variant: 'page' | 'status') => (
+    <PageFooter
+      page={page.page}
+      pageCount={page.pageCount}
+      text={footerText(page, view.spec.noun)}
+      pageSize={state.pageSize}
+      onPage={view.setPage}
+      onPageSize={view.setPageSize}
+      variant={variant}
+    />
+  )
+
   const body = () => {
     if (isLoading && total === undefined) return <Skeleton shape={layout === 'grid' ? 'card' : 'row'} count={layout === 'grid' ? 4 : 8} />
     if (error) return <EmptyState kind="error" what={what} detail={error} action={onRetry ? <TextButton onPress={onRetry}>{LIST.retry}</TextButton> : null} />
@@ -340,7 +353,7 @@ export function LibraryList({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
       {bulk ? (
         <BulkBar
           count={selection.ids.size}
@@ -365,7 +378,8 @@ export function LibraryList({
         ref={scrollRef}
         // The list's own width decides which table columns fit (1.1.1): beside
         // the domains pane and an opened row it can be 25rem wide.
-        className="@container/list min-h-0 flex-1 overflow-y-auto"
+        // Room under the last row, inside the scroll: the list itself meets the status bar (beta.9).
+        className="@container/list min-h-0 flex-1 overflow-y-auto pb-3"
         data-list-body
         onClick={(e) => {
           // Empty space: not a row, a header, a control or a link.
@@ -376,14 +390,8 @@ export function LibraryList({
       >
         {body()}
       </div>
-      <PageFooter
-        page={page.page}
-        pageCount={page.pageCount}
-        text={footerText(page, view.spec.noun)}
-        pageSize={state.pageSize}
-        onPage={view.setPage}
-        onPageSize={view.setPageSize}
-      />
+      {/* The pages ride in the status bar (beta.9): the list runs to the bottom. */}
+      <InStatusBar inline={footer('page')}>{footer('status')}</InStatusBar>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { Profiler, useEffect, useRef, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import { Text } from '@/atoms'
-import { NoticeCollector, QuitGuard, SidebarNav, StatusBar, TopBar, WhatsNewDialog } from '@/organisms'
+import { NoticeCollector, QuitGuard, SidebarNav, StatusBar, StatusSlotProvider, TopBar, WhatsNewDialog } from '@/organisms'
 import {
   ControlPage,
   BetaWelcomePage,
@@ -206,33 +206,36 @@ function Shell() {
     return <FirstRunPage onDone={() => setWizardDone(true)} />
   }
 
+  // The status bar's slot for the open page's pagination (beta.9) spans the shell.
   return (
-    <ShellLayout
-      sidebar={<SidebarNav />}
-      top={<TopBar />}
-      status={<StatusBar />}
-      overlays={
-        <>
-          <NoticeCollector />
-          <WhatsNewDialog />
-          <Toaster theme={theme} position="bottom-right" closeButton duration={3500} toastOptions={{ style: { fontFamily: 'var(--font-sans)' } }} />
-        </>
-      }
-    >
-      {/* The `Profiler` is how the watchdog counts commits: a page that
-        * commits hundreds of times a second is spinning, and nothing else in
-        * the app would ever notice. It wraps only the routed page, so the
-        * count is the page's own and not the shell's. */}
-      {import.meta.env.DEV ? (
-        <Profiler id="page" onRender={onPageCommit}>
+    <StatusSlotProvider>
+      <ShellLayout
+        sidebar={<SidebarNav />}
+        top={<TopBar />}
+        status={<StatusBar />}
+        overlays={
+          <>
+            <NoticeCollector />
+            <WhatsNewDialog />
+            <Toaster theme={theme} position="bottom-right" closeButton duration={3500} toastOptions={{ style: { fontFamily: 'var(--font-sans)' } }} />
+          </>
+        }
+      >
+        {/* The `Profiler` is how the watchdog counts commits: a page that
+          * commits hundreds of times a second is spinning, and nothing else in
+          * the app would ever notice. It wraps only the routed page, so the
+          * count is the page's own and not the shell's. */}
+        {import.meta.env.DEV ? (
+          <Profiler id="page" onRender={onPageCommit}>
+            <Page route={route} />
+          </Profiler>
+        ) : (
+          // A release build has no watchdog (P12.1): React's production build
+          // never calls `onRender`, and the code that would count is compiled out.
           <Page route={route} />
-        </Profiler>
-      ) : (
-        // A release build has no watchdog (P12.1): React's production build
-        // never calls `onRender`, and the code that would count is compiled out.
-        <Page route={route} />
-      )}
-    </ShellLayout>
+        )}
+      </ShellLayout>
+    </StatusSlotProvider>
   )
 }
 

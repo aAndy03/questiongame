@@ -344,14 +344,25 @@ export interface PageFooterProps {
   pageSize: PageSizeChoice
   onPage(page: number): void
   onPageSize(size: PageSizeChoice): void
+  /**
+   * `status` (beta.9): in the status bar — 20px controls, 11px type, one line,
+   * the summary first. `page` (default): under a list in a dialog.
+   */
+  variant?: 'page' | 'status' | undefined
 }
 
-export function PageFooter({ page, pageCount, text, pageSize, onPage, onPageSize }: PageFooterProps) {
+export function PageFooter({ page, pageCount, text, pageSize, onPage, onPageSize, variant = 'page' }: PageFooterProps) {
   if (text === '') return null
+  const status = variant === 'status'
   return (
-    <Pagination aria-label={LIST.pages} className="flex flex-wrap items-center justify-between gap-3 pt-2" data-density="compact">
+    <Pagination
+      aria-label={LIST.pages}
+      className={status ? 'flex h-6 flex-nowrap items-center gap-3' : 'flex flex-wrap items-center justify-between gap-3 pt-2'}
+      data-density={status ? 'status' : 'compact'}
+      data-page-footer={variant}
+    >
       <Pagination.Summary>{text}</Pagination.Summary>
-      <div className="flex items-center gap-3">
+      <div className={status ? 'flex items-center gap-2' : 'flex items-center gap-3'}>
         <SegmentedField
           label={LIST.rowsPerPage}
           hideLabel

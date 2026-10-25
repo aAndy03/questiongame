@@ -7,6 +7,7 @@ import { CHROME, fmt, noticeTitle } from '@/copy'
 import { usePlayClock, usePlayState } from '@/host/playState'
 import { DisplaysStatus } from './DisplaysStatus'
 import { NoticePanel } from './NoticePanel'
+import { StatusSlot } from './StatusSlot'
 
 /**
  * Health and the latest notice (one popover) · the displays (a popover with
@@ -82,6 +83,8 @@ export function StatusBar() {
       </Popover>
       <DisplaysStatus />
       <span className="flex-1" />
+      {/* The open page's pagination (beta.9), before the clock. */}
+      <StatusSlot />
       {showTimer ? <StatusClock /> : null}
     </footer>
   )
