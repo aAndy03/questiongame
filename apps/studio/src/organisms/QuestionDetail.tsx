@@ -1,6 +1,7 @@
 import { Button, Icon, MeaningChip, Panel, Skeleton, Text } from '@/atoms'
 import { DifficultyChip, EmptyState, GapNotice, IncompleteMark, MetaList, NavCrumbs, PageHeader } from '@/molecules'
 import { useNavStore } from '@/chrome/nav'
+import { useListState } from '@/chrome/chrome'
 import { DOMAIN, LIST, QUESTION, SHELL, TABS, fmt } from '@/copy'
 import { questionGaps } from '@/host/question'
 import { useCatalogItem, useCatalogList } from '@/host/queries'
@@ -24,6 +25,10 @@ export function QuestionDetail({ id, domainId, compact }: QuestionDetailProps) {
   const domains = useCatalogList('domain', 'active')
   const go = useNavStore((s) => s.go)
   const archive = useArchive()
+  // Beside the list (the aside), the list's search is marked here too (beta.9):
+  // a hit in an explanation the row could not show is found at a glance.
+  const listSearch = useListState('library').search.trim()
+  const hit = compact && listSearch ? listSearch : undefined
 
   if (question.isLoading) return <Skeleton shape="card" count={2} />
   if (!question.data) return <EmptyState kind="error" what={QUESTION.many} detail={question.error?.message} compact />
@@ -59,7 +64,9 @@ export function QuestionDetail({ id, domainId, compact }: QuestionDetailProps) {
       {compact ? (
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-2">
-            <Text variant="studio-heading">{title}</Text>
+            <Text variant="studio-heading" highlight={hit}>
+              {title}
+            </Text>
             {status}
           </div>
           <Button size="sm" variant="secondary" icon="edit" onPress={edit} isDisabled={archived}>
@@ -88,7 +95,7 @@ export function QuestionDetail({ id, domainId, compact }: QuestionDetailProps) {
               <Text variant="studio-mono" tone={o.correct ? 'success' : 'muted'} className="w-4">
                 {String.fromCharCode(65 + i)}
               </Text>
-              <Text variant="studio-body" className="flex-1">
+              <Text variant="studio-body" className="flex-1" highlight={hit}>
                 {o.text}
               </Text>
               {o.correct ? <Icon name="correct" size="sm" style={{ color: 'var(--success)' }} label={QUESTION.correct} /> : null}
@@ -121,7 +128,9 @@ export function QuestionDetail({ id, domainId, compact }: QuestionDetailProps) {
                   <span className="flex flex-wrap gap-1">
                     {(q.tags ?? []).map((t) => (
                       <MeaningChip key={t} meaning="tag">
-                        {t}
+                        <Text variant="studio-caption" tone="inherit" highlight={hit}>
+                          {t}
+                        </Text>
                       </MeaningChip>
                     ))}
                   </span>
@@ -129,7 +138,16 @@ export function QuestionDetail({ id, domainId, compact }: QuestionDetailProps) {
                   GROUPS_TAGS.noTag
                 ),
             },
-            { label: QUESTION.explanation, value: q.explanation ?? '—' },
+            {
+              label: QUESTION.explanation,
+              value: q.explanation ? (
+                <Text variant="studio-body" tone="inherit" highlight={hit}>
+                  {q.explanation}
+                </Text>
+              ) : (
+                '—'
+              ),
+            },
             { label: LIST.updated, value: fmt.date(q.updatedAt) },
             { label: LIST.created, value: fmt.date(q.createdAt) },
             { label: SHELL.id, value: q.id, mono: true },

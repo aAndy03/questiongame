@@ -99,7 +99,9 @@ describe('Manage workspaces as a list (beta.5)', () => {
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'friday' } })
     const page = document.querySelector('[data-workspaces-page]') as HTMLElement
     await waitFor(() => expect(within(page).queryByText(first.name ?? '')).toBeNull(), { timeout: 2000 })
-    expect(within(page).getByText('Friday club')).toBeTruthy()
+    // Marked now (beta.9): <mark>Friday</mark> club, so the row is matched whole.
+    expect(within(page).getAllByText((_, el) => el?.textContent === 'Friday club' && !el.querySelector('*:not(mark)')).length).toBeGreaterThan(0)
+    expect(within(page).getByText('Friday').tagName).toBe('MARK')
   })
 })
 

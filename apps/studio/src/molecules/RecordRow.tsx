@@ -46,6 +46,10 @@ export interface RecordRowProps {
   rowRef?: ((el: Element | null) => void) | undefined
   /** Being carried in a drag: dimmed where it stands. */
   isCarried?: boolean | undefined
+  /** The search in force (beta.9): marked in the title, the subtitle and the note. */
+  highlight?: string | null | undefined
+  /** Where a search hit that the row does not show sits — *Found in: explanation* (beta.9). */
+  found?: string | undefined
 }
 
 /**
@@ -73,6 +77,8 @@ export function RecordRow({
   onOpen,
   rowRef,
   isCarried,
+  highlight,
+  found,
 }: RecordRowProps) {
   const selectable = onSelectChange !== undefined
   const tone = isArchived ? 'muted' : 'default'
@@ -147,17 +153,22 @@ export function RecordRow({
           {leading ? <div className="shrink-0">{leading}</div> : null}
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             {/* The title leads the card: up to three lines, not one cut short (1.1.1, the maintainer). */}
-            <Text variant="studio-body" tone={tone} className="line-clamp-3 break-words font-medium">
+            <Text variant="studio-body" tone={tone} className="line-clamp-3 break-words font-medium" highlight={highlight}>
               {title}
             </Text>
             {subtitle ? (
-              <Text variant="studio-caption" tone="muted" truncate>
+              <Text variant="studio-caption" tone="muted" truncate highlight={highlight}>
                 {subtitle}
               </Text>
             ) : null}
             {note ? (
-              <Text variant="studio-caption" tone="muted" truncate>
+              <Text variant="studio-caption" tone="muted" truncate highlight={highlight}>
                 {note}
+              </Text>
+            ) : null}
+            {found ? (
+              <Text variant="studio-caption" tone="muted" truncate className="italic" data-found>
+                {found}
               </Text>
             ) : null}
           </div>
@@ -217,9 +228,17 @@ export function RecordRow({
       <div className="flex min-w-0 flex-1 items-center gap-3">
         {/* A readable minimum: beside an opened row's aside the chips and meta
             took every pixel and the text went to nothing (1.1.1). */}
-        <Text variant="studio-label" tone={tone} truncate className="min-w-[8rem] flex-1">
+        <Text variant="studio-label" tone={tone} truncate className="min-w-[8rem] flex-1" highlight={highlight}>
           {title}
         </Text>
+        {/* Always shown, whatever the width: it is why the row is here (beta.9). */}
+        {found ? (
+          <span className="shrink-0" data-found>
+            <Text variant="studio-caption" tone="muted" className="italic">
+              {found}
+            </Text>
+          </span>
+        ) : null}
         {/*
           The wrapper hides them, not the Text: a truncated Text sets an inline
           `display: block`, which beats `hidden` — the options showed at every
@@ -228,14 +247,14 @@ export function RecordRow({
         */}
         {note ? (
           <div className="hidden min-w-0 max-w-[30%] shrink-0 @xl/list:block">
-            <Text variant="studio-caption" tone="muted" truncate>
+            <Text variant="studio-caption" tone="muted" truncate highlight={highlight}>
               {note}
             </Text>
           </div>
         ) : null}
         {subtitle ? (
           <div className="hidden min-w-0 max-w-[30%] @5xl/list:block">
-            <Text variant="studio-caption" tone="muted" truncate>
+            <Text variant="studio-caption" tone="muted" truncate highlight={highlight}>
               {subtitle}
             </Text>
           </div>

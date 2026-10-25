@@ -163,6 +163,7 @@ export function PickList<T>({ spec, items, chosen, onChosen, disabledReason, cou
                   reason={reason(e.row.item.id)}
                   onToggle={toggle}
                   onPick={pick}
+                  highlight={view.searching ? session.search : undefined}
                   onOpen={onOpen}
                   isCurrent={currentId === e.row.item.id}
                 />
@@ -187,6 +188,7 @@ function PickRow({
   onPick,
   onOpen,
   isCurrent,
+  highlight,
 }: {
   id: string
   row: PickerRow
@@ -194,12 +196,14 @@ function PickRow({
   reason: string | null
   onToggle: (id: string, on: boolean) => void
   onPick: (id: string, range: boolean) => void
+  /** The search in force: marked in the title and the line under it (beta.9). */
+  highlight?: string | undefined
   onOpen?: ((id: string) => void) | undefined
   isCurrent: boolean
 }) {
   const text = (
     <div className="flex min-w-0 flex-col">
-      <Text variant="studio-body" truncate title={row.title}>
+      <Text variant="studio-body" truncate title={row.title} highlight={highlight}>
         {row.title}
       </Text>
       {/* The reason is the row's second line, not only a tooltip (§24); whole in the tooltip. */}
@@ -208,7 +212,7 @@ function PickRow({
           {reason}
         </Text>
       ) : row.subtitle ? (
-        <Text variant="studio-caption" tone="muted" truncate title={row.subtitle}>
+        <Text variant="studio-caption" tone="muted" truncate title={row.subtitle} highlight={highlight}>
           {row.subtitle}
         </Text>
       ) : null}

@@ -225,3 +225,60 @@ export function variantTokens(variant: TextVariant): VariantTokens {
 }
 
 export const TEXT_VARIANTS = Object.keys(VARIANT_TOKENS) as TextVariant[];
+
+// ---------------------------------------------------------------- highlight
+
+/** A character as the search sees it: lower case, its accents dropped. */
+const foldChar = (c: string): string => c.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/** The query's words, folded; nothing for a blank query. */
+export function searchTerms(query: string | null | undefined): readonly string[] {
+  if (!query) return [];
+  return [...new Set(query.split(/\s+/).map((w) => [...w].map(foldChar).join('').replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean))];
+}
+
+/**
+ * Where a search's words stand in a text (beta.9): `[start, end)` ranges of
+ * the **original** text, sorted and merged. Case- and diacritic-insensitive
+ * (*pamant* marks *Pământ*), and by **word prefix** — the search engine
+ * matches words, so a hit in the middle of a word would mark what did not
+ * match. A blank query marks nothing.
+ */
+export function highlightRanges(text: string, query: string | null | undefined): readonly (readonly [number, number])[] {
+  const terms = searchTerms(query);
+  if (terms.length === 0 || !text) return [];
+  // The folded text, and for each folded character the original index it came from.
+  let folded = '';
+  const origin: number[] = [];
+  let i = 0;
+  for (const ch of text) {
+    const f = foldChar(ch);
+    for (const fc of f) {
+      folded += fc;
+      origin.push(i);
+    }
+    i += ch.length;
+  }
+  origin.push(i);
+  const found: [number, number][] = [];
+  const isWord = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}]/u.test(c);
+  for (const term of terms) {
+    let at = folded.indexOf(term);
+    while (at !== -1) {
+      if (!isWord(folded[at - 1])) found.push([origin[at]!, origin[at + term.length]!]);
+      at = folded.indexOf(term, at + 1);
+    }
+  }
+  found.sort((a, b) => a[0] - b[0]);
+  const merged: [number, number][] = [];
+  for (const r of found) {
+    const last = merged[merged.length - 1];
+    if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
+    else merged.push([r[0], r[1]]);
+  }
+  return merged;
+}
+
+/** Does any of the search's words start a word of this text? */
+export const matchesSearch = (text: string | null | undefined, query: string | null | undefined): boolean =>
+  Boolean(text) && highlightRanges(text as string, query).length > 0;

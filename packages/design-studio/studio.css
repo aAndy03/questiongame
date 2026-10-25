@@ -95,6 +95,16 @@ html .button svg {
   flex-shrink: 0;
 }
 
+/* A search hit (beta.9, `Text highlight`): a quiet accent tint behind the
+ * letters, the text's own colour kept, legible in both themes. */
+mark[data-hit] {
+  background: color-mix(in oklab, var(--accent) 24%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding-inline: 1px;
+  margin-inline: -1px;
+}
+
 /* A list's own row actions (P21.5, the display rows): 24px and 11px, under
  * the list's column headings. Two attribute-class pairs outrank `html .button`. */
 [data-density="tight"] .button {

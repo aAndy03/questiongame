@@ -6,7 +6,8 @@ import { ListArea, SplitLayout } from '@/templates'
 import { useArchiveScope, useChromeStore, useListState, usePrefs } from '@/chrome/chrome'
 import { useNavStore } from '@/chrome/nav'
 import { toast } from '@/chrome/toast'
-import { DOMAIN, DRAG, IMPORT, LIST, MENU, QUESTION, SHARE, SHELL, TABS, VIEWS, fmt } from '@/copy'
+import { DOMAIN, DRAG, IMPORT, LIST, MENU, QUESTION, SEARCH, SHARE, SHELL, TABS, VIEWS, fmt } from '@/copy'
+import { matchesSearch } from '@questiongame/text'
 import { TRANSFER } from '@/copy/workspaces'
 import { GROUPS_TAGS } from '@/copy/groupsTags'
 import { activeMemberIds, questionGaps } from '@/host/question'
@@ -72,6 +73,7 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
   /** The domain pane's pick scopes the list before anything else does. */
   const scoped = useMemo(() => questions.data?.filter((q) => !memberIds || memberIds.has(q.id)), [questions.data, memberIds])
   const session = useListState('library')
+  const query = session.search.trim()
   const hits = useListHits('question', session.search, scope, questions.data?.length)
 
   const items = useMemo<ListItem<QuestionItem, RecordView>[] | undefined>(
@@ -96,7 +98,11 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
               <>
                 {mode === 'multiple' ? <MeaningChip meaning="multiple">{QUESTION.multiple}</MeaningChip> : null}
                 {(q.tags ?? []).slice(0, 3).map((t) => (
-                  <MeaningChip key={t} meaning="tag">{t}</MeaningChip>
+                  <MeaningChip key={t} meaning="tag">
+                    <Text variant="studio-caption" tone="inherit" highlight={query}>
+                      {t}
+                    </Text>
+                  </MeaningChip>
                 ))}
                 {(q.tags?.length ?? 0) > 3 ? <MeaningChip meaning="tag">{`+${(q.tags?.length ?? 0) - 3}`}</MeaningChip> : null}
                 {isArchived(q) ? <MeaningChip meaning="archived">{LIST.archived}</MeaningChip> : null}
@@ -104,12 +110,15 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
             ),
             meta: [domain ? '' : fmt.count(inDomains, DOMAIN.one, DOMAIN.many), fmt.dateShort(q.updatedAt)].filter(Boolean),
             isArchived: isArchived(q),
+            // A hit the stem does not hold: say where it is (beta.9) — the
+            // answers can be cut off, the explanation is not in the row at all.
+            found: query && !matchesSearch(q.stem, query) ? foundIn(q, query) : undefined,
           }
           const member = domain?.questions.find((m) => m.questionId === q.id)
           const group = member?.groupId ? (domain?.groups ?? []).find((g) => g.id === member.groupId) : undefined
           return { id: q.id, data: { question: q, gaps, domains: domainsOf.get(q.id) ?? [], group: group ? { id: group.id, name: group.name } : null }, view: record }
         }),
-    [scoped, inActiveDomain, domainsOf, domain],
+    [scoped, inActiveDomain, domainsOf, domain, query],
   )
   const spec = useMemo(
     () =>
@@ -395,4 +404,13 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
     />
     </QuestionDragProvider>
   )
+}
+
+/** Where in a question a search's words were found, outside its stem (beta.9). */
+function foundIn(q: { readonly options: readonly { readonly text: string }[]; readonly explanation?: string | null; readonly tags?: readonly string[] }, query: string): string | undefined {
+  const where: string[] = []
+  if (q.options.some((o) => matchesSearch(o.text, query))) where.push(SEARCH.answers)
+  if (matchesSearch(q.explanation ?? null, query)) where.push(SEARCH.explanation)
+  if ((q.tags ?? []).some((t) => matchesSearch(t, query))) where.push(SEARCH.tags)
+  return where.length > 0 ? SEARCH.foundIn(where) : undefined
 }

@@ -501,6 +501,14 @@ export const PICKER = {
   moreChosen: (n: number) => `and ${n} more`,
 } as const
 
+/** beta.9: where a search hit sits when the row does not show it. */
+export const SEARCH = {
+  answers: 'answers',
+  explanation: 'explanation',
+  tags: 'question tags',
+  foundIn: (where: readonly string[]) => `Found in ${where.join(', ')}`,
+} as const
+
 /** beta.9: dragging questions onto a domain in the Domains pane. */
 export const DRAG = {
   carrying: (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'question' : 'questions'}`,

@@ -24,6 +24,8 @@ export interface RecordView {
   readonly meta?: readonly ReactNode[] | undefined
   readonly isArchived?: boolean | undefined
   readonly isOverridden?: boolean | undefined
+  /** *Found in: …* — a search hit the row does not show (beta.9); set by the page while searching. */
+  readonly found?: string | undefined
 }
 
 /** A table column the header row can sort by. */
@@ -164,6 +166,8 @@ export function LibraryList({
         key={row.key}
         rowRef={rowRef}
         isCarried={carried}
+        highlight={view.searching ? state.search : undefined}
+        found={view.searching ? record.found : undefined}
         layout={layout}
         index={index}
         leading={record.leading}

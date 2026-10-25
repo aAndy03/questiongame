@@ -1,6 +1,6 @@
 import { createElement, type CSSProperties, type ReactNode } from 'react'
 import { StudioTransition } from '@questiongame/text/studio'
-import { variantTokens, type TextTransition, type TextVariant } from '@questiongame/text'
+import { highlightRanges, variantTokens, type TextTransition, type TextVariant } from '@questiongame/text'
 
 /**
  * The Studio `Text` atom — the React half of `@questiongame/text` (§2.29).
@@ -39,6 +39,12 @@ export interface TextProps {
   className?: string | undefined
   style?: CSSProperties | undefined
   title?: string | undefined
+  /**
+   * The search in force (beta.9): its words are marked where they start a
+   * word of the text — case and accents aside. Plain strings only; nothing
+   * marks without a search.
+   */
+  highlight?: string | null | undefined
   children?: ReactNode
 }
 
@@ -53,6 +59,7 @@ export function Text({
   className,
   style,
   title,
+  highlight,
   children,
 }: TextProps) {
   const t = variantTokens(variant)
@@ -68,11 +75,31 @@ export function Text({
     ...style,
   }
   const text = typeof children === 'string' || typeof children === 'number' ? String(children) : null
+  const ranges = text !== null && transition === 'none' ? highlightRanges(text, highlight) : []
   const body =
     transition !== 'none' && text !== null ? (
       <StudioTransition transition={transition}>{text}</StudioTransition>
+    ) : ranges.length > 0 && text !== null ? (
+      marks(text, ranges)
     ) : (
       children
     )
   return createElement(as, { id, className, style: resolved, title }, body)
+}
+
+/** The text with its search hits in `<mark data-hit>` (studio.css draws them). */
+function marks(text: string, ranges: readonly (readonly [number, number])[]): ReactNode[] {
+  const out: ReactNode[] = []
+  let at = 0
+  for (const [a, b] of ranges) {
+    if (a > at) out.push(text.slice(at, a))
+    out.push(
+      <mark key={a} data-hit="">
+        {text.slice(a, b)}
+      </mark>,
+    )
+    at = b
+  }
+  if (at < text.length) out.push(text.slice(at))
+  return out
 }
