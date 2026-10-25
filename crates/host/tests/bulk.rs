@@ -537,3 +537,70 @@ fn move_to_domain_preview_writes_nothing() {
     assert!(members(&c, "d2").is_empty());
     assert!(members(&c, "d1").contains(&"q1".to_string()));
 }
+
+#[test]
+fn move_to_domain_joins_in_selection_order_and_leaves_its_group_behind() {
+    let c = setup();
+    let romans = c.domain_group_create(&DomainId::from("d1"), "Romans", NOW).unwrap();
+    edit(&c, &["q3"], BulkEdit::Group { domain_id: DomainId::from("d1"), group_id: Some(romans.id) });
+    edit(&c, &["q3", "q1"], BulkEdit::MoveToDomain { domain_id: DomainId::from("d2") });
+    let d2 = domain(&c, "d2");
+    assert_eq!(members(&c, "d2"), ["q3", "q1"], "the order they were picked in");
+    assert!(d2.questions.iter().all(|m| m.group_id.is_none()), "a group belongs to its domain: it stays behind");
+    assert_eq!(members(&c, "d1"), ["q2"]);
+}
+
+#[test]
+fn move_to_domain_with_a_bad_id_or_domain_changes_nothing() {
+    let c = setup();
+    let move_to = |d: &str| BulkEdit::MoveToDomain { domain_id: DomainId::from(d) };
+    assert!(c.catalog_bulk_edit(&ids(&["q1", "missing"]), &move_to("d2"), true, NOW).is_err());
+    assert!(c.catalog_bulk_edit(&ids(&["q1"]), &move_to("nowhere"), true, NOW).is_err());
+    assert_eq!(members(&c, "d1"), ["q1", "q2", "q3"]);
+    assert!(members(&c, "d2").is_empty());
+}
+
+#[test]
+fn move_to_domain_leaves_copies_in_other_workspaces_alone() {
+    let c = setup();
+    let b = c.workspace_create("B", None, NOW).unwrap().id;
+    c.catalog_copy_to(&Selection { domains: vec![DomainId::from("d1")], ..Selection::default() }, &b, CopyOptions::default(), NOW)
+        .unwrap();
+    edit(&c, &["q1"], BulkEdit::MoveToDomain { domain_id: DomainId::from("d2") });
+    c.workspace_switch(&b).unwrap();
+    let copies = c.catalog_list(CatalogKind::Domain, ArchiveScope::All).unwrap();
+    let CatalogItem::Domain(copy) = &copies[0] else { panic!() };
+    assert_eq!(copy.questions.len(), 3, "the copy of History still holds all three");
+}
+
+#[test]
+fn a_second_move_to_the_same_domain_changes_nothing() {
+    let c = setup();
+    spread(&c);
+    let all = ["q1", "q2", "q3", "q4", "q5"];
+    for target in ["d1", "d2", "d3"] {
+        edit(&c, &all, BulkEdit::MoveToDomain { domain_id: DomainId::from(target) });
+        for q in all {
+            let homes: Vec<_> = ["d1", "d2", "d3", "d4"].into_iter().filter(|d| members(&c, d).contains(&q.to_string())).collect();
+            assert_eq!(homes, [target], "{q} ends in {target} alone");
+        }
+        let again = edit(&c, &all, BulkEdit::MoveToDomain { domain_id: DomainId::from(target) });
+        assert!(again.changed.is_empty());
+        assert_eq!(again.unchanged.len(), all.len());
+    }
+}
+
+#[test]
+fn move_to_domain_adds_no_refusal_load_reports_a_board_clash() {
+    // §2.31, as Set difficulty (b52): the edit goes through and Load says so.
+    let c = setup();
+    let mut game = Recipe::new("g", "Game", GameSettings::default());
+    game.board = vec![BoardDomain { domain_id: DomainId::from("d2"), question_ids: vec![] }];
+    c.recipe_upsert(&game, NOW).unwrap();
+    edit(&c, &["q1"], BulkEdit::SetDifficulty { difficulty: Some(30) });
+    // q1 and q3 now share difficulty 30; both into the board's domain is not refused.
+    let report = c
+        .catalog_bulk_edit(&ids(&["q1", "q3"]), &BulkEdit::MoveToDomain { domain_id: DomainId::from("d2") }, true, NOW)
+        .expect("a Move is never refused over a board");
+    assert_eq!(report.changed.len(), 2);
+}

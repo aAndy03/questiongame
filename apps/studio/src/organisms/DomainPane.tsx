@@ -308,16 +308,23 @@ function DomainRow({
 /** A domain's count, which pulses once each time a drop lands on it (beta.9). */
 function PulsingCount({ count, pulse }: { count: number | null; pulse: number }) {
   const still = useReducedMotion()
+  // A drop arms the pulse; it plays when the new count arrives (after the
+  // host's change is refetched), on the new number, once.
+  const [seen, setSeen] = useState({ pulse, count, armed: false, played: 0 })
+  if (pulse !== seen.pulse) setSeen({ ...seen, pulse, armed: pulse > 0 })
+  else if (count !== seen.count) setSeen({ ...seen, count, armed: false, played: seen.armed ? seen.played + 1 : seen.played })
   return (
     <motion.span
-      key={pulse}
+      key={seen.played}
       className="w-8 shrink-0 text-right"
-      initial={pulse > 0 && !still ? { scale: 1.45, color: 'var(--accent)' } : false}
+      initial={seen.played > 0 && !still ? { scale: 1.45, color: 'var(--accent)' } : false}
       animate={{ scale: 1, color: 'var(--muted)' }}
       transition={{ duration: 0.45, ease: 'easeOut' }}
+      style={{ color: 'var(--muted)' }}
       data-domain-count
+      data-pulsed={seen.played > 0 ? seen.played : undefined}
     >
-      <Text variant="studio-caption" tone="muted" tabular>
+      <Text variant="studio-caption" tone="inherit" tabular>
         {count ?? ''}
       </Text>
     </motion.span>

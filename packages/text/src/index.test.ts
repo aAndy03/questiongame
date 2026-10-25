@@ -44,6 +44,14 @@ describe('highlight (beta.9)', () => {
     expect(marked('a (b) c', '(b)')).toEqual(['b'])
     expect(() => highlightRanges('x', '.*[')).not.toThrow()
   })
+  it('keeps its place after an emoji or a flag (two UTF-16 units each)', () => {
+    expect(marked('😀 Rome', 'rome')).toEqual(['Rome'])
+    expect(marked('🇷🇴 Pământ', 'pamant')).toEqual(['Pământ'])
+  })
+  it('splits a query on what is not a letter or a digit, as the search does', () => {
+    expect(searchTerms('rock-n-roll')).toEqual(['rock', 'n', 'roll'])
+    expect(marked('Rock-n-roll', 'rock-n-roll')).toEqual(['Rock', 'n', 'roll'])
+  })
   it('says whether a text matches', () => {
     expect(matchesSearch('Sydney', 'syd')).toBe(true)
     expect(matchesSearch('Sydney', 'ney')).toBe(false)

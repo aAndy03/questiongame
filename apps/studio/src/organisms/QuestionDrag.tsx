@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type Ref } from 'react'
 import { createPortal } from 'react-dom'
-import { DragDropProvider, PointerSensor, useDraggable } from '@dnd-kit/react'
+import { DragDropProvider, useDraggable } from '@dnd-kit/react'
+import { AutoScroller, PointerActivationConstraints, PointerSensor } from '@dnd-kit/dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Icon } from '@/atoms'
 import { DRAG } from '@/copy'
@@ -60,6 +61,21 @@ export interface QuestionDragProviderProps {
 }
 
 type Point = { readonly x: number; readonly y: number }
+
+/**
+ * A drag starts after 5px of movement and only then: dnd-kit's default also
+ * starts one on a 200ms hold, which turned a slow click into a drag — the row
+ * did not open and a slow Shift/Ctrl+click lost its tick.
+ */
+const SENSORS = [PointerSensor.configure({ activationConstraints: [new PointerActivationConstraints.Distance({ value: 5 })] })]
+/** Only the auto-scroller: a domain below the fold of a long pane is reached by holding the chip at its edge. */
+const PLUGINS = [AutoScroller]
+
+/** One function, so the listener added at a drag's start is the one removed after its end. */
+function swallow(e: MouseEvent) {
+  e.stopPropagation()
+  e.preventDefault()
+}
 type Settle = { readonly kind: 'cancel' | 'drop'; readonly from: Point; readonly to: Point; readonly label: string; readonly key: number }
 
 /** The domain row under a point, if any — the only drop the drag accepts. */
@@ -83,7 +99,9 @@ export function QuestionDragProvider({ children, idsFor, onDrop }: QuestionDragP
   // The handlers below are the provider's, bound once: they read the drag through this.
   const live = useRef<QuestionDragState | null>(null)
   live.current = state
-  const [pointer, setPointer] = useState<Point | null>(null)
+  // The chip follows the pointer by its style, not by React state: a drag
+  // moves 60–144 times a second and must not re-render the rows with it.
+  const chip = useRef<HTMLDivElement | null>(null)
   const [settle, setSettle] = useState<Settle | null>(null)
   const [pulse, setPulse] = useState<Context['pulse']>(null)
   const start = useRef<Point>({ x: 0, y: 0 })
@@ -93,6 +111,23 @@ export function QuestionDragProvider({ children, idsFor, onDrop }: QuestionDragP
   const still = useReducedMotion()
 
   const dragging = state !== null
+  // The click a drag ends with is not a click: released on the list's empty
+  // space it would close the opened question, on a row it would open or tick
+  // it. Swallowed from the start of the drag until just after its end,
+  // whichever comes first, the click or dnd-kit's end.
+  const swallowing = useRef(false)
+  const startSwallowing = () => {
+    if (swallowing.current) return
+    swallowing.current = true
+    window.addEventListener('click', swallow, true)
+  }
+  const stopSwallowingSoon = () =>
+    window.setTimeout(() => {
+      swallowing.current = false
+      window.removeEventListener('click', swallow, true)
+    }, 0)
+  useEffect(() => () => window.removeEventListener('click', swallow, true), [])
+
   useEffect(() => {
     if (!dragging) return
     const onKey = (e: KeyboardEvent) => {
@@ -116,23 +151,25 @@ export function QuestionDragProvider({ children, idsFor, onDrop }: QuestionDragP
   const track = (at: Point, ctrl: boolean | null) => {
     last.current = at
     if (ctrl !== null) moveKey.current = ctrl
-    setPointer(at)
+    if (chip.current) chip.current.style.transform = chipAt(at)
     const over = domainAt(at)
     setState((s) => (s && (s.over?.id !== over?.id || s.move !== moveKey.current) ? { ...s, over, move: moveKey.current } : s))
   }
+
+  const context = useMemo(() => ({ state, pulse }), [state, pulse])
 
   const label = (s: QuestionDragState) =>
     s.over ? (s.move ? DRAG.moveTo(s.ids.length, s.over.name) : DRAG.addTo(s.ids.length, s.over.name)) : DRAG.carrying(s.ids.length)
 
   return (
-    <DragContext.Provider value={{ state, pulse }}>
+    <DragContext.Provider value={context}>
       <DragDropProvider
         // The pointer only: the keyboard sensor would take Space and Enter,
         // which open a row. The keyboard way is the row menu's *Move to domain…*.
-        sensors={[PointerSensor]}
-        // No plugins: the row stays where it is (the chip is the feedback, drawn
-        // here), and nothing scrolls or restyles the page under the operator.
-        plugins={[]}
+        sensors={SENSORS}
+        // No feedback plugin: the row stays where it is (the chip is the
+        // feedback, drawn here) and nothing restyles the page under the operator.
+        plugins={PLUGINS}
         onDragStart={(event) => {
           const id = String(event.operation.source?.id ?? '')
           const native = event.nativeEvent as PointerEvent | undefined
@@ -140,9 +177,9 @@ export function QuestionDragProvider({ children, idsFor, onDrop }: QuestionDragP
           start.current = at
           last.current = at
           cancelled.current = false
+          startSwallowing()
           moveKey.current = Boolean(native?.ctrlKey || native?.metaKey)
           setSettle(null)
-          setPointer(at)
           setState({ ids: idsFor(id), over: null, move: moveKey.current })
         }}
         onDragMove={(event) => {
@@ -152,10 +189,13 @@ export function QuestionDragProvider({ children, idsFor, onDrop }: QuestionDragP
         }}
         onDragEnd={(event) => {
           const s = live.current
+          stopSwallowingSoon()
           setState(null)
           if (!s) return
-          const over = event.canceled || cancelled.current ? null : domainAt(last.current)
-          const from = last.current
+          // Judged where it was let go: the last move may be a frame behind.
+          const up = event.nativeEvent as PointerEvent | undefined
+          const from = up && 'clientX' in up && up.type === 'pointerup' ? { x: up.clientX, y: up.clientY } : last.current
+          const over = event.canceled || cancelled.current ? null : domainAt(from)
           if (!over) {
             setSettle({ kind: 'cancel', from, to: start.current, label: label({ ...s, over: null }), key: Date.now() })
             return
@@ -173,8 +213,8 @@ export function QuestionDragProvider({ children, idsFor, onDrop }: QuestionDragP
         ? null
         : createPortal(
             <AnimatePresence>
-              {state && pointer ? (
-                <Chip key="live" at={pointer} label={label(state)} move={state.move} over={state.over !== null} />
+              {state ? (
+                <Chip key="live" chipRef={chip} at={last.current} label={label(state)} move={state.move} over={state.over !== null} />
               ) : settle ? (
                 <motion.div
                   key={`settle-${settle.key}`}
@@ -199,9 +239,11 @@ export function QuestionDragProvider({ children, idsFor, onDrop }: QuestionDragP
   )
 }
 
-function Chip({ at, label, move, over }: { at: Point; label: string; move: boolean; over: boolean }) {
+const chipAt = (at: Point) => `translate(${at.x + 14}px, ${at.y + 14}px)`
+
+function Chip({ chipRef, at, label, move, over }: { chipRef: Ref<HTMLDivElement>; at: Point; label: string; move: boolean; over: boolean }) {
   return (
-    <div className="pointer-events-none fixed left-0 top-0 z-[100]" style={{ transform: `translate(${at.x + 14}px, ${at.y + 14}px)` }} data-drag-chip>
+    <div ref={chipRef} className="pointer-events-none fixed left-0 top-0 z-[100]" style={{ transform: chipAt(at) }} data-drag-chip>
       <ChipBody label={label} move={move} over={over} />
     </div>
   )

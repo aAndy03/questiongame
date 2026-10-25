@@ -3127,7 +3127,9 @@ e2e:
     e2e/specs/beta-stable-running.e2e.ts: ["questiongame Beta while questiongame is running > asks to close it first, then copies"]
     e2e/specs/beta-start-empty.e2e.ts: ["questiongame Beta, started empty > goes to first run"]
     e2e/specs/beta5.e2e.ts: ["beta.5 > duplicates a team here, and lists workspaces with search"]
-    e2e/specs/drag-domains.e2e.ts: ["drag questions onto a domain > adds on a release over a domain, and writes nothing on a release elsewhere"]
+    e2e/specs/drag-domains.e2e.ts:
+      - "drag questions onto a domain > adds on a release over a domain, and writes nothing on a release elsewhere"
+      - "drag questions onto a domain > a slow click, held still, opens the row rather than starting a drag"
     e2e/specs/first-run.e2e.ts: ["first run > sets up an operator and the Demo"]
     e2e/specs/games.e2e.ts:
       - "games parity > builds a roster and a board through the pickers, edits a difficulty, and refuses an archived team"

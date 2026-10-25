@@ -322,7 +322,7 @@ export function LibraryList({
           {stuckGroup ? (
             <div className="sticky z-[5] h-0" style={{ top: HEADER_PX }} data-sticky-band data-stuck>
               <div style={{ background: 'var(--surface)' }}>
-                <GroupHeader label={stuckGroup.label} count={stuckGroup.count} continued={stuckGroup.continued} collapsed={stuckGroup.collapsed} onToggle={() => view.toggleCollapsed(stuckGroup.key)} compact />
+                <GroupHeader label={stuckGroup.label} count={stuckGroup.count} continued={stuckGroup.continued} collapsed={stuckGroup.collapsed} onToggle={() => view.toggleCollapsed(stuckGroup.key)} actions={headerActions?.(stuckGroup.key, stuckGroup.label)} compact />
               </div>
             </div>
           ) : null}

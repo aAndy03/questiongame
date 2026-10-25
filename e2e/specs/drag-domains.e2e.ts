@@ -58,4 +58,22 @@ describe('drag questions onto a domain', () => {
       timeoutMsg: `no toast for a drop on ${name}`,
     })
   })
+
+  it('a slow click, held still, opens the row rather than starting a drag', async () => {
+    const boxes = await $$('[role="button"] input[type="checkbox"]')
+    const row = await boxes[0]!.$('./ancestor::*[@role="button"][1]')
+    const at = await centre(row)
+    await browser
+      .action('pointer', { parameters: { pointerType: 'mouse' } })
+      .move({ x: at.x, y: at.y })
+      .down({ button: 0 })
+      .pause(400)
+      .up({ button: 0 })
+      .perform()
+    expect(await $$('[data-drag-chip], [data-drag-settle]').length).toBe(0)
+    await browser.waitUntil(async () => (await $$('aside').length) > 0 || (await $('body').getText()).includes('Options'), {
+      timeout: 5_000,
+      timeoutMsg: 'the held click did not open the question',
+    })
+  })
 })

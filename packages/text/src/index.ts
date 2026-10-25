@@ -234,7 +234,9 @@ const foldChar = (c: string): string => c.normalize('NFD').replace(/[̀-ͯ]/g, '
 /** The query's words, folded; nothing for a blank query. */
 export function searchTerms(query: string | null | undefined): readonly string[] {
   if (!query) return [];
-  return [...new Set(query.split(/\s+/).map((w) => [...w].map(foldChar).join('').replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean))];
+  // Split, not stripped, on what is not a letter or a digit: *rock-n-roll* is
+  // three words, as the search engine reads it.
+  return [...new Set([...query].map(foldChar).join('').split(/[^\p{L}\p{N}]+/u).filter(Boolean))];
 }
 
 /**
@@ -253,10 +255,9 @@ export function highlightRanges(text: string, query: string | null | undefined):
   let i = 0;
   for (const ch of text) {
     const f = foldChar(ch);
-    for (const fc of f) {
-      folded += fc;
-      origin.push(i);
-    }
+    // One entry per UTF-16 unit, as `indexOf` counts: an emoji is two.
+    folded += f;
+    for (let k = 0; k < f.length; k++) origin.push(i);
     i += ch.length;
   }
   origin.push(i);

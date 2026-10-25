@@ -30,6 +30,47 @@ export interface WhatsNewRelease {
 
 export const WHATS_NEW: readonly WhatsNewRelease[] = [
   {
+    version: '2.0.0-beta.9',
+    notes: {
+      en: [
+        {
+          title: 'Drag questions onto a domain',
+          body: 'On Domains & Questions, drag a question, or the questions you ticked, onto a domain in the Domains pane to add them to it; hold Ctrl (⌘ on a Mac) as you let go to move them there instead, out of every other domain. Only a release right on a domain counts: let go anywhere else, or press Escape, and nothing changes. A short note says what was added, what was already there and what was left out. Add to domain… and Move to domain… in a question’s menu and in Edit… do the same from the keyboard.',
+        },
+        {
+          title: 'See where the search hit',
+          body: 'The words you search for are marked in the list, in the pickers and in the question opened beside the list. When a question is found by one of its answers, its explanation or a tag, its row says where: Found in answers.',
+        },
+        {
+          title: 'Keep your place',
+          body: 'As a long list scrolls, its column headings stay at the top and the group you are in stays under them, smaller; in grid view and in the pickers too. On a game’s Board, an open domain’s row stays at the top while its questions scroll, and lets go where the domain ends.',
+        },
+        {
+          title: 'More room for the list',
+          body: 'Lists run down to the bottom of the window, and their pages (1–50 of 1,022, the page size, the page links) sit in the status bar. Page subtitles are gone, the spacing is tighter, and in the Domains pane only the domains scroll: the heading, the add button and Active · Archived stay put.',
+        },
+      ],
+      ro: [
+        {
+          title: 'Trage întrebările pe un domeniu',
+          body: 'În Domains & Questions, trage o întrebare, sau întrebările bifate, pe un domeniu din panoul Domains ca să le adaugi în el; ține apăsat Ctrl (⌘ pe Mac) când le lași ca să le muți acolo, scoase din toate celelalte domenii. Contează doar o eliberare chiar pe un domeniu: dacă le lași în altă parte sau apeși Escape, nu se schimbă nimic. O notă scurtă spune ce s-a adăugat, ce era deja acolo și ce a rămas pe dinafară. Add to domain… și Move to domain… din meniul unei întrebări și din Edit… fac același lucru de la tastatură.',
+        },
+        {
+          title: 'Vezi unde a găsit căutarea',
+          body: 'Cuvintele căutate sunt marcate în listă, în ferestrele de alegere și în întrebarea deschisă lângă listă. Când o întrebare e găsită după un răspuns, după explicație sau după o etichetă, rândul ei spune unde: Found in answers.',
+        },
+        {
+          title: 'Nu-ți pierzi locul',
+          body: 'Când o listă lungă se derulează, titlurile coloanelor rămân sus, iar grupul în care ești rămâne sub ele, mai mic; la fel în grilă și în ferestrele de alegere. Pe Board-ul unui joc, rândul unui domeniu deschis rămâne sus cât timp i se derulează întrebările și se oprește unde se termină domeniul.',
+        },
+        {
+          title: 'Mai mult loc pentru listă',
+          body: 'Listele merg până jos în fereastră, iar paginile lor (1–50 of 1,022, mărimea paginii, linkurile de pagină) stau în bara de stare. Subtitlurile paginilor au dispărut, spațiile sunt mai strânse, iar în panoul Domains se derulează doar domeniile: titlul, butonul de adăugare și Active · Archived rămân pe loc.',
+        },
+      ],
+    },
+  },
+  {
     version: '2.0.0-beta.8',
     notes: {
       en: [

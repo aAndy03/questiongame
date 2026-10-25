@@ -54,6 +54,11 @@ describe('search highlight (beta.9)', () => {
     expect(marks()).toContain('Rome')
   })
 
+  it('says where the words the stem lacks were found, when one word is in the stem', async () => {
+    await search('byzantine rome')
+    expect(await screen.findByText('Found in answers')).toBeTruthy()
+  })
+
   it('marks the hit in the opened question beside the list', async () => {
     await search('rome')
     await screen.findByText('Found in answers')

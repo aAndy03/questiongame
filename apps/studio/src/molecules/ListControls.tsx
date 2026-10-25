@@ -363,14 +363,18 @@ export function PageFooter({ page, pageCount, text, pageSize, onPage, onPageSize
     >
       <Pagination.Summary>{text}</Pagination.Summary>
       <div className={status ? 'flex items-center gap-2' : 'flex items-center gap-3'}>
-        <SegmentedField
-          label={LIST.rowsPerPage}
-          hideLabel
-          value={String(pageSize)}
-          onChange={(v) => onPageSize(v === 'all' ? 'all' : (Number(v) as PageSizeChoice))}
-          options={SIZES.map((s) => ({ value: String(s), label: s === 'all' ? LIST.pageSizeAll : String(s) }))}
-          size="sm"
-        />
+        {/* In a narrow status bar the page size goes first, then the page
+            numbers; the summary and ‹ › always stay (beta.9). */}
+        <div className={status ? 'hidden @[52rem]/status:block' : 'contents'}>
+          <SegmentedField
+            label={LIST.rowsPerPage}
+            hideLabel
+            value={String(pageSize)}
+            onChange={(v) => onPageSize(v === 'all' ? 'all' : (Number(v) as PageSizeChoice))}
+            options={SIZES.map((s) => ({ value: String(s), label: s === 'all' ? LIST.pageSizeAll : String(s) }))}
+            size="sm"
+          />
+        </div>
         <Pagination.Content>
           <Pagination.Item>
             <Pagination.Previous isDisabled={page <= 1} onPress={() => onPage(page - 1)} aria-label={LIST.previousPage}>
@@ -379,11 +383,11 @@ export function PageFooter({ page, pageCount, text, pageSize, onPage, onPageSize
           </Pagination.Item>
           {pageLinks(page, pageCount).map((p, i) =>
             p === 'gap' ? (
-              <Pagination.Item key={`gap-${i}`}>
+              <Pagination.Item key={`gap-${i}`} className={status ? 'hidden @[40rem]/status:flex' : ''}>
                 <Pagination.Ellipsis />
               </Pagination.Item>
             ) : (
-              <Pagination.Item key={p}>
+              <Pagination.Item key={p} className={status ? 'hidden @[40rem]/status:flex' : ''}>
                 <Pagination.Link isActive={p === page} {...(p === page ? { 'aria-current': 'page' as const } : {})} aria-label={LIST.page(p)} onPress={() => onPage(p)}>
                   {p}
                 </Pagination.Link>
@@ -449,8 +453,6 @@ export interface StickyBandProps {
   off?: boolean | undefined
   /** A hairline under it while stuck, for a band with no rule of its own (a Board domain). */
   hairline?: boolean | undefined
-  /** How many px the compact variant is shorter (12 for a group header): given back as margin while stuck. */
-  saves?: number | undefined
   /** The band, told whether it is stuck: it draws its compact variant then. */
   children(stuck: boolean): ReactNode
 }
@@ -464,14 +466,27 @@ export interface StickyBandProps {
  * they are. A zero-height sentinel just before it says when (`useStuck`). A
  * later band at the same `top` slides over an earlier one: one at a time.
  */
-export function StickyBand({ top, background, as = 'div', className, off, hairline, saves = 12, children }: StickyBandProps) {
+export function StickyBand({ top, background, as = 'div', className, off, hairline, children }: StickyBandProps) {
   const [sentinel, seen] = useStuck(top)
   const stuck = seen && !off
   const Tag = as
+  // The height the compact variant saves, measured — a wrapped Board row saves
+  // less than one on a line — and given back as margin, before paint.
+  const band = useRef<HTMLElement | null>(null)
+  const tall = useRef(0)
+  useLayoutEffect(() => {
+    const el = band.current
+    if (!el) return
+    if (stuck) el.style.marginBottom = `${Math.max(0, tall.current - el.offsetHeight)}px`
+    else {
+      el.style.marginBottom = ''
+      tall.current = el.offsetHeight
+    }
+  }, [stuck])
   return (
     <>
       <Tag ref={sentinel} aria-hidden className={as === 'li' ? 'col-span-full h-0 list-none' : 'h-0'} data-sticky-sentinel />
-      <Tag className={[off ? '' : 'sticky z-[5]', stuck && hairline ? 'shadow-[0_1px_0_var(--separator)]' : '', className ?? ''].join(' ')} style={{ top, background, marginBottom: stuck ? saves : undefined }} data-sticky-band data-stuck={stuck ? '' : undefined}>
+      <Tag className={[off ? '' : 'sticky z-[5]', stuck && hairline ? 'shadow-[0_1px_0_var(--separator)]' : '', className ?? ''].join(' ')} ref={(el: HTMLElement | null) => void (band.current = el)} style={{ top, background }} data-sticky-band data-stuck={stuck ? '' : undefined}>
         {children(stuck)}
       </Tag>
     </>

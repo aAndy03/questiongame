@@ -57,11 +57,29 @@ describe('a sticky band (beta.9)', () => {
     expect(heading().className).toContain('h-7')
     const band = document.querySelector<HTMLElement>('[data-sticky-band]')!
     expect(band.hasAttribute('data-stuck')).toBe(true)
-    // 40 → 28: the 12px it saves stay as margin, so the rows under it do not jump.
-    expect(band.style.marginBottom).toBe('12px')
     scrollPast(false)
     expect(heading().hasAttribute('data-compact')).toBe(false)
     expect(band.style.marginBottom).toBe('')
+  })
+
+  it('gives back, as margin, exactly the height it lost by sticking, so the rows under it do not jump', () => {
+    // jsdom has no layout: the band is 40px tall unstuck and 28px stuck (a wrapped Board row: 64 and 56).
+    const tall = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      if (!this.hasAttribute('data-sticky-band')) return 0
+      const wrapped = this.textContent?.includes('Wrapped')
+      return this.hasAttribute('data-stuck') ? (wrapped ? 56 : 28) : wrapped ? 64 : 40
+    })
+    render(<StickyBand top={0} background="var(--background)">{header}</StickyBand>)
+    const band = document.querySelector<HTMLElement>('[data-sticky-band]')!
+    scrollPast(true)
+    expect(band.style.marginBottom).toBe('12px')
+    scrollPast(false)
+    expect(band.style.marginBottom).toBe('')
+    cleanup()
+    render(<StickyBand top={0} background="var(--surface)">{() => <span>Wrapped</span>}</StickyBand>)
+    scrollPast(true)
+    expect(document.querySelector<HTMLElement>('[data-sticky-band]')!.style.marginBottom).toBe('8px')
+    tall.mockRestore()
   })
 
   it('off: the same tree, not sticky and never stuck (a closed Board domain)', () => {

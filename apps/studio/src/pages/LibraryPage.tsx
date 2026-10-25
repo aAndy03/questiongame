@@ -7,7 +7,7 @@ import { useArchiveScope, useChromeStore, useListState, usePrefs } from '@/chrom
 import { useNavStore } from '@/chrome/nav'
 import { toast } from '@/chrome/toast'
 import { DOMAIN, DRAG, IMPORT, LIST, MENU, QUESTION, SEARCH, SHARE, SHELL, TABS, VIEWS, fmt } from '@/copy'
-import { matchesSearch } from '@questiongame/text'
+import { matchesSearch, searchTerms } from '@questiongame/text'
 import { TRANSFER } from '@/copy/workspaces'
 import { GROUPS_TAGS } from '@/copy/groupsTags'
 import { activeMemberIds, questionGaps } from '@/host/question'
@@ -112,7 +112,7 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
             isArchived: isArchived(q),
             // A hit the stem does not hold: say where it is (beta.9) — the
             // answers can be cut off, the explanation is not in the row at all.
-            found: query && !matchesSearch(q.stem, query) ? foundIn(q, query) : undefined,
+            found: query ? foundIn(q, query) : undefined,
           }
           const member = domain?.questions.find((m) => m.questionId === q.id)
           const group = member?.groupId ? (domain?.groups ?? []).find((g) => g.id === member.groupId) : undefined
@@ -406,7 +406,10 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
 }
 
 /** Where in a question a search's words were found, outside its stem (beta.9). */
-function foundIn(q: { readonly options: readonly { readonly text: string }[]; readonly explanation?: string | null; readonly tags?: readonly string[] }, query: string): string | undefined {
+function foundIn(q: { readonly stem: string; readonly options: readonly { readonly text: string }[]; readonly explanation?: string | null; readonly tags?: readonly string[] }, search: string): string | undefined {
+  // Only the words the stem lacks: *byzantine rome* with Byzantine in the stem says where Rome was.
+  const query = searchTerms(search).filter((t) => !matchesSearch(q.stem, t)).join(' ')
+  if (!query) return undefined
   const where: string[] = []
   if (q.options.some((o) => matchesSearch(o.text, query))) where.push(SEARCH.answers)
   if (matchesSearch(q.explanation ?? null, query)) where.push(SEARCH.explanation)

@@ -38,7 +38,7 @@ export function StatusBar() {
 
   return (
     <footer
-      className="flex h-7 shrink-0 items-center gap-4 border-t border-[var(--chrome-line)] px-3"
+      className="@container/status flex h-7 shrink-0 items-center gap-4 border-t border-[var(--chrome-line)] px-3"
       style={{ background: 'var(--chrome)' }}
     >
       {/*
