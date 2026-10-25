@@ -57,6 +57,9 @@ export const CHIP_TONES = {
   // P20: an import row changed in the dialog, or left out of the import
   edited: 'accent',
   leftOut: 'default',
+  // beta.9: What's new — a release this update brought, and a beta release
+  fresh: 'accent',
+  beta: 'default',
 } as const satisfies Record<string, ChipTone>
 
 export type ChipMeaning = keyof typeof CHIP_TONES

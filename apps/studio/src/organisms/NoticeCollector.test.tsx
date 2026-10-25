@@ -121,8 +121,12 @@ describe('the notices popover (P21.3)', () => {
     await userEvent.click(trigger)
     const dialog = await screen.findByRole('dialog', { name: /displays/i })
     expect(dialog.querySelector('[data-display-list]')).not.toBeNull()
-    expect(within(dialog).getAllByRole('button', { name: /Send Stage here/ }).length).toBe(2)
+    // beta.9: ticks, not buttons — one per display and column.
+    expect(within(dialog).getAllByRole('checkbox', { name: /^Stage on / }).length).toBe(2)
+    expect(within(dialog).getAllByRole('checkbox', { name: /^Statistics on / }).length).toBe(2)
+    expect(within(dialog).queryByRole('button', { name: /Send Stage here/ })).toBeNull()
   })
+
 })
 
 describe('the update notice (P12.9)', () => {

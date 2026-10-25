@@ -238,6 +238,11 @@ export const SETTINGS = {
     /** P21.4: the Statistics window on a display card. */
     statistics: 'Statistics',
     showStatsHere: 'Show Statistics here',
+    /** The popover's ticks (beta.9): their names, and why one cannot be changed. */
+    stageTick: (display: string) => `Stage on ${display}`,
+    statsTick: (display: string) => `Statistics on ${display}`,
+    pacerTick: 'Stage stays on at least one display; to move it, use the arrow beside a free one',
+    statsBlockedTick: 'Stage is on this display',
     statsFullscreen: 'Statistics fullscreen',
     /** P21.5: a row's actions are short under the Stage and Statistics
      * headings; the full names above stay their accessible names. */

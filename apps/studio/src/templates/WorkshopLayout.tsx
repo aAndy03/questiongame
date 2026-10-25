@@ -19,10 +19,12 @@ export function WorkshopLayout({ toolbar, children, inspector }: WorkshopLayoutP
       transition={{ duration: 0.14, ease: [0.2, 0, 0, 1] }}
       className="flex h-full min-h-0 flex-col"
     >
-      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-[var(--chrome-line)] px-4 py-2">{toolbar}</div>
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--chrome-line)] px-4 py-2">{toolbar}</div>
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="min-h-0 min-w-0 p-4">{children}</div>
-        <aside className="min-h-0 overflow-y-auto border-l border-[var(--chrome-line)] p-4" style={{ background: 'var(--surface)' }}>
+        <div className="min-h-0 min-w-0 py-4 pl-4">{children}</div>
+        {/* Plain (beta.9): the panels in it are the surfaces, not the aside.
+          * 16px from the canvas, as everywhere: no padding doubled between. */}
+        <aside className="min-h-0 overflow-y-auto p-4">
           {inspector}
         </aside>
       </div>

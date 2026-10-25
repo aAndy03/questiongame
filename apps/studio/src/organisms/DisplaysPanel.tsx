@@ -55,10 +55,11 @@ export function DisplaysPanel({ compact }: DisplaysPanelProps) {
         <div className="col-span-full grid grid-cols-subgrid px-2" aria-hidden>
           <span />
           <span />
-          <Text variant="studio-caption" tone="muted">
+          {/* Over the ticks in the popover, centred like them (beta.9). */}
+          <Text variant="studio-caption" tone="muted" className={compact ? 'text-center' : undefined}>
             {SETTINGS.monitors.stage}
           </Text>
-          <Text variant="studio-caption" tone="muted">
+          <Text variant="studio-caption" tone="muted" className={compact ? 'text-center' : undefined}>
             {SETTINGS.monitors.statistics}
           </Text>
         </div>

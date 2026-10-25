@@ -20,6 +20,10 @@ export function useSqueeze(ref: RefObject<HTMLElement | null>): void {
     if (!el) return
     const fit = () => {
       delete el.dataset['squeezed']
+      // Measured at full size: the search uncapped too, or a cap from the
+      // last squeeze would decide this one.
+      const searches = [...el.querySelectorAll<HTMLElement>('.search-field')]
+      for (const search of searches) search.style.maxWidth = ''
       // What folds is measured whole: every item shown.
       for (const item of el.querySelectorAll<HTMLElement>('[data-fold-item]')) item.style.display = ''
       const kids = [...el.children] as HTMLElement[]
@@ -27,6 +31,10 @@ export function useSqueeze(ref: RefObject<HTMLElement | null>): void {
       const wraps = kids.some((k) => k.offsetTop > top + 2)
       const folds = [...el.querySelectorAll<HTMLElement>('[data-fold]')].some((f) => f.scrollWidth > f.clientWidth + 1)
       const squeezed = wraps || folds || el.scrollWidth > el.clientWidth + 1
+      // The search keeps the width it had before the squeeze (beta.9): the
+      // room the buttons give up as icons is not the search's to take — it
+      // jumped wide the moment a search made *Sort: Best match* not fit.
+      if (squeezed) for (const search of searches) search.style.maxWidth = `${search.offsetWidth}px`
       if (squeezed) el.dataset['squeezed'] = ''
       for (const button of el.querySelectorAll<HTMLElement>('.button')) {
         if (squeezed && !button.title) {

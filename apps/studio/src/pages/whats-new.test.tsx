@@ -105,3 +105,54 @@ describe("What's new (P12.10)", () => {
     expect(await screen.findByRole('dialog', { name: WHATS_NEW_COPY.en.title('1.0.2') })).toBeTruthy()
   })
 })
+
+describe("What's new holds every release (beta.9)", () => {
+  it('lists every release up to this one, stable and beta, newest first and chosen; another is a click away', async () => {
+    const { useWhatsNewStore } = await import('@/chrome/whatsNew')
+    const { WhatsNewDialog } = await import('@/organisms')
+    const beta8 = WHATS_NEW.find((r) => r.version === '2.0.0-beta.8')!
+    const beta9 = WHATS_NEW.find((r) => r.version === '2.0.0-beta.9')!
+    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query')
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <WhatsNewDialog />
+      </QueryClientProvider>,
+    )
+    act(() => useWhatsNewStore.getState().show({ releases: [beta8], markSeen: true }))
+    const dialog = await screen.findByRole('dialog', { name: WHATS_NEW_COPY.en.title('2.0.0-beta.8') })
+    const list = within(dialog).getByRole('navigation', { name: 'Releases' })
+    const versions = within(list).getAllByRole('button').map((o) => o.getAttribute('aria-label'))
+    expect(versions[0]).toBe('2.0.0-beta.8, new')
+    expect(within(list).getByRole('button', { name: '2.0.0-beta.8, new' }).getAttribute('aria-current')).toBe('true')
+    expect(versions).toContain('1.1.1')
+    expect(versions).not.toContain(beta9.version)
+    // Never published: not a release to list.
+    expect(versions).not.toContain('2.0.0-beta.7')
+    expect(within(dialog).getByText(beta8.notes.en[0]!.title)).toBeTruthy()
+    fireEvent.click(within(list).getByRole('button', { name: '1.1.1' }))
+    const stable = WHATS_NEW.find((r) => r.version === '1.1.1')!
+    expect(await within(dialog).findByText(stable.notes.en[0]!.title)).toBeTruthy()
+    expect(within(dialog).getByRole('heading', { name: WHATS_NEW_COPY.en.title('1.1.1') })).toBeTruthy()
+  })
+})
+
+describe("What's new on a stable build (beta.9)", () => {
+  it('lists stable releases only: a stable user is never shown a beta', async () => {
+    const { useWhatsNewStore } = await import('@/chrome/whatsNew')
+    const { WhatsNewDialog } = await import('@/organisms')
+    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query')
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <WhatsNewDialog />
+      </QueryClientProvider>,
+    )
+    const stable = WHATS_NEW.find((r) => r.version === '1.1.1')!
+    act(() => useWhatsNewStore.getState().show({ releases: [stable], markSeen: false }))
+    const dialog = await screen.findByRole('dialog', { name: WHATS_NEW_COPY.en.title('1.1.1') })
+    const versions = within(within(dialog).getByRole('navigation', { name: 'Releases' }))
+      .getAllByRole('button')
+      .map((o) => o.getAttribute('aria-label'))
+    expect(versions.every((v) => !v?.includes('-'))).toBe(true)
+    expect(versions[0]).toBe('1.1.1')
+  })
+})

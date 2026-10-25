@@ -53,12 +53,17 @@ function ScreensFor() {
     <LayoutEditor
       key={recipeId}
       recipeId={recipeId}
-      render={({ toolbar, canvas, inspector }) => (
+      render={({ toolbar, status, canvas, inspector }) => (
         <WorkshopLayout
           toolbar={
             <>
-              {picker}
-              {toolbar}
+              {/* The game and its save state on one line, the screens' tabs under it (beta.9). */}
+              <div className="flex w-full items-center gap-3">
+                {picker}
+                <div className="flex-1" />
+                {status}
+              </div>
+              <div className="w-full min-w-0">{toolbar}</div>
             </>
           }
           inspector={inspector}

@@ -26,6 +26,8 @@ export interface WhatsNewNote {
 export interface WhatsNewRelease {
   readonly version: string
   readonly notes: Readonly<Record<WhatsNewLanguage, readonly WhatsNewNote[]>>
+  /** Built and never published (2.0.0-beta.7): shown to an update that spans it, never in the list of releases. */
+  readonly unreleased?: true | undefined
 }
 
 export const WHATS_NEW: readonly WhatsNewRelease[] = [
@@ -53,6 +55,14 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
           title: 'Import, laid out wide',
           body: 'Import questions puts the file, where its rows go and what it holds in a column on the left, and its rows, or its text in a tab of its own, beside them, with the pages at the bottom. Copy template now explains the file to whoever fills it in, an AI assistant included: that the examples are not a pattern, that the right answer can stand anywhere, how to spread difficulties and what makes a question incomplete.',
         },
+        {
+          title: 'Displays at a glance',
+          body: 'The displays in the status bar open a smaller window: the displays come first, with a tick for where Stage shows, on as many displays as you like, and one for where Statistics shows. To move Stage from one display to another, use the arrow beside a display. Opening Stage, Statistics and the Monitors settings are the small icons at the top.',
+        },
+        {
+          title: 'Every release in What’s new',
+          body: 'What’s new now lists every version, stable and beta, newest first. The newest is shown when it opens, any other is a click away, and the ones an update has just brought are marked New.',
+        },
       ],
       ro: [
         {
@@ -74,6 +84,14 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
         {
           title: 'Import, pe toată lățimea',
           body: 'Import questions pune fișierul, unde merg rândurile și ce conține într-o coloană în stânga, iar rândurile, sau textul într-un tab separat, lângă ele, cu paginile jos. Copy template explică acum fișierul celui care îl completează, inclusiv unui asistent AI: că exemplele nu sunt un tipar, că răspunsul corect poate sta oriunde, cum să împartă dificultățile și ce face o întrebare incompletă.',
+        },
+        {
+          title: 'Ecranele dintr-o privire',
+          body: 'Ecranele din bara de stare deschid o fereastră mai mică: întâi ecranele, cu o bifă pentru unde apare Stage, pe câte ecrane vrei, și una pentru unde apare Statistics. Ca să muți Stage de pe un ecran pe altul, folosește săgeata de lângă ecran. Deschiderea Stage, Statistics și setările Monitors sunt iconițele mici de sus.',
+        },
+        {
+          title: 'Toate versiunile în What’s new',
+          body: 'What’s new arată acum fiecare versiune, stabilă și beta, de la cea mai nouă. La deschidere vezi cea mai nouă, oricare alta e la un clic distanță, iar cele aduse chiar de actualizare sunt marcate Nou.',
         },
       ],
     },
@@ -121,6 +139,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
   },
   {
     version: '2.0.0-beta.7',
+    unreleased: true,
     notes: {
       en: [
         {
@@ -596,10 +615,10 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
 ]
 
 export const WHATS_NEW_COPY: Readonly<
-  Record<WhatsNewLanguage, { title: (version: string) => string; close: string; language: string }>
+  Record<WhatsNewLanguage, { title: (version: string) => string; close: string; language: string; releases: string; fresh: string; beta: string; option: (version: string, fresh: boolean) => string }>
 > = {
-  en: { title: (version) => `What’s new in questiongame ${version}`, close: 'Got it', language: 'Language' },
-  ro: { title: (version) => `Ce e nou în questiongame ${version}`, close: 'Am înțeles', language: 'Limba' },
+  en: { title: (version) => `What’s new in questiongame ${version}`, close: 'Got it', language: 'Language', releases: 'Releases', fresh: 'New', beta: 'Beta', option: (version, fresh) => (fresh ? `${version}, new` : version) },
+  ro: { title: (version) => `Ce e nou în questiongame ${version}`, close: 'Am înțeles', language: 'Limba', releases: 'Versiuni', fresh: 'Nou', beta: 'Beta', option: (version, fresh) => (fresh ? `${version}, nou` : version) },
 }
 
 const SEMVER = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/

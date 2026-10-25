@@ -1,5 +1,5 @@
 import type { MonitorInfo } from '@questiongame/contract'
-import { Button, MeaningChip, Text } from '@/atoms'
+import { Button, CheckboxField, IconButton, MeaningChip, Text } from '@/atoms'
 import { SETTINGS } from '@/copy/settings'
 import { STATS } from '@/copy/stats'
 import { DisplayTile, type DisplayStageState, type DisplayStatsState } from './DisplayTile'
@@ -15,7 +15,11 @@ export interface DisplayRowProps {
   onRemoveStage: () => void
   onShowStats: () => void
   onCloseStats: () => void
-  /** The status bar's popover: a smaller tile, the same row. */
+  /**
+   * The status bar's popover (beta.9): a smaller tile, and **ticks** in place
+   * of the Stage and Statistics buttons — the popover is glanced at, the
+   * buttons are Settings ▸ Monitors'.
+   */
   compact?: boolean | undefined
   highlighted?: boolean | undefined
   onHighlight?: ((on: boolean) => void) | undefined
@@ -99,57 +103,98 @@ export function DisplayRow({ monitor, stage, stats, onSendStage, onMoveStage, on
         ) : null}
       </div>
 
-      {/* Stage. Send on a free display (the first is the pacer, the rest
-        * mirror — the operator never needs the word); Move beside it while
-        * the pacer stands elsewhere; Remove on a mirror; the pacer itself is
-        * only marked. */}
-      {/* Both cells hold the room their widest state needs (Send + Move;
-        * the chip + Close), so a press never reflows the list or makes the
-        * popover jump under the pointer. One pattern in both (P21.5): a chip
-        * for what is there, short words under the column's heading for what
-        * can be done — full names to a screen reader — no icons, quiet until
-        * the row is lit (seven rows of filled buttons read as a wall). */}
-      <div className="flex min-w-[7.5rem] items-center gap-1" data-display-stage-cell>
-        {stage === 'stage' ? <MeaningChip meaning="stage">{SETTINGS.monitors.showing}</MeaningChip> : null}
-        {stage === 'mirror' ? (
-          <>
-            <MeaningChip meaning="stage">{SETTINGS.monitors.mirror}</MeaningChip>
-            <Button size="sm" variant="ghost" label={SETTINGS.monitors.removeStage} onPress={onRemoveStage}>
-              {SETTINGS.monitors.remove}
-            </Button>
-          </>
-        ) : null}
-        {stage === 'free' ? (
-          <>
-            <Button size="sm" variant={highlighted ? 'secondary' : 'ghost'} label={SETTINGS.monitors.sendStage} onPress={onSendStage}>
-              {SETTINGS.monitors.send}
-            </Button>
-            {onMoveStage ? (
-              <Button size="sm" variant="ghost" label={SETTINGS.monitors.moveStage} onPress={onMoveStage}>
-                {SETTINGS.monitors.move}
+      {compact ? (
+        <>
+          {/* Stage: a tick per display, as many as show it (the pacer and its
+            * mirrors). Ticking a free one sends Stage there — a mirror, once
+            * Stage is up; unticking a mirror removes it; the pacer stays
+            * ticked. Moving the pacer is the small icon beside a free tick. */}
+          {/* The move icon in its own slot beside the tick, never over it: a
+            * click on the tick's edge must add a mirror, not move Stage. */}
+          <div className="grid w-20 grid-cols-[1.75rem_1rem_1.75rem] items-center justify-items-center gap-x-0.5" data-display-stage-cell>
+            <span />
+            <CheckboxField
+              label={SETTINGS.monitors.stageTick(name)}
+              hideLabel
+              isSelected={stage === 'stage' || stage === 'mirror'}
+              onChange={(on) => {
+                if (on && stage === 'free') onSendStage()
+                if (!on && stage === 'mirror') onRemoveStage()
+              }}
+              disabledReason={stage === 'stage' ? SETTINGS.monitors.pacerTick : null}
+            />
+            {stage === 'free' && onMoveStage ? (
+              <span className={['transition-opacity', highlighted ? 'opacity-100' : 'pointer-events-none opacity-0 focus-within:pointer-events-auto focus-within:opacity-100'].join(' ')}>
+                <IconButton icon="transfer" size="sm" label={SETTINGS.monitors.moveStage} onPress={onMoveStage} />
+              </span>
+            ) : null}
+          </div>
+          {/* Statistics: tick to show it here, untick to close it; never where Stage stands. */}
+          <div className="flex w-20 items-center justify-center" data-display-stats-cell>
+            <CheckboxField
+              label={SETTINGS.monitors.statsTick(name)}
+              hideLabel
+              isSelected={stats === 'here'}
+              onChange={(on) => (on ? onShowStats() : onCloseStats())}
+              disabledReason={stats === 'blocked' ? SETTINGS.monitors.statsBlockedTick : null}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Stage. Send on a free display (the first is the pacer, the rest
+            * mirror — the operator never needs the word); Move beside it while
+            * the pacer stands elsewhere; Remove on a mirror; the pacer itself is
+            * only marked. */}
+          {/* Both cells hold the room their widest state needs (Send + Move;
+            * the chip + Close), so a press never reflows the list or makes the
+            * popover jump under the pointer. One pattern in both (P21.5): a chip
+            * for what is there, short words under the column's heading for what
+            * can be done — full names to a screen reader — no icons, quiet until
+            * the row is lit (seven rows of filled buttons read as a wall). */}
+          <div className="flex min-w-[7.5rem] items-center gap-1" data-display-stage-cell>
+            {stage === 'stage' ? <MeaningChip meaning="stage">{SETTINGS.monitors.showing}</MeaningChip> : null}
+            {stage === 'mirror' ? (
+              <>
+                <MeaningChip meaning="stage">{SETTINGS.monitors.mirror}</MeaningChip>
+                <Button size="sm" variant="ghost" label={SETTINGS.monitors.removeStage} onPress={onRemoveStage}>
+                  {SETTINGS.monitors.remove}
+                </Button>
+              </>
+            ) : null}
+            {stage === 'free' ? (
+              <>
+                <Button size="sm" variant={highlighted ? 'secondary' : 'ghost'} label={SETTINGS.monitors.sendStage} onPress={onSendStage}>
+                  {SETTINGS.monitors.send}
+                </Button>
+                {onMoveStage ? (
+                  <Button size="sm" variant="ghost" label={SETTINGS.monitors.moveStage} onPress={onMoveStage}>
+                    {SETTINGS.monitors.move}
+                  </Button>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+
+          {/* Statistics: shown here, or offered — never on the display Stage
+            * stands on (§13.3), where the cell stays empty. */}
+          <div className="flex min-w-[7.5rem] items-center gap-1" data-display-stats-cell>
+            {stats === 'here' ? (
+              <>
+                <MeaningChip meaning="statistics">{SETTINGS.monitors.showing}</MeaningChip>
+                <Button size="sm" variant="ghost" label={STATS.window.close} onPress={onCloseStats}>
+                  {SETTINGS.monitors.close}
+                </Button>
+              </>
+            ) : null}
+            {stats === 'free' ? (
+              <Button size="sm" variant={highlighted ? 'secondary' : 'ghost'} label={SETTINGS.monitors.showStatsHere} onPress={onShowStats}>
+                {SETTINGS.monitors.show}
               </Button>
             ) : null}
-          </>
-        ) : null}
-      </div>
-
-      {/* Statistics: shown here, or offered — never on the display Stage
-        * stands on (§13.3), where the cell stays empty. */}
-      <div className="flex min-w-[7.5rem] items-center gap-1" data-display-stats-cell>
-        {stats === 'here' ? (
-          <>
-            <MeaningChip meaning="statistics">{SETTINGS.monitors.showing}</MeaningChip>
-            <Button size="sm" variant="ghost" label={STATS.window.close} onPress={onCloseStats}>
-              {SETTINGS.monitors.close}
-            </Button>
-          </>
-        ) : null}
-        {stats === 'free' ? (
-          <Button size="sm" variant={highlighted ? 'secondary' : 'ghost'} label={SETTINGS.monitors.showStatsHere} onPress={onShowStats}>
-            {SETTINGS.monitors.show}
-          </Button>
-        ) : null}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

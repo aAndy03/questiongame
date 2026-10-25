@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { App } from '@/App'
 import { HOME, useNavStore } from '@/chrome/nav'
 import { createFakeHost, type FakeHost } from '@/host/fake'
@@ -85,6 +85,52 @@ describe('Settings ▸ Monitors, with several displays', () => {
     const moves = fake.calls.filter((c) => c.name === 'stage_set_monitor')
     expect(moves.at(-1)?.args).toEqual({ monitorId: 'tv@1920x1080' })
     expect(fake.calls.some((c) => c.name === 'stage_add_mirror'), 'a move is not a mirror').toBe(false)
+  })
+
+  it('the status bar popover ticks Stage onto several displays at once, and a mirror off again (beta.9)', async () => {
+    await openMonitors()
+    fireEvent.click(document.querySelector<HTMLElement>('[data-displays-trigger]')!)
+    const popover = await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[data-displays-panel]')
+      expect(el).toBeTruthy()
+      return el!
+    })
+    const ticks = () => within(popover).getAllByRole('checkbox', { name: /^Stage on / }) as HTMLInputElement[]
+    await act(async () => ticks()[0]!.click())
+    await waitFor(() => expect(ticks()[0]!.checked).toBe(true))
+    await act(async () => ticks()[1]!.click())
+    // Both show Stage: the second is a mirror, not a move.
+    await waitFor(() => expect(ticks().map((t) => t.checked)).toEqual([true, true]))
+    expect(fake.calls.some((c) => c.name === 'stage_add_mirror')).toBe(true)
+    await act(async () => ticks()[1]!.click())
+    await waitFor(() => expect(ticks().map((t) => t.checked)).toEqual([true, false]))
+    // The pacer's tick cannot be taken off.
+    expect(ticks()[0]!.disabled).toBe(true)
+  })
+
+  it('the popover moves Stage with the icon beside a free tick, and ticks Statistics on and off (beta.9)', async () => {
+    await openMonitors()
+    fireEvent.click(document.querySelector<HTMLElement>('[data-displays-trigger]')!)
+    const popover = await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[data-displays-panel]')
+      expect(el).toBeTruthy()
+      return el!
+    })
+    const row = (key: string) => popover.querySelector<HTMLElement>(`[data-display-row="${key}"]`)!
+    const stageTick = (key: string) => within(row(key)).getByRole('checkbox', { name: /^Stage on / }) as HTMLInputElement
+    const statsTick = (key: string) => within(row(key)).getByRole('checkbox', { name: /^Statistics on / }) as HTMLInputElement
+    await act(async () => stageTick('primary').click())
+    await waitFor(() => expect(row('primary').dataset['stage']).toBe('stage'))
+    // Where Stage stands, Statistics cannot go.
+    expect(statsTick('primary').disabled).toBe(true)
+    await act(async () => within(row('tv@1920x1080')).getByRole('button', { name: 'Move Stage here' }).click())
+    await waitFor(() => expect(row('tv@1920x1080').dataset['stage']).toBe('stage'))
+    expect(row('primary').dataset['stage']).toBe('free')
+    expect(fake.calls.some((c) => c.name === 'stage_add_mirror'), 'a move is not a mirror').toBe(false)
+    await act(async () => statsTick('primary').click())
+    await waitFor(() => expect(statsTick('primary').checked).toBe(true))
+    await act(async () => statsTick('primary').click())
+    await waitFor(() => expect(statsTick('primary').checked).toBe(false))
   })
 
   it('takes a mirror away again, and never the pacer', async () => {

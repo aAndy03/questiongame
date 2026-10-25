@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Popover } from '@heroui/react'
-import { Button, Text } from '@/atoms'
+import { IconButton, Text } from '@/atoms'
 import { DisplayGlyphs } from '@/molecules'
 import { useNavStore } from '@/chrome/nav'
 import { CHROME } from '@/copy'
@@ -57,24 +57,24 @@ export function DisplaysStatus() {
       </Popover.Trigger>
       <Popover.Content placement="top start">
         <Popover.Dialog aria-label={CHROME.openDisplays}>
-          <div className="flex w-max min-w-[24rem] max-w-[min(44rem,92vw)] flex-col gap-2" data-displays-panel>
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-              <Text as="h2" variant="studio-subheading">
+          <div className="flex w-max min-w-[20rem] max-w-[min(36rem,92vw)] flex-col gap-1.5" data-displays-panel>
+            {/* The header is the least of it (beta.9): a caption and three
+              * icons. The displays — the map, the rows — have the room. */}
+            <div className="flex items-center justify-between gap-3">
+              <Text as="h2" variant="studio-caption" tone="muted">
                 {CHROME.displaysTitle(count)}
               </Text>
-              <div className="flex items-center gap-1.5">
-                <DisplayWindowButtons />
-                <Button
+              <div className="flex items-center">
+                <DisplayWindowButtons iconOnly />
+                <IconButton
                   size="sm"
-                  variant="ghost"
                   icon="settings"
+                  label={CHROME.displaysSettings}
                   onPress={() => {
                     setOpen(false)
                     void go({ tab: 'settings', inner: 'monitors' })
                   }}
-                >
-                  {CHROME.displaysSettings}
-                </Button>
+                />
               </div>
             </div>
             <div className="-mx-2 max-h-[min(30rem,65vh)] overflow-y-auto">
