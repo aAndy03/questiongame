@@ -4,6 +4,7 @@ import { GAME } from '@/copy'
 import { PREVIEW } from '@/copy/preview'
 import type { DomainLadder } from '@/host/types'
 import { DragHandle, type SortableRowHandle } from './SortableList'
+import { StickyBand } from './ListControls'
 
 export interface BoardDomainRowProps {
   handle: SortableRowHandle
@@ -33,6 +34,46 @@ export interface BoardDomainRowProps {
  * host's (`rules_preview`), so the row never counts what a Play would not ask.
  */
 export function BoardDomainRow({ handle, name, code, overridden, count, of, ladder, short, open, onToggle, frozenReason, actions, children }: BoardDomainRowProps) {
+  const head = (compact: boolean) => (
+    <div className={['flex flex-wrap items-center gap-x-3 gap-y-1 pr-2 pl-1', compact ? 'min-h-9 py-0.5' : 'min-h-12 py-1.5'].join(' ')}>
+      <DragHandle handle={handle} label={GAME.reorder(name)} disabledReason={frozenReason} />
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={name}
+        onClick={onToggle}
+        className="flex min-w-[10rem] flex-1 items-center gap-2 rounded py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+      >
+        <Icon name="chevronRight" size="sm" className={['shrink-0 transition-transform', open ? 'rotate-90' : ''].join(' ')} />
+        <Text variant="studio-label" truncate>
+          {name}
+        </Text>
+        <Text variant="studio-mono" tone="muted">
+          {code}
+        </Text>
+      </button>
+      {overridden ? <MeaningChip meaning="overridden">{GAME.overridden}</MeaningChip> : null}
+      {/* Fixed widths, right-aligned: down a long board the three numbers read as columns. */}
+      <span className="flex items-center gap-4 whitespace-nowrap">
+        <Text variant="studio-caption" tone={short ? 'warning' : 'muted'} tabular className="inline-block w-32 text-right">
+          {GAME.questionsOn(count, of)}
+        </Text>
+        {ladder && ladder.questions > 0 ? (
+          <>
+            <Text variant="studio-caption" tone="muted" tabular className="inline-block w-28 text-right">
+              {GAME.span(ladder.minDifficulty, ladder.maxDifficulty)}
+            </Text>
+            <Tooltip content={PREVIEW.board.availableHint}>
+              <Text variant="studio-caption" tone="muted" tabular className="inline-block w-28 text-right">
+                {GAME.pointsAvailable(ladder.pointsAvailable)}
+              </Text>
+            </Tooltip>
+          </>
+        ) : null}
+      </span>
+      <span className="flex items-center gap-1">{actions}</span>
+    </div>
+  )
   return (
     <div
       data-board-domain
@@ -41,44 +82,11 @@ export function BoardDomainRow({ handle, name, code, overridden, count, of, ladd
         handle.isDragging ? 'border-[var(--accent)] shadow-lg' : 'border-[var(--border)]',
       ].join(' ')}
     >
-      <div className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 py-1.5 pr-2 pl-1">
-        <DragHandle handle={handle} label={GAME.reorder(name)} disabledReason={frozenReason} />
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-label={name}
-          onClick={onToggle}
-          className="flex min-w-[10rem] flex-1 items-center gap-2 rounded py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
-        >
-          <Icon name="chevronRight" size="sm" className={['shrink-0 transition-transform', open ? 'rotate-90' : ''].join(' ')} />
-          <Text variant="studio-label" truncate>
-            {name}
-          </Text>
-          <Text variant="studio-mono" tone="muted">
-            {code}
-          </Text>
-        </button>
-        {overridden ? <MeaningChip meaning="overridden">{GAME.overridden}</MeaningChip> : null}
-        {/* Fixed widths, right-aligned: down a long board the three numbers read as columns. */}
-        <span className="flex items-center gap-4 whitespace-nowrap">
-          <Text variant="studio-caption" tone={short ? 'warning' : 'muted'} tabular className="inline-block w-32 text-right">
-            {GAME.questionsOn(count, of)}
-          </Text>
-          {ladder && ladder.questions > 0 ? (
-            <>
-              <Text variant="studio-caption" tone="muted" tabular className="inline-block w-28 text-right">
-                {GAME.span(ladder.minDifficulty, ladder.maxDifficulty)}
-              </Text>
-              <Tooltip content={PREVIEW.board.availableHint}>
-                <Text variant="studio-caption" tone="muted" tabular className="inline-block w-28 text-right">
-                  {GAME.pointsAvailable(ladder.pointsAvailable)}
-                </Text>
-              </Tooltip>
-            </>
-          ) : null}
-        </span>
-        <span className="flex items-center gap-1">{actions}</span>
-      </div>
+      {/* Open, its row sticks while its questions scroll under it and lets go
+          where the domain ends (beta.9): the whole row, at the compact height. */}
+      <StickyBand top={0} background="var(--surface)" className="rounded-t-[var(--radius)]" off={!open} hairline>
+        {head}
+      </StickyBand>
       {open ? <div className="border-t border-[var(--separator)] px-2 py-1.5">{children}</div> : null}
     </div>
   )

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Dropdown, Header, Label, Pagination, Popover } from '@heroui/react'
-import { Button, CheckboxField, Icon, IconButton, NumberField, SegmentedField, SQUEEZE_EVENT, SwitchField, Text } from '@/atoms'
+import { Button, CheckboxField, Icon, IconButton, NumberField, SegmentedField, SQUEEZE_EVENT, SwitchField, Text, useStuck } from '@/atoms'
 import { LIST } from '@/copy'
 
 /**
@@ -398,14 +398,22 @@ export interface GroupHeaderProps {
   onToggle(): void
   /** A menu at the header's end — a domain group's Rename and Delete (P15). */
   actions?: ReactNode
+  /** The stuck variant (beta.9): 28px, caption type — drawn only while the header is stuck. */
+  compact?: boolean | undefined
 }
 
 /** A full-width header row: "History · 48", "(continued)" on a later page, a toggle. */
-export function GroupHeader({ label, count, continued, collapsed, onToggle, actions }: GroupHeaderProps) {
+export function GroupHeader({ label, count, continued, collapsed, onToggle, actions, compact }: GroupHeaderProps) {
   return (
-    <div role="heading" aria-level={3} className="flex h-10 items-center gap-2 border-b border-[var(--separator)] px-2" data-group-header>
+    <div
+      role="heading"
+      aria-level={3}
+      className={['flex items-center gap-2 border-b border-[var(--separator)] px-2', compact ? 'h-7' : 'h-10'].join(' ')}
+      data-group-header
+      data-compact={compact ? '' : undefined}
+    >
       <IconButton icon={collapsed ? 'chevronRight' : 'chevronDown'} size="sm" label={collapsed ? LIST.showGroup(label) : LIST.hideGroup(label)} hideTooltip onPress={onToggle} />
-      <Text variant="studio-label" tone="default">
+      <Text variant={compact ? 'studio-caption' : 'studio-label'} tone="default">
         {LIST.groupHeader(label, count)}
       </Text>
       {continued ? (
@@ -415,5 +423,46 @@ export function GroupHeader({ label, count, continued, collapsed, onToggle, acti
       ) : null}
       {actions ? <span className="ml-auto">{actions}</span> : null}
     </div>
+  )
+}
+
+export interface StickyBandProps {
+  /** The sticky offset in px: under the table's header row (36), or the top (0). */
+  top: number
+  /** Opaque, so what scrolls under it does not show through: the list's own surface. */
+  background: string
+  /** `li` inside a list. */
+  as?: 'div' | 'li' | undefined
+  className?: string | undefined
+  /** Not sticking now (a closed Board domain): the same tree, so focus inside it survives the switch. */
+  off?: boolean | undefined
+  /** A hairline under it while stuck, for a band with no rule of its own (a Board domain). */
+  hairline?: boolean | undefined
+  /** How many px the compact variant is shorter (12 for a group header): given back as margin while stuck. */
+  saves?: number | undefined
+  /** The band, told whether it is stuck: it draws its compact variant then. */
+  children(stuck: boolean): ReactNode
+}
+
+/**
+ * Where you are, kept in view (beta.9): a band (a group header, an open
+ * domain on the Board) that sticks at `top` while what it heads scrolls under
+ * it, and takes its compact variant while stuck. **Only what tells you where
+ * you are sticks, and it sticks at its smallest.** A compact band gives the
+ * height it saves back as margin, so stuck or not the rows under it stay where
+ * they are. A zero-height sentinel just before it says when (`useStuck`). A
+ * later band at the same `top` slides over an earlier one: one at a time.
+ */
+export function StickyBand({ top, background, as = 'div', className, off, hairline, saves = 12, children }: StickyBandProps) {
+  const [sentinel, seen] = useStuck(top)
+  const stuck = seen && !off
+  const Tag = as
+  return (
+    <>
+      <Tag ref={sentinel} aria-hidden className={as === 'li' ? 'col-span-full h-0 list-none' : 'h-0'} data-sticky-sentinel />
+      <Tag className={[off ? '' : 'sticky z-[5]', stuck && hairline ? 'shadow-[0_1px_0_var(--separator)]' : '', className ?? ''].join(' ')} style={{ top, background, marginBottom: stuck ? saves : undefined }} data-sticky-band data-stuck={stuck ? '' : undefined}>
+        {children(stuck)}
+      </Tag>
+    </>
   )
 }

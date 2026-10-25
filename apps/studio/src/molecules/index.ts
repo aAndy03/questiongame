@@ -31,6 +31,7 @@ export {
   ActiveFilters,
   FilterMenu,
   GroupHeader,
+  StickyBand,
   GroupMenu,
   PageFooter,
   SortMenu,

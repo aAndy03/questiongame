@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { CheckboxField, Skeleton } from '@/atoms'
-import { BulkBar, EmptyState, GroupHeader, PageFooter, RecordRow, type RecordLayout } from '@/molecules'
+import { BulkBar, EmptyState, GroupHeader, PageFooter, RecordRow, StickyBand, type RecordLayout } from '@/molecules'
 import { LIST } from '@/copy'
 import { crumb } from '@/chrome/diagnostics'
 import { footerText, isActive, type ListEntry } from '@/host/listView'
@@ -81,6 +81,8 @@ export interface LibraryListProps {
 }
 
 const VIRTUAL_ABOVE = 200
+/** The table's header row, `h-9`: a stuck group sits under it. */
+const HEADER_PX = 36
 
 /**
  * A table's meta column only where the list is wide enough for it (1.1.1):
@@ -154,7 +156,17 @@ export function LibraryList({
   const draw = (entry: ListEntry<unknown, RecordView>) => {
     if (entry.kind === 'header') {
       const g = entry.group
-      return <GroupHeader key={`#${g.key}`} label={g.label} count={g.count} continued={g.continued} collapsed={g.collapsed} onToggle={() => view.toggleCollapsed(g.key)} actions={headerActions?.(g.key, g.label)} />
+      const head = (compact: boolean) => (
+        <GroupHeader label={g.label} count={g.count} continued={g.continued} collapsed={g.collapsed} onToggle={() => view.toggleCollapsed(g.key)} actions={headerActions?.(g.key, g.label)} compact={compact} />
+      )
+      // Absolutely placed rows cannot stick: the virtual table draws its stuck group itself (`stuckGroup`).
+      if (virtual) return <div key={`#${g.key}`}>{head(false)}</div>
+      // Under the table's header row, or at the top of the grid (beta.9).
+      return (
+        <StickyBand key={`#${g.key}`} top={layout === 'table' ? HEADER_PX : 0} background={layout === 'table' ? 'var(--surface)' : 'var(--background)'}>
+          {head}
+        </StickyBand>
+      )
     }
     const { row } = entry
     const record = row.item.view
@@ -275,9 +287,32 @@ export function LibraryList({
       return <div className="flex flex-col gap-3">{out}</div>
     }
     if (virtual) {
+      // The group the top row belongs to, once its header has scrolled past:
+      // drawn compact in a zero-height sticky band under the header row.
+      const items = virtualizer.getVirtualItems()
+      const scrolled = virtualizer.scrollOffset ?? 0
+      const top = items.find((i) => i.end > scrolled)
+      let stuck: ListEntry<unknown, RecordView> | undefined
+      if (top && scrolled > 0) {
+        for (let i = top.index; i >= 0; i--) {
+          const e = entries[i]
+          if (e?.kind !== 'header') continue
+          const at = items.find((it) => it.index === i)
+          if (!at || at.start < scrolled) stuck = e
+          break
+        }
+      }
+      const stuckGroup = stuck?.kind === 'header' ? stuck.group : undefined
       return (
         <div className="rounded-[var(--radius)] border border-[var(--border)]" style={{ background: 'var(--surface)' }}>
           {header()}
+          {stuckGroup ? (
+            <div className="sticky z-[5] h-0" style={{ top: HEADER_PX }} data-sticky-band data-stuck>
+              <div style={{ background: 'var(--surface)' }}>
+                <GroupHeader label={stuckGroup.label} count={stuckGroup.count} continued={stuckGroup.continued} collapsed={stuckGroup.collapsed} onToggle={() => view.toggleCollapsed(stuckGroup.key)} compact />
+              </div>
+            </div>
+          ) : null}
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
           {virtualizer.getVirtualItems().map((item) => {
             const entry = entries[item.index]
@@ -293,9 +328,11 @@ export function LibraryList({
         </div>
       )
     }
-    // `overflow-hidden` keeps hover and selection inside the rounded corners.
+    // `overflow-clip` keeps hover and selection inside the rounded corners and,
+    // unlike `overflow-hidden`, is no scroll container, so the header row and
+    // the group headers stick to the list body (beta.9).
     return (
-      <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)]" style={{ background: 'var(--surface)' }}>
+      <div className="overflow-clip rounded-[var(--radius)] border border-[var(--border)]" style={{ background: 'var(--surface)' }}>
         {header()}
         {entries.map(draw)}
       </div>

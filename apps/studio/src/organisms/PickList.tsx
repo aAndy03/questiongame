@@ -1,6 +1,6 @@
 import { useMemo, useRef, type MouseEvent, type ReactNode } from 'react'
 import { CheckboxField, Text } from '@/atoms'
-import { EmptyState, GroupHeader, PageFooter } from '@/molecules'
+import { EmptyState, GroupHeader, PageFooter, StickyBand } from '@/molecules'
 import { LIST, PICKER } from '@/copy'
 import { useListState } from '@/chrome/chrome'
 import { footerText, listView, rangeBetween, type ListItem, type ListSpec } from '@/host/listView'
@@ -148,12 +148,17 @@ export function PickList<T>({ spec, items, chosen, onChosen, disabledReason, cou
           <ul className={['grid grid-cols-1 gap-x-6', columns === 2 ? '@4xl/picker:grid-cols-2' : ''].join(' ')}>
             {page.entries.map((e) =>
               e.kind === 'header' ? (
-                <li key={`h:${e.group.key}`} className="col-span-full flex items-center gap-1">
-                  <span className="pl-2">{groupCheckbox(groupIds.get(e.group.key) ?? [], PICKER.selectGroup(e.group.label))}</span>
-                  <div className="min-w-0 flex-1">
-                    <GroupHeader label={e.group.label} count={e.group.count} continued={e.group.continued} collapsed={e.group.collapsed} onToggle={() => view.toggleCollapsed(e.group.key)} />
-                  </div>
-                </li>
+                // The group sticks while its rows scroll, compact (beta.9); a picker is a dialog's.
+                <StickyBand key={`h:${e.group.key}`} as="li" top={0} background="var(--overlay)" className="col-span-full flex items-center gap-1">
+                  {(stuck) => (
+                    <>
+                      <span className="pl-2">{groupCheckbox(groupIds.get(e.group.key) ?? [], PICKER.selectGroup(e.group.label))}</span>
+                      <div className="min-w-0 flex-1">
+                        <GroupHeader label={e.group.label} count={e.group.count} continued={e.group.continued} collapsed={e.group.collapsed} onToggle={() => view.toggleCollapsed(e.group.key)} compact={stuck} />
+                      </div>
+                    </>
+                  )}
+                </StickyBand>
               ) : (
                 <PickRow
                   key={e.row.key}
