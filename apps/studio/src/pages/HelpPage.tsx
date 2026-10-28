@@ -26,9 +26,11 @@ export interface HelpPageProps {
 export function HelpPage({ section, topic }: HelpPageProps = {}) {
   const [query, setQuery] = useState('')
   useEffect(() => {
-    tipLearned('help')
     if (section === 'how-the-game-plays') tipLearned('how-the-game-plays')
-  }, [section])
+    // Opened at a topic: what it explains is read.
+    if (topic === 'easy-to-hard') tipLearned('board-difficulty')
+    if (topic === 'games') tipLearned('rules-frozen')
+  }, [section, topic])
   useEffect(() => {
     if (!section) return
     const el = document.getElementById(topic ? `help-${section}-${topic}` : `help-${section}`)

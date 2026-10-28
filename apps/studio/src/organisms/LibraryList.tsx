@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { tipMoment } from '@/tips/signals'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { CheckboxField, Skeleton } from '@/atoms'
 import { BulkBar, EmptyState, GroupHeader, PageFooter, RecordRow, StickyBand, type RecordLayout } from '@/molecules'
@@ -354,6 +355,7 @@ export function LibraryList({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <SelectedMany questions={view.spec.tab === 'library'} count={selection.ids.size} />
       {bulk ? (
         <BulkBar
           count={selection.ids.size}
@@ -425,3 +427,12 @@ function TextButton({ onPress, children }: { onPress: () => void; children: Reac
 
 /** Whether any filter of a view is on — for a page that needs to know. */
 export const hasActive = isActive
+
+/** beta.11: several **questions** ticked is a moment a tip may answer (*Share*, a run). */
+function SelectedMany({ questions, count }: { questions: boolean; count: number }) {
+  const many = questions && count >= 2
+  useEffect(() => {
+    if (many) tipMoment('questions:selected-many')
+  }, [many])
+  return null
+}

@@ -354,7 +354,7 @@ export const HELP: readonly HelpSection[] = [
         id: 'statistics-and-whats-new',
         title: 'Statistics and What’s new',
         blocks: [
-          { kind: 'p', text: '{{ui:Statistics}} shows the Play under way (Live) and every Play that has been run (All data). {{ui:Show Statistics}} opens it in a window of its own, on another display if you like.' },
+          { kind: 'p', text: '{{ui:Statistics}} shows the Play under way (Live) and every Play that has been run (All data). {{ui:Show Statistics}}, in {{ui:Displays}} on the status bar or in Settings ▸ Monitors, opens it in a window of its own, on another display if you like.' },
           { kind: 'p', text: '{{ui:What\'s new}}, in Settings ▸ About, lists what every version added. It also opens by itself after an update.' },
         ],
       },

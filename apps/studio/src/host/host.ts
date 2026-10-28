@@ -105,7 +105,13 @@ export function command<T>(name: Command, args?: Record<string, unknown>): Promi
   if (observers.size > 0) {
     answer.then(
       () => {
-        for (const observer of observers) observer(name, args)
+        for (const observer of observers) {
+          try {
+            observer(name, args)
+          } catch (error) {
+            console.error('a command observer failed', error)
+          }
+        }
       },
       () => {},
     )

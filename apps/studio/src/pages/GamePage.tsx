@@ -33,6 +33,7 @@ export function GamePage({ id, section = 'roster' }: GamePageProps) {
   useEffect(() => tipMoment('game:opened'), [id])
   useEffect(() => {
     if (section === 'board') tipMoment('game:board')
+    if (section === 'rules') tipMoment('game:rules')
   }, [section])
   const recipe = useRecipe(id)
   const play = usePlayState()

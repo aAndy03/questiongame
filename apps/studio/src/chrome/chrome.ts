@@ -223,10 +223,16 @@ export function tipsOf(prefs: OperatorPrefs | undefined): TipsState {
     t !== null &&
     typeof t === 'object' &&
     typeof t.skills === 'object' &&
+    t.skills !== null &&
     typeof t.tips === 'object' &&
+    t.tips !== null &&
     Array.isArray(t.activeDays) &&
     typeof t.today === 'object' &&
-    t.today !== null
+    t.today !== null &&
+    typeof t.today.day === 'string' &&
+    typeof t.today.shown === 'number' &&
+    (t.lastShownAt === null || typeof t.lastShownAt === 'number') &&
+    typeof t.firstLaunchDone === 'boolean'
   return ok ? t : EMPTY_TIPS_STATE
 }
 

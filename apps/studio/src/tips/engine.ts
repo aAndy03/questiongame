@@ -26,9 +26,10 @@ export type Moment =
   | 'route:settings'
   | 'editor:new-question'
   | 'question:saved'
-  | 'list:selected-many'
+  | 'questions:selected-many'
   | 'game:opened'
   | 'game:board'
+  | 'game:rules'
   | 'control:loaded'
   | 'control:rehearsal'
   | 'displays:opened'
@@ -45,9 +46,10 @@ export const MOMENTS: readonly Moment[] = [
   'route:settings',
   'editor:new-question',
   'question:saved',
-  'list:selected-many',
+  'questions:selected-many',
   'game:opened',
   'game:board',
+  'game:rules',
   'control:loaded',
   'control:rehearsal',
   'displays:opened',
@@ -122,6 +124,8 @@ export const TUNING = {
   novelty: { base: 0.15, scaleDays: 12 },
   /** No tip within `minMs` of the last; the chance rises to whole at `fullMs`. */
   quiet: { minMs: 90_000, fullMs: 300_000 },
+  /** The same tip not again within this — never twice in a row in a session (review). */
+  tipCooldownMs: 4 * 60 * 60_000,
   /** `cap = max(1, round(firstDay · e^(−(activeDays − 1) / scaleDays)))`. */
   dailyCap: { firstDay: 6, scaleDays: 7 },
   /** Reading speed and time for visuals; the clamp (§6.4: 30 s at most). */
@@ -180,6 +184,9 @@ export function quiet(state: TipsState, now: number): number {
   if (state.lastShownAt === null) return 1
   const { minMs, fullMs } = TUNING.quiet
   const since = now - state.lastShownAt
+  // A clock set back (or a document from another machine) is not "just now":
+  // tips would otherwise stay silent until the clock caught up (review).
+  if (since < 0) return 1
   if (since < minMs) return 0
   return Math.min(1, (since - minMs) / (fullMs - minMs))
 }
@@ -206,6 +213,8 @@ export function chance(state: TipsState, rule: TipRule, moment: Moment, now: num
   const relevance = rule.moments[moment] ?? 0
   if (relevance <= 0) return 0
   if (rule.requires !== undefined && knowledge(state, rule.requires, now) <= TUNING.prerequisite) return 0
+  const last = state.tips[rule.id]?.lastShown
+  if (last !== null && last !== undefined && now >= last && now - last < TUNING.tipCooldownMs) return 0
   const p = novelty(state) * relevance * weightAt(state.tips[rule.id], now) * (1 - knowledge(state, rule.skill, now)) * quiet(state, now)
   return p < TUNING.floor ? 0 : p
 }

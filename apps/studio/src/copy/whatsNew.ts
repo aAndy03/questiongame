@@ -37,7 +37,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
       en: [
         {
           title: 'Tips that teach as you go',
-          body: 'Now and then, when it fits what you are doing, a short tip appears at the bottom right: make a domain before your first question, import many questions with the AI template, drag questions onto a domain, run a show from the keyboard. It shows keys and gestures as you press them, stays as long as it takes to read, waits while your pointer is on it, and opens the right page of Help if you want more. Nothing dims, nothing takes your keys.',
+          body: 'Now and then, when it fits what you are doing, a short tip appears at the bottom right: make a domain before your first question, import many questions with the AI template, drag questions onto a domain, run a show from the keyboard. It draws keys and gestures as small badges, stays as long as it takes to read, waits while your pointer is on it, and opens the right page of Help if you want more. Nothing dims, nothing takes your keys.',
         },
         {
           title: 'Fewer as you learn',
@@ -51,7 +51,7 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
       ro: [
         {
           title: 'Sfaturi care te învață pe parcurs',
-          body: 'Din când în când, când se potrivește cu ce faci, apare un sfat scurt în dreapta jos: fă un domeniu înainte de prima întrebare, importă multe întrebări cu șablonul pentru AI, trage întrebările pe un domeniu, condu un show de la tastatură. Arată tastele și gesturile așa cum le apeși, stă cât îți trebuie să-l citești, așteaptă cât ții cursorul pe el și deschide pagina potrivită din Help dacă vrei mai mult. Nimic nu se întunecă, nimic nu-ți ia tastele.',
+          body: 'Din când în când, când se potrivește cu ce faci, apare un sfat scurt în dreapta jos: fă un domeniu înainte de prima întrebare, importă multe întrebări cu șablonul pentru AI, trage întrebările pe un domeniu, condu un show de la tastatură. Arată tastele și gesturile ca insigne mici, stă cât îți trebuie să-l citești, așteaptă cât ții cursorul pe el și deschide pagina potrivită din Help dacă vrei mai mult. Nimic nu se întunecă, nimic nu-ți ia tastele.',
         },
         {
           title: 'Tot mai puține pe măsură ce înveți',

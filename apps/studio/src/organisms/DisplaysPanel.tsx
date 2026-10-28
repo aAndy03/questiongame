@@ -24,7 +24,9 @@ export interface DisplaysPanelProps {
  */
 export function DisplaysPanel({ compact }: DisplaysPanelProps) {
   const { displays, sendStage, removeStage, moveStage, showStats, setStatsOpen } = useDisplays()
-  useEffect(() => tipMoment('displays:opened'), [])
+  // beta.11: looking at the displays is a moment — said as the panel goes,
+  // since the status bar's popover is a dialog and no tip shows over one.
+  useEffect(() => () => void setTimeout(() => tipMoment('displays:opened'), 400), [])
   const [highlighted, setHighlighted] = useState<string | null>(null)
   const nameOf = (d: (typeof displays)[number]) => d.monitor.friendlyName ?? d.monitor.name ?? SETTINGS.monitors.unnamed
 

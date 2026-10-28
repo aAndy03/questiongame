@@ -31,6 +31,12 @@ describe('chrome stores hold chrome only', () => {
     // Populate every optional shape so the walk sees the full document.
     useChromeStore.getState().setOperator('op-a')
     useChromeStore.getState().setSettingsInner('shortcuts')
+    // beta.11: the tips memory too, with the ids it really holds.
+    useChromeStore.getState().updateTips((s) => ({
+      ...s,
+      skills: { 'make-domain': { evidence: 1, at: 0 } },
+      tips: { 'domain-first': { shown: 1, lastShown: 0, weight: 1, weightAt: 0 } },
+    }))
     useHealthStore.getState().setReport({ status: 'warn', items: [] })
     for (const store of [useChromeStore, useNavStore, useNoticeStore, useHealthStore]) {
       const state = Object.fromEntries(
@@ -40,6 +46,9 @@ describe('chrome stores hold chrome only', () => {
         // `view.teams` is the Teams *tab's* grid|table preference, keyed by
         // tab name — chrome about a list, not a roster.
         if (/\.view\.[a-z]+$/.test(key)) continue
+        // A skill's or a tip's id (`make-domain`, `domain-first`) names what a
+        // tip teaches, not Play state; only those two maps are skipped.
+        if (/\.tips\.(skills|tips)\.[a-z0-9-]+(\.|$)/.test(key)) continue
         expect(key, `${key} looks like Play state`).not.toMatch(FORBIDDEN)
       }
     }

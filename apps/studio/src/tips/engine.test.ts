@@ -122,6 +122,19 @@ describe('the chance (beta.11)', () => {
   })
 })
 
+describe('the review (beta.11)', () => {
+  it('never shows the same tip twice within its cooldown', () => {
+    const s = shown(fresh(), drag, T0)
+    expect(chance(s, drag, 'route:library', T0 + 10 * 60_000)).toBe(0)
+    expect(chance(s, drag, 'route:library', T0 + TUNING.tipCooldownMs + 1)).toBeGreaterThan(0)
+  })
+
+  it('takes a clock set back as long ago, not as just now', () => {
+    const s = shown(fresh(), drag, T0)
+    expect(quiet(s, T0 - DAY)).toBe(1)
+  })
+})
+
 describe('picking (beta.11)', () => {
   it('shows How the game plays on first launch with certainty, once', () => {
     const never = () => 0.999

@@ -12,7 +12,7 @@ import { demoLibrary, demoRecipe } from '@/host/devFake'
 import { setHostTransport } from '@/host/host'
 import { receivePlayState } from '@/host/playState'
 import { knowledge } from '@/tips/engine'
-import { setTipsClock, tipMoment } from '@/tips/signals'
+import { resetTipsLearned, setTipsClock, tipLearned, tipMoment } from '@/tips/signals'
 import { TipCard, tipDuration } from './TipCard'
 
 /**
@@ -36,6 +36,7 @@ afterAll(() => {
 
 beforeEach(() => {
   setTipsClock(() => T0)
+  resetTipsLearned()
   useNavStore.setState({ route: HOME, back: [], forward: [], guard: null })
   useNoticeStore.setState({ notices: [] })
   useChromeStore.setState({ listState: {}, prefs: {}, operatorId: '', archiveScope: {} })
@@ -55,8 +56,12 @@ describe('the first launch (beta.11)', () => {
     render(<App />)
     await waitFor(() => expect(card()?.dataset['tip']).toBe('how-the-game-plays'))
     const tip = card()!
-    expect(tip.getAttribute('role')).toBe('status')
-    expect(tip.getAttribute('aria-live')).toBe('polite')
+    // Read out through the host's region, mounted before the tip came.
+    const region = document.querySelector('[data-tip-host]')!
+    expect(region.getAttribute('role')).toBe('status')
+    expect(region.getAttribute('aria-live')).toBe('polite')
+    expect(region.contains(tip)).toBe(true)
+    expect(within(tip).getByRole('heading').textContent).toBe(tip.getAttribute('aria-labelledby') ? document.getElementById(tip.getAttribute('aria-labelledby')!)?.textContent : 'none')
     expect(tip.contains(document.activeElement)).toBe(false)
     // No dimming: nothing covers the window behind it.
     expect(document.querySelector('[data-tip-host]')?.className).toContain('pointer-events-none')
@@ -95,6 +100,47 @@ describe('closing a tip (beta.11)', () => {
     const tip = await upFirst()
     fireEvent.click(within(tip).getByRole('button', { name: TIPS_COPY.moreInHelp }))
     await waitFor(() => expect(useNavStore.getState().route).toMatchObject({ tab: 'help', section: 'how-the-game-plays', topic: 'teams-and-the-token' }))
+  })
+})
+
+describe('the review (beta.11)', () => {
+  it('holds a tip’s clock while a dialog opened after it is up', async () => {
+    render(<App />)
+    await waitFor(() => expect(card()).not.toBeNull())
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    document.body.appendChild(dialog)
+    try {
+      await waitFor(() => expect(card()?.dataset['paused']).toBe('true'))
+    } finally {
+      dialog.remove()
+    }
+    await waitFor(() => expect(card()?.dataset['paused']).toBeUndefined())
+  })
+
+  it('counts a held key or a search typed in pauses as one use', () => {
+    useChromeStore.getState().setOperator('op-a')
+    for (let i = 0; i < 30; i++) tipLearned('shift-arrow-nudge')
+    expect(knowledge(tipsOf(prefs()), 'shift-arrow-nudge', T0)).toBeLessThan(0.3)
+  })
+})
+
+describe('sharing the corner with toasts (beta.11 review)', () => {
+  it('waits for a toast to go instead of appearing under it', async () => {
+    const toast = document.createElement('div')
+    toast.setAttribute('data-sonner-toast', '')
+    document.body.appendChild(toast)
+    try {
+      render(<App />)
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 1_500))
+      })
+      expect(card()).toBeNull()
+      toast.remove()
+      await waitFor(() => expect(card()?.dataset['tip']).toBe('how-the-game-plays'), { timeout: 6_000 })
+    } finally {
+      toast.remove()
+    }
   })
 })
 

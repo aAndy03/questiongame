@@ -25,7 +25,8 @@ export function skillOf(name: Command, args: Args): string | null {
     case 'catalog_upsert_propagating':
       return kindOf(args) === 'domain' ? 'make-domain' : null
     case 'catalog_import_questions':
-      return 'import'
+      // The dialog previews with `commit: false` on every edit (review).
+      return args?.['commit'] === true ? 'import' : null
     case 'tag_rename':
     case 'tag_delete':
     case 'tags_unify':
@@ -35,9 +36,6 @@ export function skillOf(name: Command, args: Args): string | null {
     case 'recipe_new':
     case 'recipe_duplicate':
       return 'make-game'
-    // Choosing a board's questions is working with its one-per-difficulty walk.
-    case 'recipe_set_membership':
-      return 'board-difficulty'
     case 'play_load':
       return 'load-into-control'
     case 'stage_set_monitor':
@@ -52,7 +50,7 @@ export function skillOf(name: Command, args: Args): string | null {
     case 'restart':
       return 'restart'
     case 'stats_window':
-      return 'statistics-window'
+      return args?.['open'] === false ? null : 'statistics-window'
     case 'workspace_create':
     case 'workspace_switch':
       return 'workspaces'

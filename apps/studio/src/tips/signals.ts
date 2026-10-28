@@ -40,8 +40,20 @@ export function onTipMoment(listener: Listener): () => void {
   return () => void listeners.delete(listener)
 }
 
+/** When each skill last counted, so a held key or a search typed in pauses is one use (review). */
+const lastLearned = new Map<string, number>()
+const ONE_USE_MS = 60_000
+
 /** The operator did what a skill names: its tips grow less likely (graded, `tips/engine.ts`). */
 export function tipLearned(skill: string): void {
   const now = clock()
+  const last = lastLearned.get(skill)
+  if (last !== undefined && now >= last && now - last < ONE_USE_MS) return
+  lastLearned.set(skill, now)
   useChromeStore.getState().updateTips((state) => learn(state, skill, 'did', now))
+}
+
+/** Tests only: forget when skills last counted. */
+export function resetTipsLearned(): void {
+  lastLearned.clear()
 }

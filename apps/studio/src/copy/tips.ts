@@ -22,6 +22,7 @@ export const ACTION_SKILLS = [
   'tags-and-groups',
   'make-game',
   'board-difficulty',
+  'rules-frozen',
   'load-into-control',
   'rehearsal',
   'displays',
@@ -59,7 +60,7 @@ export const TIPS: readonly Tip[] = [
     moments: { 'editor:new-question': 1 },
     skill: 'make-domain',
     title: 'Every question needs a domain',
-    body: 'A question goes on a board through its domain, such as History or Science. Make your domains first, in the Domains pane, then pick one here.',
+    body: 'A question goes on a board through its domain, such as History or Science. Make your domains first on {{ui:Domains & Questions}}, then pick one here.',
     help: { section: 'prepare-a-show', topic: 'teams-domains-questions' },
   },
   {
@@ -91,7 +92,7 @@ export const TIPS: readonly Tip[] = [
   },
   {
     id: 'select-run',
-    moments: { 'list:selected-many': 1, 'route:library': 0.4, 'route:teams': 0.3 },
+    moments: { 'questions:selected-many': 1, 'route:library': 0.4, 'route:teams': 0.3 },
     skill: 'shift-click-run',
     title: 'Tick a run of rows',
     body: '{{gesture:shift-click-run}} ticks every row from the last one you ticked to this one; {{gesture:mod-click-tick}} ticks one without opening it.',
@@ -125,7 +126,7 @@ export const TIPS: readonly Tip[] = [
   },
   {
     id: 'share',
-    moments: { 'list:selected-many': 0.6 },
+    moments: { 'questions:selected-many': 0.6 },
     skill: 'share',
     title: 'Share them as text',
     body: 'Tick questions and press {{ui:Share}}: they are copied complete, ready to paste into {{ui:Import}} in any library.',
@@ -147,6 +148,14 @@ export const TIPS: readonly Tip[] = [
     body: 'A board holds one question per difficulty in each domain, so a domain always gets harder. {{ui:Allow repeated difficulties}} lets it hold more.',
     figure: 'easy-to-hard',
     help: { section: 'how-the-game-plays', topic: 'easy-to-hard' },
+  },
+  {
+    id: 'rules-frozen',
+    moments: { 'game:rules': 1 },
+    skill: 'rules-frozen',
+    title: 'Rules hold still during a Play',
+    body: 'While a Play of this game runs, its scoring and timer rules are frozen: you can see them, not change them, until the Play ends. What Control does can still change.',
+    help: { section: 'prepare-a-show', topic: 'games' },
   },
   {
     id: 'load-into-control',
@@ -215,7 +224,7 @@ export const TIPS: readonly Tip[] = [
     moments: { 'route:statistics': 1 },
     skill: 'statistics-window',
     title: 'Statistics on another screen',
-    body: '{{ui:Show Statistics}} opens it in a window of its own, on another display if you like, while Control stays here.',
+    body: '{{ui:Show Statistics}}, in {{ui:Displays}} on the status bar or in Settings ▸ Monitors, opens it in a window of its own, on another display if you like.',
     help: { section: 'run-a-show', topic: 'statistics-and-whats-new' },
   },
   {
@@ -228,7 +237,7 @@ export const TIPS: readonly Tip[] = [
   },
   {
     id: 'copy-to-workspace',
-    moments: { 'route:workspaces': 0.6, 'list:selected-many': 0.3 },
+    moments: { 'route:workspaces': 0.6, 'questions:selected-many': 0.3 },
     skill: 'copy-to-workspace',
     requires: 'workspaces',
     title: 'Take rows to another workspace',
@@ -240,7 +249,7 @@ export const TIPS: readonly Tip[] = [
     moments: { 'route:screens': 1 },
     skill: 'shift-arrow-nudge',
     title: 'Place things exactly',
-    body: 'With an element selected, the arrow keys move it a pixel; {{gesture:shift-arrow-nudge}} moves it ten.',
+    body: 'With an element focused on the canvas, an arrow key moves it a pixel; {{gesture:shift-arrow-nudge}} moves it ten.',
     help: { section: 'shortcuts-and-gestures', topic: 'mouse-and-keyboard-gestures' },
   },
   {
@@ -249,7 +258,7 @@ export const TIPS: readonly Tip[] = [
     skill: 'help',
     title: 'Everything, in one place',
     body: '{{gesture:f1-help}} opens Help from anywhere: how the game plays, every screen, and every shortcut.',
-    help: { section: 'shortcuts-and-gestures', topic: 'control-shortcuts' },
+    help: { section: 'shortcuts-and-gestures', topic: 'mouse-and-keyboard-gestures' },
   },
   {
     id: 'title-bar',

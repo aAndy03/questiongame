@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Button, Icon, IconButton, Panel, Text } from '@/atoms'
 import { HelpFigure, HelpText, helpPlain } from '@/molecules'
 import { TIPS_COPY, type Tip } from '@/copy/tips'
@@ -6,6 +6,8 @@ import { duration } from '@/tips/engine'
 
 export interface TipCardProps {
   tip: Tip
+  /** A dialog is over it: the clock holds (beta.11 review). */
+  held?: boolean | undefined
   /** It stayed its time, or *More in Help* was pressed: read to the end. */
   onRead: () => void
   /** *Got it*. */
@@ -30,18 +32,19 @@ export function tipDuration(tip: Tip): number {
  * **A tip** (beta.11): Studio's `Panel` with a bulb, the title, Help's inline
  * text (key caps, gesture badges, labels) and maybe a figure, *More in Help*
  * and *Got it*. **It never asks for attention** (§6.7): no backdrop, no
- * dimming, no focus taken — a polite live region the operator may read or
- * ignore. It stays for its reading time, paused while the pointer is over it
+ * dimming, no focus taken — read out by `TipHost`'s live region, which the
+ * operator may listen to or ignore. It stays for its reading time, paused while the pointer is over it
  * or focus is in it, with a thin line for the time left; × or Esc closes it
  * early, and Esc goes no further than the card.
  */
-export function TipCard({ tip, onRead, onGotIt, onDismiss, onMoreInHelp }: TipCardProps) {
+export function TipCard({ tip, held, onRead, onGotIt, onDismiss, onMoreInHelp }: TipCardProps) {
   const total = tipDuration(tip)
   const [left, setLeft] = useState(total)
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
-  const paused = hovered || focused
+  const paused = hovered || focused || held === true
   const done = useRef(false)
+  const titleId = useId()
   const read = useRef(onRead)
   read.current = onRead
 
@@ -58,12 +61,17 @@ export function TipCard({ tip, onRead, onGotIt, onDismiss, onMoreInHelp }: TipCa
       read.current()
     }
   }, [left])
+  /** One way out: after Got it, × or More in Help the timer can no longer read it out. */
+  const once = (fn: () => void) => () => {
+    if (done.current) return
+    done.current = true
+    fn()
+  }
 
   return (
     <div
-      role="status"
-      aria-live="polite"
-      aria-label={TIPS_COPY.region}
+      role="group"
+      aria-labelledby={titleId}
       className="w-[22rem] max-w-[calc(100vw-2rem)]"
       data-tip={tip.id}
       data-paused={paused || undefined}
@@ -78,7 +86,7 @@ export function TipCard({ tip, onRead, onGotIt, onDismiss, onMoreInHelp }: TipCa
         // The card's Esc is the card's: an editor or a list behind it keeps its own.
         e.stopPropagation()
         e.preventDefault()
-        onDismiss()
+        once(onDismiss)()
       }}
     >
       <Panel className="relative flex flex-col gap-3 overflow-hidden shadow-[var(--overlay-shadow)]">
@@ -86,11 +94,11 @@ export function TipCard({ tip, onRead, onGotIt, onDismiss, onMoreInHelp }: TipCa
           <span className="mt-0.5 shrink-0 text-[var(--accent)]">
             <Icon name="tip" size="sm" />
           </span>
-          <Text as="h2" variant="studio-label" className="min-w-0 flex-1">
+          <Text as="h2" id={titleId} variant="studio-label" className="min-w-0 flex-1">
             {tip.title}
           </Text>
           <div className="-mr-2 -mt-1.5 shrink-0">
-            <IconButton icon="close" size="sm" label={TIPS_COPY.dismiss} onPress={onDismiss} />
+            <IconButton icon="close" size="sm" label={TIPS_COPY.dismiss} onPress={once(onDismiss)} />
           </div>
         </div>
         <p className="leading-relaxed">
@@ -98,10 +106,10 @@ export function TipCard({ tip, onRead, onGotIt, onDismiss, onMoreInHelp }: TipCa
         </p>
         {tip.figure ? <HelpFigure figure={tip.figure} caption={tip.title} hideCaption /> : null}
         <div className="flex items-center justify-end gap-2">
-          <Button size="sm" variant="ghost" onPress={onMoreInHelp}>
+          <Button size="sm" variant="ghost" onPress={once(onMoreInHelp)}>
             {TIPS_COPY.moreInHelp}
           </Button>
-          <Button size="sm" variant="secondary" onPress={onGotIt}>
+          <Button size="sm" variant="secondary" onPress={once(onGotIt)}>
             {TIPS_COPY.gotIt}
           </Button>
         </div>
