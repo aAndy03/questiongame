@@ -10,6 +10,14 @@ export const CONTROL = {
   noRecipe: 'Nothing in Control',
   noRecipeBody: 'Open a game and press Load into Control. The Stage window opens with it.',
   goToGames: 'Go to Games',
+  /** beta.10: Control's empty state offers the games to pick up again. */
+  recentTitle: 'Pick up where you left off',
+  recentLoad: 'Load into Control',
+  recentPlayed: (when: string) => `Played ${when}`,
+  recentEdited: (when: string) => `Edited ${when}`,
+  recentCounts: (teams: number, questions: number) =>
+    `${teams} ${teams === 1 ? 'team' : 'teams'} · ${questions} ${questions === 1 ? 'question' : 'questions'}`,
+  justNow: 'just now',
   panels: {
     viewer: 'Viewer',
     game: 'Game',

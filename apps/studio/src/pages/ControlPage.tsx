@@ -1,7 +1,7 @@
 import { useCallback, useEffect, type ReactNode } from 'react'
 import { Button } from '@/atoms'
 import { EmptyState, MosaicPanel, type MosaicDensityFloor } from '@/molecules'
-import { ActionPanel, GamePanel, StripsPanel, TimelinePanel, Viewer, useControlHotkeys } from '@/organisms'
+import { ActionPanel, GamePanel, RecentGames, StripsPanel, TimelinePanel, Viewer, useControlHotkeys } from '@/organisms'
 import { MosaicLayout } from '@/templates'
 import { useControlLayout, useControlLayoutStore, type PanelId } from '@/chrome/control'
 import { useNavStore } from '@/chrome/nav'
@@ -34,19 +34,23 @@ export function ControlPage() {
   const renderTile = useRenderTile(floor)
 
   if (!hasPlay) {
+    // beta.10: the games to pick up again, or — none yet — the plain way to Games.
+    const empty = (
+      <EmptyState
+        kind="empty"
+        what={CONTROL.title.toLowerCase()}
+        detail={CONTROL.noRecipeBody}
+        action={
+          <Button variant="primary" icon="games" onPress={() => void go({ tab: 'games' })}>
+            {CONTROL.goToGames}
+          </Button>
+        }
+      />
+    )
     return (
-      <div className="flex h-full flex-col">
-        <div className="flex flex-1 items-center justify-center">
-          <EmptyState
-            kind="empty"
-            what={CONTROL.title.toLowerCase()}
-            detail={CONTROL.noRecipeBody}
-            action={
-              <Button variant="primary" icon="games" onPress={() => void go({ tab: 'games' })}>
-                {CONTROL.goToGames}
-              </Button>
-            }
-          />
+      <div className="flex h-full flex-col overflow-y-auto">
+        <div className="flex flex-1 items-center justify-center py-6">
+          <RecentGames empty={empty} />
         </div>
       </div>
     )
