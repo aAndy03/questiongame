@@ -10,7 +10,7 @@ export interface TipCardProps {
   held?: boolean | undefined
   /** It stayed its time, or *More in Help* was pressed: read to the end. */
   onRead: () => void
-  /** *Got it*. */
+  /** *Thanks* — the tip understood. */
   onGotIt: () => void
   /** × or Esc: *not now*. */
   onDismiss: () => void
@@ -31,7 +31,7 @@ export function tipDuration(tip: Tip): number {
 /**
  * **A tip** (beta.11): Studio's `Panel` with a bulb, the title, Help's inline
  * text (key caps, gesture badges, labels) and maybe a figure, *More in Help*
- * and *Got it*. **It never asks for attention** (§6.7): no backdrop, no
+ * and *Thanks*. **It never asks for attention** (§6.7): no backdrop, no
  * dimming, no focus taken — read out by `TipHost`'s live region, which the
  * operator may listen to or ignore. It stays for its reading time, paused while the pointer is over it
  * or focus is in it, with a thin line for the time left; × or Esc closes it
@@ -61,7 +61,7 @@ export function TipCard({ tip, held, onRead, onGotIt, onDismiss, onMoreInHelp }:
       read.current()
     }
   }, [left])
-  /** One way out: after Got it, × or More in Help the timer can no longer read it out. */
+  /** One way out: after Thanks, × or More in Help the timer can no longer read it out. */
   const once = (fn: () => void) => () => {
     if (done.current) return
     done.current = true

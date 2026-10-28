@@ -152,7 +152,7 @@ export function knowledge(state: TipsState, skill: string, now: number): number 
   return 1 - Math.exp(-evidenceAt(state.skills[skill], now) / TUNING.knowledgeScale)
 }
 
-/** A signal that the operator knows a skill: they did it (`did`), read a tip to the end, or pressed *Got it*. */
+/** A signal that the operator knows a skill: they did it (`did`), read a tip to the end, or pressed *Thanks*. */
 export function learn(state: TipsState, skill: string, signal: keyof typeof TUNING.signal, now: number): TipsState {
   const evidence = evidenceAt(state.skills[skill], now) + TUNING.signal[signal]
   return { ...state, skills: { ...state.skills, [skill]: { evidence, at: now } } }

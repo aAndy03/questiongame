@@ -272,7 +272,8 @@ export const TIPS: readonly Tip[] = [
 
 export const TIPS_COPY = {
   moreInHelp: 'More in Help',
-  gotIt: 'Got it',
+  /** Not *Got it*: What's new's button has that name, and one name is one button (e2e, beta.11). */
+  gotIt: 'Thanks',
   dismiss: 'Dismiss tip',
   region: 'Tip',
   showTips: 'Show tips',
