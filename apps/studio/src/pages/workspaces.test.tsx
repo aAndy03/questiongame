@@ -65,7 +65,29 @@ describe('naming the workspace', () => {
     await withOperator()
     fake.workspaces = fake.workspaces.map((w) => ({ ...w, name: null }))
     render(<App />)
-    expect(await screen.findByText(WORKSPACE.nameTitle)).toBeTruthy()
+    expect(await screen.findByText(WORKSPACE.guidedTitle)).toBeTruthy()
+  })
+
+  it('tells a 1.x library what happened before it asks, with the name prefilled (beta.10)', async () => {
+    await withOperator()
+    fake.workspaces = fake.workspaces.map((w) => ({ ...w, name: null }))
+    render(<App />)
+    expect(await screen.findByText(WORKSPACE.guidedTitle)).toBeTruthy()
+    for (const title of [WORKSPACE.guidedSafeTitle, WORKSPACE.guidedHereTitle, WORKSPACE.guidedWhyTitle]) {
+      expect(screen.getByText(title)).toBeTruthy()
+    }
+    const field = screen.getByRole('textbox', { name: new RegExp(WORKSPACE.nameLabel) }) as HTMLInputElement
+    expect(field.value).toBe(WORKSPACE.guidedDefaultName)
+    expect(screen.getByText(WORKSPACE.guidedNameHint)).toBeTruthy()
+    // The card is the workspace as it will be: the name as typed, what it holds.
+    const card = document.querySelector<HTMLElement>('[data-workspace-card]')!
+    expect(card.textContent).toContain(WORKSPACE.guidedDefaultName)
+    fireEvent.change(field, { target: { value: 'Quiz club' } })
+    expect(card.textContent).toContain('Quiz club')
+    fireEvent.click(screen.getByRole('button', { name: WORKSPACE.guidedShowFolder }))
+    await waitFor(() => expect(calls('paths_reveal')).toHaveLength(1))
+    fireEvent.click(screen.getByRole('button', { name: WORKSPACE.continue }))
+    await waitFor(() => expect(fake.workspaces[0]?.name).toBe('Quiz club'))
   })
 
   it('shows a refused name on the field and stays', async () => {
@@ -79,7 +101,7 @@ describe('naming the workspace', () => {
     fireEvent.change(field, { target: { value: 'taken' } })
     fireEvent.click(screen.getByRole('button', { name: WORKSPACE.continue }))
     expect(await screen.findByText('another workspace has this name')).toBeTruthy()
-    expect(screen.getByText(WORKSPACE.nameTitle)).toBeTruthy()
+    expect(screen.getByText(WORKSPACE.guidedTitle)).toBeTruthy()
   })
 })
 

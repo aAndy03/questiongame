@@ -77,13 +77,14 @@ export async function nameWorkspace(name = 'E2E library'): Promise<void> {
   await browser.waitUntil(
     async () => {
       const text = await $('body').getText()
-      return text.includes('Name your workspace') || text.includes('Create your first workspace')
+      // beta.10: a 1.x library is told what happened first, the name prefilled.
+      return text.includes('keeps your library in a workspace') || text.includes('Create your first workspace')
     },
     { timeout: 30_000, timeoutMsg: 'Studio never asked for the workspace name' },
   )
   const field = await named('Workspace name')
-  expect(await field.getValue()).toBe('')
   expect(await field.getAttribute('placeholder')).toBeNull()
+  await field.clearValue()
   await field.setValue(name)
   await press('Continue')
 }

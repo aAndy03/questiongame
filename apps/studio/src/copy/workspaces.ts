@@ -25,13 +25,22 @@ export const WORKSPACE = {
   save: 'Save',
 
   // The first screen of a library without a named workspace.
-  nameTitle: 'Name your workspace',
-  nameBody:
-    'This library now lives in a workspace. A workspace is one library of teams, domains, questions and games; you can make more later, and copy or move rows between them. Give this one a name.',
   createTitle: 'Create your first workspace',
   createBody:
     'A workspace is one library of teams, domains, questions and games. You can make more later, and copy or move rows between them. Give the first one a name.',
   continue: 'Continue',
+  // beta.10: a 1.x library meeting 2.0 is told what happened, first.
+  guidedTitle: 'questiongame 2.0 keeps your library in a workspace',
+  guidedSafeTitle: 'Your library is safe',
+  guidedSafeBody: 'It was copied before anything changed, into the backups beside it.',
+  guidedShowFolder: 'Show in folder',
+  guidedHereTitle: 'Everything is here',
+  guidedHereBody: 'Your teams, domains, questions and games moved into this workspace as they were.',
+  guidedWhyTitle: 'Why workspaces',
+  guidedWhyBody: 'Keep a club, a classroom and a TV show apart, each its own library, and copy or move rows between them.',
+  guidedNameHint: 'You can rename it any time in Manage workspaces.',
+  guidedDefaultName: 'My library',
+  emptyCounts: 'Empty, for now',
 
   // Manage workspaces
   pageTitle: 'Workspaces',
