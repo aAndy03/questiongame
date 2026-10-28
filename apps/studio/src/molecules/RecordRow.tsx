@@ -117,6 +117,7 @@ export function RecordRow({
       />
     </div>
   ) : null
+  // gesture: shift-click-run, mod-click-tick
   // Shift selects a run, Ctrl/⌘ ticks; only a plain click opens. Shift's
   // mouse-down would select text across the rows, so it is refused.
   const click = (e: MouseEvent) => {
@@ -140,6 +141,7 @@ export function RecordRow({
         onClick={click}
         onMouseDown={mouseDown}
         onKeyDown={(e) => {
+          // gesture: enter-open-row
           if (onOpen && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault()
             onOpen()

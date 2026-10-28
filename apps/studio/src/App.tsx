@@ -9,6 +9,7 @@ import {
   FirstRunPage,
   NameWorkspacePage,
   WorkspacesPage,
+  HelpPage,
   GamePage,
   GamesPage,
   LibraryPage,
@@ -274,6 +275,8 @@ function Page({ route }: { route: Route }) {
       return <SettingsPage inner={route.inner} />
     case 'workspaces':
       return <WorkspacesPage />
+    case 'help':
+      return <HelpPage />
   }
 }
 

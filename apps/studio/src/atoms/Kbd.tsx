@@ -24,6 +24,11 @@ const KEY: Record<string, KbdKey> = {
   right: 'right',
 }
 
+/** Keys HeroUI has no name for, as they are written on the key (beta.10). */
+const TEXT: Record<string, string> = {
+  arrow: '←↑→↓',
+}
+
 export interface KbdProps {
   /** `mod+k`, `shift+enter`, `esc`. Painted, never bound (spec §7). */
   chord: string
@@ -41,7 +46,7 @@ export function Kbd({ chord, variant = 'default' }: KbdProps) {
             {key ? (
               <HeroKbd.Abbr keyValue={key} />
             ) : (
-              <HeroKbd.Content>{part.length === 1 ? part.toUpperCase() : part}</HeroKbd.Content>
+              <HeroKbd.Content>{TEXT[part] ?? (part.length === 1 || /^f\d{1,2}$/.test(part) ? part.toUpperCase() : part)}</HeroKbd.Content>
             )}
           </HeroKbd>
         )

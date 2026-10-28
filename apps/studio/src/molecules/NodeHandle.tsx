@@ -49,6 +49,7 @@ export function NodeHandle({ id, x, y, width, height, isSelected, isOverridden, 
         onNudge(Math.round((e.clientX - d.x) / scale), Math.round((e.clientY - d.y) / scale))
       }}
       onKeyDown={(e) => {
+        // gesture: shift-arrow-nudge
         const step = e.shiftKey ? 10 : 1
         if (e.key === 'ArrowLeft') onNudge(-step, 0)
         if (e.key === 'ArrowRight') onNudge(step, 0)

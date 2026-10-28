@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button, Text } from '@/atoms'
-import { ConfirmDialog, InlineNotice, SettingsGroup, ShortcutRow } from '@/molecules'
+import { ConfirmDialog, GestureList, InlineNotice, SettingsGroup, ShortcutRow } from '@/molecules'
 import { HOTKEYS } from '@/copy'
 import { SETTINGS } from '@/copy/settings'
 import { useHostCommand } from '@/host/commands'
@@ -103,6 +103,12 @@ export function ShortcutsEditor() {
           />
         ))}
         <ShortcutRow command="pick" label={HOTKEYS.labels['pick'] ?? SETTINGS.shortcuts.positional} chord={null} defaultChord={null} isOverridden={false} onChange={() => {}} onReset={() => {}} fixed={SETTINGS.shortcuts.positionalRange} />
+      </SettingsGroup>
+      {/* beta.10: the moves that are not chords — fixed, so listed, never edited. */}
+      <SettingsGroup title={SETTINGS.shortcuts.gesturesTitle} description={SETTINGS.shortcuts.gesturesHint}>
+        <div className="py-2">
+          <GestureList />
+        </div>
       </SettingsGroup>
       <ConfirmDialog
         isOpen={resetting}

@@ -231,6 +231,7 @@ function PickRow({
   // Shift on the row picks a run, Ctrl/⌘ ticks it; neither opens the row
   // (only a plain click does). Shift's mouse-down would select text across
   // the rows, so it is refused.
+  // gesture: shift-click-run, mod-click-tick
   const click = (e: MouseEvent) => {
     if (!(e.shiftKey || e.ctrlKey || e.metaKey)) return
     e.preventDefault()

@@ -286,6 +286,8 @@ export const SETTINGS = {
     positional: 'Pick domain / answer by position',
     positionalRange: '1–9',
     hint: 'Esc cancels. Backspace clears.',
+    gesturesTitle: 'Mouse and keyboard gestures',
+    gesturesHint: 'These work wherever they apply and cannot be changed. Help (F1) explains each one.',
     conflictKeep: 'Keep',
     conflictReassign: (command: string) => `Reassign to ${command}`,
   } as const,

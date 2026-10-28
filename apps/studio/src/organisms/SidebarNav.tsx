@@ -1,3 +1,4 @@
+import { useHotkeys } from '@tanstack/react-hotkeys'
 import { motion } from 'motion/react'
 import { Chip, IconButton, Text, type IconName } from '@/atoms'
 import { SidebarItem } from '@/molecules'
@@ -47,6 +48,9 @@ export function SidebarNav() {
       </Chip>
     </span>
   ) : null
+
+  // gesture: f1-help — Help from anywhere in Studio (beta.10).
+  useHotkeys([{ hotkey: 'F1', callback: () => void go({ tab: 'help' }) }], { ignoreInputs: true, preventDefault: true })
 
   const collapsed = sidebar === 'rail'
   const width = SIDEBAR_WIDTH[sidebar]
@@ -147,6 +151,7 @@ export function SidebarNav() {
         </div>
         <ChromeLine />
         {/* The shell's bottom row, level with the status bar and its size (P20). */}
+        <div className="flex h-7 shrink-0 items-center px-2">{item({ tab: 'help', icon: 'question', size: 'sm' })}</div>
         <div className="flex h-7 shrink-0 items-center px-2">{item({ tab: 'settings', icon: 'settings', size: 'sm' })}</div>
       </motion.nav>
     </>

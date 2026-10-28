@@ -47,6 +47,7 @@ export function TopBar() {
   // when the sidebar is narrower than they are.
   const { custom, mac } = useTitleBar()
   const inset = custom && mac ? Math.max(0, TRAFFIC_LIGHTS - SIDEBAR_WIDTH[sidebar]) : 0
+  // gesture: double-click-title-bar — the drag region maximizes on a double-click (Tauri's own).
   const drag = custom ? { 'data-tauri-drag-region': true } : {}
 
   return (

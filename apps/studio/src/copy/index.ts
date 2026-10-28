@@ -26,6 +26,7 @@ export const TABS: Readonly<Record<Tab, { label: string; hint: string }>> = {
   statistics: { label: 'Statistics', hint: 'Results and history' },
   settings: { label: 'Settings', hint: 'Displays, defaults, shortcuts' },
   workspaces: { label: 'Workspaces', hint: 'Libraries in this file, and the workspace groups they sit in' },
+  help: { label: 'Help', hint: 'How the game and Studio work (F1)' },
 }
 
 export const PLAY_STATUS = {

@@ -2230,11 +2230,12 @@ studio_calls:
       - apps/studio/src/organisms/DataActions.tsx
       - apps/studio/src/organisms/FirstRunFlow.tsx
       - apps/studio/src/organisms/useNoticeActions.ts
+      - apps/studio/src/pages/NameWorkspacePage.tsx
     pause: [apps/studio/src/organisms/ActionPanel.tsx]
     pause_timer: [apps/studio/src/organisms/ActionPanel.tsx]
     play_events: [apps/studio/src/host/queries.ts, apps/studio/src/organisms/TimelinePanel.tsx]
     play_list: [apps/studio/src/host/queries.ts]
-    play_load: [apps/studio/src/pages/GamePage.tsx]
+    play_load: [apps/studio/src/organisms/RecentGames.tsx, apps/studio/src/pages/GamePage.tsx]
     play_start: [apps/studio/src/organisms/ActionPanel.tsx]
     play_unload: [apps/studio/src/organisms/UnloadGame.tsx]
     recipe_archive: [apps/studio/src/organisms/useArchive.tsx]
@@ -2318,6 +2319,7 @@ studio_calls:
   dynamic_call_files:
     - apps/studio/src/chrome/diagnostics.ts
     - apps/studio/src/host/commands.ts
+    - apps/studio/src/molecules/HelpText.tsx
     - apps/studio/src/organisms/DataActions.tsx
     - apps/studio/src/organisms/Viewer.tsx
     - apps/studio/src/organisms/useControlHotkeys.ts

@@ -145,6 +145,7 @@ export function QuestionDragProvider({ children, idsFor, homesOf, onDrop }: Ques
 
   useEffect(() => {
     if (!dragging) return
+    // gesture: escape-cancel-drag, mod-drag-move
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') cancelled.current = true
       moveKey.current = e.ctrlKey || e.metaKey
@@ -178,6 +179,7 @@ export function QuestionDragProvider({ children, idsFor, homesOf, onDrop }: Ques
 
   return (
     <DragContext.Provider value={context}>
+      {/* gesture: drag-to-domain */}
       <DragDropProvider
         // The pointer only: the keyboard sensor would take Space and Enter,
         // which open a row. The keyboard way is the row menu's *Move to domain…*.

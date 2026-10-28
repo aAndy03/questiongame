@@ -19,3 +19,4 @@ export { StatisticsPage, type StatisticsPageProps, type StatsView } from './Stat
 export { FirstRunPage } from './FirstRunPage'
 export { NameWorkspacePage, type NameWorkspacePageProps } from './NameWorkspacePage'
 export { WorkspacesPage } from './WorkspacesPage'
+export { HelpPage } from './HelpPage'

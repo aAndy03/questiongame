@@ -62,6 +62,7 @@ export function DomainPane({ selectedId, onSelect, pickedIds = [], onPickMany }:
   // Where Shift+click spans from: the last domain clicked.
   const anchor = useRef<string | null>(selectedId)
   const lit = pickedIds.length > 0 ? pickedIds : selectedId ? [selectedId] : []
+  // gesture: mod-click-domains, shift-click-domains
   const choose = (id: string, e: MouseEvent | null) => {
     const many = onPickMany && scope === 'active' && e !== null && (e.ctrlKey || e.metaKey || e.shiftKey)
     if (!many) {

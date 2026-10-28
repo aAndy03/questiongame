@@ -4,8 +4,8 @@ import { motion } from 'motion/react'
 export interface SettingsLayoutProps {
   /** A `PageHeader`. */
   header: ReactNode
-  /** The HeroUI `Tabs` list: Monitors · Settings · Keyboard shortcuts. */
-  tabs: ReactNode
+  /** The HeroUI `Tabs` list: Monitors · Settings · Keyboard shortcuts. Help has none (beta.10). */
+  tabs?: ReactNode
   /** The selected inner tab's panel, in one scrolling column with page padding. */
   children: ReactNode
   /**
@@ -32,7 +32,7 @@ export function SettingsLayout({ header, tabs, children, width = 'form', aside }
     >
       <div className="flex shrink-0 flex-col gap-4 px-6 pt-6">
         {header}
-        <div className="border-b border-[var(--separator)]">{tabs}</div>
+        {tabs ? <div className="border-b border-[var(--separator)]">{tabs}</div> : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className={['@container/settings w-full p-6', cap].join(' ')}>
