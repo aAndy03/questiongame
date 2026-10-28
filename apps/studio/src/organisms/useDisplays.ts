@@ -86,7 +86,11 @@ export function useDisplays() {
     void run.ok('stage_add_mirror', { monitorId: key })
   }
 
-  const removeStage = (key: string) => void run.ok('stage_remove_mirror', { monitorId: key })
+  /**
+   * Take Stage off a display (beta.10): a mirror stops; the pacer hands over
+   * to the first mirror; the last one closes Stage (`stage_remove_display`).
+   */
+  const removeStage = (key: string) => void run.ok('stage_remove_display', { monitorId: key })
 
   /**
    * Move the pacer — always `stage_set_monitor`, never the mirror path: this
@@ -124,6 +128,8 @@ export function useDisplays() {
     showStats,
     setStatsOpen,
     openStage: () => void run('stage_open'),
+    /** *Close Stage* (beta.10): every Stage window; where it was is kept. */
+    closeStage: () => void run('stage_close'),
     setStatsFullscreen: (value: boolean) => void run('settings_set_global', { setting: { key: 'stats_fullscreen', value } }),
   }
 }

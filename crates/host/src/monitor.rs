@@ -258,8 +258,14 @@ impl StageMove {
 pub struct StageDisplay {
     monitors: Vec<MonitorInfo>,
     /// Where the window is. `None` is primary — including "primary because the
-    /// remembered display is unplugged".
+    /// remembered display is unplugged". Kept while Stage is closed, so
+    /// *Open Stage* puts it back where it was (beta.10).
     on: Option<MonitorKey>,
+    /// Whether Stage is up at all (beta.10). False until the first Control
+    /// Load or *Open Stage*, and again after *Close Stage* or the OS closing
+    /// the last Stage window. While it is false no mirror is live: a
+    /// remembered mirror waits for Stage, it does not open on its own.
+    open: bool,
     /// The displays the operator asked to **mirror** the pacer, in the order
     /// they were asked for (§9, P11.11).
     ///
@@ -314,12 +320,95 @@ impl StageDisplay {
     ///
     /// A display that is not connected is skipped, not forgotten.
     pub fn live_mirrors(&self) -> Vec<MonitorKey> {
+        if !self.open {
+            return Vec::new();
+        }
         self.wanted_mirrors
             .iter()
             .filter(|key| self.on.as_ref() != Some(*key))
             .filter(|key| self.monitors.iter().any(|m| m.matches(key)))
             .cloned()
             .collect()
+    }
+
+    /// Is Stage up? See the field.
+    pub fn is_open(&self) -> bool {
+        self.open
+    }
+
+    /// Stage was opened (Control Load, *Open Stage*) or closed (*Close
+    /// Stage*). Closing keeps where it was and the mirrors asked for.
+    pub fn set_open(&mut self, open: bool) {
+        self.open = open;
+    }
+
+    /// The display the pacer stands on, named: where it is, or primary.
+    fn pacer_key(&self) -> Option<MonitorKey> {
+        self.on.clone().or_else(|| self.primary().map(|m| m.key.clone()))
+    }
+
+    /// **A Stage window is gone** — whoever closed it: the OS (Alt+F4, the
+    /// taskbar, Alt-Tab, Cmd+W) or the app itself (beta.10).
+    ///
+    /// The app closes windows too (*Close Stage*, a reconcile shrinking the
+    /// mirrors), so this answers [`StageClosed::Ignored`] for every close it
+    /// already accounted for: Stage already closed, or a mirror index past the
+    /// live list. What is left is a close nobody here asked for, and it is
+    /// taken as an answer, never undone:
+    ///
+    /// - **the pacer** with mirrors live: the first mirror becomes the pacer,
+    ///   so Stage is still up where the audience can see it;
+    /// - **the pacer** alone: Stage is closed — its display is kept, so *Open
+    ///   Stage* puts it back;
+    /// - **a mirror**: it is no longer wanted, so the next reconcile does not
+    ///   open it again.
+    pub fn window_closed(&mut self, which: StageWindow) -> StageClosed {
+        if !self.open {
+            return StageClosed::Ignored;
+        }
+        match which {
+            StageWindow::Pacer => self.pacer_gone(),
+            StageWindow::Mirror(index) => match self.live_mirrors().get(index).cloned() {
+                Some(key) => {
+                    self.remove_mirror(&key);
+                    StageClosed::MirrorDropped(key)
+                }
+                None => StageClosed::Ignored,
+            },
+        }
+    }
+
+    /// The pacer is going: the first live mirror takes over, or Stage closes.
+    fn pacer_gone(&mut self) -> StageClosed {
+        match self.live_mirrors().first().cloned() {
+            Some(next) => {
+                self.wanted_mirrors.retain(|k| k != &next);
+                self.on = Some(next.clone());
+                StageClosed::Promoted(next)
+            }
+            None => {
+                self.open = false;
+                StageClosed::Closed
+            }
+        }
+    }
+
+    /// **Untick Stage on a display** (beta.10, the displays popover and
+    /// Settings ▸ Monitors): a mirror stops; the pacer hands over to the first
+    /// mirror; the last one closes Stage. Not showing Stage there already is
+    /// not an error — the operator's intent is already true.
+    pub fn remove_display(&mut self, key: &MonitorKey) -> StageClosed {
+        if !self.open {
+            return StageClosed::Ignored;
+        }
+        if self.wanted_mirrors.contains(key) {
+            self.remove_mirror(key);
+            return StageClosed::MirrorDropped(key.clone());
+        }
+        if self.pacer_key().as_ref() == Some(key) {
+            return self.pacer_gone();
+        }
+        StageClosed::Ignored
     }
 
     /// Ask for another mirror. Refuses for the reasons [`Self::set_monitor`]
@@ -452,6 +541,28 @@ impl StageDisplay {
             _ => StageMove::stay(),
         }
     }
+}
+
+/// Which Stage window went (beta.10). Mirrors are named by their place in
+/// [`StageDisplay::live_mirrors`] — the app crate's `stage-(i+2)` labels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StageWindow {
+    Pacer,
+    Mirror(usize),
+}
+
+/// What a Stage window going away means, for the app crate to carry out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StageClosed {
+    /// Already accounted for: the app closed it, or Stage was already closed.
+    Ignored,
+    /// The pacer went and this mirror took over: build the pacer here, and
+    /// reconcile the mirrors (one fewer).
+    Promoted(MonitorKey),
+    /// The pacer went with no mirror to take over: Stage is closed.
+    Closed,
+    /// A mirror went; it is no longer wanted.
+    MirrorDropped(MonitorKey),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

@@ -25,6 +25,8 @@ export const CONTROL = {
   statsDisplay: 'Statistics display',
   primaryDisplay: 'Primary display',
   openStage: 'Open Stage',
+  /** beta.10: every Stage window goes; where it was is kept for the next Open Stage. */
+  closeStage: 'Close Stage',
   /** The settings float's name — "Settings" alone is the sidebar's (P21.4: both in the shell). */
   settings: 'Control settings',
   settingsGlobal: 'Global',

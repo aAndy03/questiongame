@@ -11,7 +11,7 @@ export interface DisplayRowProps {
   onSendStage: () => void
   /** Move the pacer here; given only while it stands on another display. */
   onMoveStage?: (() => void) | undefined
-  /** Stop mirroring here. Never offered for the pacer — that one moves. */
+  /** Take Stage off this display (beta.10): a mirror stops; the pacer hands over to the first mirror, or Stage closes. */
   onRemoveStage: () => void
   onShowStats: () => void
   onCloseStats: () => void
@@ -34,8 +34,9 @@ const BOX = { regular: [56, 32], compact: [40, 22] } as const
  * says what is on this display or offers to put it there, so the whole list
  * reads as "where each window goes". Drawn by Settings ▸ Monitors and the
  * status bar's popover alike (`DisplaysList`). Nothing here touches a Play
- * (§9), and the pacer's row offers no Remove: it is moved from another row, so
- * the operator cannot end up with no Stage at all (P11.11).
+ * (§9). Since beta.10 the pacer's row offers Remove too: the first mirror
+ * takes over, or Stage closes (`stage_remove_display`) — and *Open Stage*
+ * brings it back where it was.
  *
  * A child of a `grid-cols-subgrid` list: it renders its four cells and the
  * list decides the columns.
@@ -119,9 +120,10 @@ export function DisplayRow({ monitor, stage, stats, onSendStage, onMoveStage, on
               isSelected={stage === 'stage' || stage === 'mirror'}
               onChange={(on) => {
                 if (on && stage === 'free') onSendStage()
-                if (!on && stage === 'mirror') onRemoveStage()
+                // Off anywhere Stage shows (beta.10): a mirror stops, the pacer
+                // hands over to the first mirror, the last one closes Stage.
+                if (!on && stage !== 'free') onRemoveStage()
               }}
-              disabledReason={stage === 'stage' ? SETTINGS.monitors.pacerTick : null}
             />
             {stage === 'free' && onMoveStage ? (
               <span className={['transition-opacity', highlighted ? 'opacity-100' : 'pointer-events-none opacity-0 focus-within:pointer-events-auto focus-within:opacity-100'].join(' ')}>
@@ -153,7 +155,16 @@ export function DisplayRow({ monitor, stage, stats, onSendStage, onMoveStage, on
             * can be done — full names to a screen reader — no icons, quiet until
             * the row is lit (seven rows of filled buttons read as a wall). */}
           <div className="flex min-w-[7.5rem] items-center gap-1" data-display-stage-cell>
-            {stage === 'stage' ? <MeaningChip meaning="stage">{SETTINGS.monitors.showing}</MeaningChip> : null}
+            {stage === 'stage' ? (
+              <>
+                <MeaningChip meaning="stage">{SETTINGS.monitors.showing}</MeaningChip>
+                {/* beta.10: the pacer can be taken off too — the first mirror
+                  * takes over, or Stage closes. */}
+                <Button size="sm" variant="ghost" label={SETTINGS.monitors.removeStage} onPress={onRemoveStage}>
+                  {SETTINGS.monitors.remove}
+                </Button>
+              </>
+            ) : null}
             {stage === 'mirror' ? (
               <>
                 <MeaningChip meaning="stage">{SETTINGS.monitors.mirror}</MeaningChip>

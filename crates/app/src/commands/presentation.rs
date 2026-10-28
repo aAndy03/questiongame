@@ -267,7 +267,7 @@ pub fn stage_set_monitor(
     // *creates* a webview, which pumps the message loop and lets the new
     // window invoke before this returns — with the lock held that is a wait
     // on ourselves.
-    let (mv, stage_on) = {
+    let mv = {
         let mut host = state.lock();
         let key = monitor_id.clone().map(MonitorKey::new);
         let mv = host.display.set_monitor(key)?;
@@ -279,17 +279,14 @@ pub fn stage_set_monitor(
         )?;
         let globals = host.flags.globals().clone();
         host.catalog.settings_store(&globals)?;
-        (mv, host.display.current().cloned())
+        mv
     };
 
     // Built where it belongs; `apply` then has nothing to do unless the window
     // already existed somewhere else.
-    windows::ensure_stage(&app, stage_on.as_ref())?;
+    windows::stage_up(&app, &state)?;
     windows::apply(&app, &mv)?;
-    let stats_open = windows::stats_is_open(&app);
-    let stage_open = windows::stage_is_open(&app);
-    let host = state.lock();
-    emit::monitors_changed(&app, &host, stats_open, stage_open);
+    windows::tell_studio(&app, &state);
     Ok(())
 }
 
@@ -302,13 +299,35 @@ pub fn stage_open(
     state: State<'_, AppState>,
 ) -> AppResult<()> {
     guard::allow(window.label(), "stage_open")?;
-    // A short lock for the destination, released before the window is built.
-    let stage_on = state.lock().display.current().cloned();
-    windows::ensure_stage(&app, stage_on.as_ref())?;
+    windows::stage_up(&app, &state)?;
     let now = now_ms();
     let mut host = state.lock();
     emit::play_state(&app, &mut host, now, true);
     Ok(())
+}
+
+/// *Close Stage* (beta.10): every Stage window goes; where it was, and the
+/// mirrors asked for, are kept for the next *Open Stage*. A Play is untouched —
+/// it keeps playing, and the Viewer still shows it.
+#[tauri::command(async)]
+pub fn stage_close(window: WebviewWindow, app: AppHandle, state: State<'_, AppState>) -> AppResult<()> {
+    guard::allow(window.label(), "stage_close")?;
+    windows::stage_down(&app, &state)
+}
+
+/// **Untick Stage on a display** (beta.10): a mirror stops, the pacer hands
+/// over to the first mirror, the last one closes Stage
+/// (`StageDisplay::remove_display`).
+#[tauri::command(async)]
+pub fn stage_remove_display(
+    window: WebviewWindow,
+    app: AppHandle,
+    state: State<'_, AppState>,
+    monitor_id: String,
+) -> AppResult<()> {
+    guard::allow(window.label(), "stage_remove_display")?;
+    let closed = state.lock().display.remove_display(&MonitorKey::new(monitor_id));
+    windows::carry_out(&app, &state, &closed)
 }
 
 /// Mirror the pacer on another display (§9, P11.11).

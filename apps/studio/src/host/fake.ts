@@ -345,7 +345,8 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
     emit('monitors-changed', {
       monitors,
       stageMonitorId: control.stage_monitor_id,
-      stageMirrors: control.stage_mirror_ids,
+      // Live only while Stage is up, as the host's `live_mirrors` (beta.10).
+      stageMirrors: fake.stageOpen ? control.stage_mirror_ids : [],
       // Resolved the way the host resolves it: `null` only when there is no
       // Stage window, the primary display's key when it is on primary.
       stageOn: fake.stageOpen
@@ -1084,6 +1085,8 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
         // mirror that was on this display stands down (§9, P11.11).
         stage_mirror_ids: control.stage_mirror_ids.filter((k) => k !== id),
       }
+      // A send brings Stage up, as the host's `stage_up` (beta.10).
+      fake.stageOpen = true
       emitMonitors()
       return null
     },
@@ -1102,6 +1105,25 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
     stage_remove_mirror: (a) => {
       const id = a.monitorId as string
       control = { ...control, stage_mirror_ids: control.stage_mirror_ids.filter((k) => k !== id) }
+      emitMonitors()
+      return null
+    },
+    // beta.10, mirroring `StageDisplay::remove_display` and `stage_down`.
+    stage_close: () => {
+      fake.stageOpen = false
+      emitMonitors()
+      return null
+    },
+    stage_remove_display: (a) => {
+      const id = a.monitorId as string
+      if (!fake.stageOpen) return null
+      if (control.stage_mirror_ids.includes(id)) {
+        control = { ...control, stage_mirror_ids: control.stage_mirror_ids.filter((k) => k !== id) }
+      } else if ((control.stage_monitor_id ?? monitors.find((m) => m.primary)?.key) === id) {
+        const [next, ...rest] = control.stage_mirror_ids
+        if (next === undefined) fake.stageOpen = false
+        else control = { ...control, stage_monitor_id: next, stage_mirror_ids: rest }
+      }
       emitMonitors()
       return null
     },

@@ -108,6 +108,8 @@ export const COMMAND_GROUPS = {
      */
     'stage_add_mirror',
     'stage_remove_mirror',
+    'stage_close',
+    'stage_remove_display',
     /** Create the Stage window without loading a recipe. */
     'stage_open',
     /** Stage reporting that it has mounted, with the contract version it was

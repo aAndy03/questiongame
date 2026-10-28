@@ -14,7 +14,7 @@
 //! Nothing in this module can reach a Play, which is the property §9 asks of
 //! it and every test here inherits.
 
-use questiongame_host::{MonitorInfo, MonitorKey, StageDisplay, StageReattach};
+use questiongame_host::{MonitorInfo, MonitorKey, StageClosed, StageDisplay, StageReattach, StageWindow};
 
 fn monitor(name: &str, primary: bool, size: (u32, u32)) -> MonitorInfo {
     MonitorInfo {
@@ -55,6 +55,8 @@ fn right() -> MonitorKey {
 fn loaded() -> StageDisplay {
     let mut display = StageDisplay::new();
     display.monitors_changed(desk(), None, StageReattach::default(), false);
+    // A Control Load opened Stage (beta.10: mirrors are live only while it is up).
+    display.set_open(true);
     display
 }
 
@@ -184,4 +186,89 @@ fn live_mirrors_is_idempotent() {
     assert_eq!(once, display.live_mirrors());
     display.monitors_changed(desk(), None, StageReattach::default(), false);
     assert_eq!(once, display.live_mirrors());
+}
+
+// ------------------------------------------------- beta.10: closing Stage
+
+fn primary() -> MonitorKey {
+    key("built-in", (1920, 1080))
+}
+
+/// Remembered mirrors wait for Stage: before the first Load, and after Close
+/// Stage, none is live — so the monitor watch never opens one on its own.
+#[test]
+fn no_mirror_is_live_while_stage_is_closed() {
+    let mut display = StageDisplay::new();
+    display.monitors_changed(desk(), None, StageReattach::default(), false);
+    display.set_wanted_mirrors(vec![left()]);
+    assert!(display.live_mirrors().is_empty(), "not before Stage is up");
+    display.set_open(true);
+    assert_eq!(display.live_mirrors(), vec![left()]);
+    display.set_open(false);
+    assert!(display.live_mirrors().is_empty(), "not after it closes");
+    assert_eq!(display.wanted_mirrors(), [left()], "still remembered for the next Open Stage");
+}
+
+#[test]
+fn the_os_closing_a_lone_pacer_closes_stage_and_keeps_its_display() {
+    let mut display = loaded();
+    display.set_monitor(Some(right())).unwrap();
+    assert_eq!(display.window_closed(StageWindow::Pacer), StageClosed::Closed);
+    assert!(!display.is_open());
+    assert_eq!(display.current(), Some(&right()), "Open Stage puts it back there");
+}
+
+#[test]
+fn the_os_closing_the_pacer_hands_stage_to_the_first_mirror() {
+    let mut display = loaded();
+    display.set_monitor(Some(right())).unwrap();
+    display.add_mirror(left()).unwrap();
+    assert_eq!(display.window_closed(StageWindow::Pacer), StageClosed::Promoted(left()));
+    assert!(display.is_open(), "Stage is still up where the audience sees it");
+    assert_eq!(display.current(), Some(&left()));
+    assert!(display.live_mirrors().is_empty());
+}
+
+#[test]
+fn the_os_closing_a_mirror_drops_it_so_no_reconcile_reopens_it() {
+    let mut display = loaded();
+    display.add_mirror(left()).unwrap();
+    display.add_mirror(right()).unwrap();
+    assert_eq!(display.window_closed(StageWindow::Mirror(1)), StageClosed::MirrorDropped(right()));
+    assert_eq!(display.live_mirrors(), vec![left()]);
+    assert_eq!(display.wanted_mirrors(), [left()]);
+}
+
+/// The app closes windows too: a reconcile closing the label past the list,
+/// and Close Stage closing everything after it has marked Stage closed.
+#[test]
+fn closes_the_app_made_itself_are_ignored() {
+    let mut display = loaded();
+    display.add_mirror(left()).unwrap();
+    assert_eq!(display.window_closed(StageWindow::Mirror(1)), StageClosed::Ignored, "past the live list");
+    display.set_open(false);
+    assert_eq!(display.window_closed(StageWindow::Pacer), StageClosed::Ignored);
+    assert_eq!(display.window_closed(StageWindow::Mirror(0)), StageClosed::Ignored);
+    assert_eq!(display.wanted_mirrors(), [left()], "Close Stage forgets no mirror");
+}
+
+#[test]
+fn unticking_a_display_stops_a_mirror_hands_the_pacer_over_or_closes_stage() {
+    let mut display = loaded();
+    display.add_mirror(left()).unwrap();
+    display.add_mirror(right()).unwrap();
+    // Stage is on primary (no pick): unticking primary hands over to the first mirror.
+    assert_eq!(display.remove_display(&right()), StageClosed::MirrorDropped(right()));
+    assert_eq!(display.remove_display(&primary()), StageClosed::Promoted(left()));
+    assert_eq!(display.current(), Some(&left()));
+    assert_eq!(display.remove_display(&left()), StageClosed::Closed);
+    assert!(!display.is_open());
+    assert_eq!(display.remove_display(&left()), StageClosed::Ignored, "already closed");
+}
+
+#[test]
+fn unticking_a_display_stage_is_not_on_changes_nothing() {
+    let mut display = loaded();
+    assert_eq!(display.remove_display(&right()), StageClosed::Ignored);
+    assert!(display.is_open());
 }

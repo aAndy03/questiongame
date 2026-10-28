@@ -104,8 +104,10 @@ describe('Settings ▸ Monitors, with several displays', () => {
     expect(fake.calls.some((c) => c.name === 'stage_add_mirror')).toBe(true)
     await act(async () => ticks()[1]!.click())
     await waitFor(() => expect(ticks().map((t) => t.checked)).toEqual([true, false]))
-    // The pacer's tick cannot be taken off.
-    expect(ticks()[0]!.disabled).toBe(true)
+    // beta.10: the last one off closes Stage.
+    await act(async () => ticks()[0]!.click())
+    await waitFor(() => expect(ticks().map((t) => t.checked)).toEqual([false, false]))
+    expect(fake.calls.some((c) => c.name === 'stage_remove_display')).toBe(true)
   })
 
   it('the popover moves Stage with the icon beside a free tick, and ticks Statistics on and off (beta.9)', async () => {
@@ -133,20 +135,37 @@ describe('Settings ▸ Monitors, with several displays', () => {
     await waitFor(() => expect(statsTick('primary').checked).toBe(false))
   })
 
-  it('takes a mirror away again, and never the pacer', async () => {
+  it('takes a mirror away, then the pacer hands over to the next, then Stage closes (beta.10)', async () => {
     await openMonitors()
     await act(async () => button(cardFor('primary'), 'Send Stage here')!.click())
     await waitFor(() => expect(cardFor('primary').dataset['stage']).toBe('stage'))
     await act(async () => button(cardFor('tv@1920x1080'), 'Send Stage here')!.click())
     await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('mirror'))
 
-    // The pacer's card offers no Remove: it is *moved* with the display
-    // picker, so the operator cannot end up with no Stage at all.
-    expect(button(cardFor('primary'), 'Remove Stage')).toBeNull()
-
-    await act(async () => button(cardFor('tv@1920x1080'), 'Remove Stage')!.click())
+    const off = 'Take Stage off this display'
+    await act(async () => button(cardFor('tv@1920x1080'), off)!.click())
     await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('free'))
-    expect(fake.calls.some((c) => c.name === 'stage_remove_mirror')).toBe(true)
+    expect(cardFor('primary').dataset['stage']).toBe('stage')
+    // A mirror again, then the pacer off: the mirror takes over.
+    await act(async () => button(cardFor('tv@1920x1080'), 'Send Stage here')!.click())
+    await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('mirror'))
+    await act(async () => button(cardFor('primary'), off)!.click())
+    await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('stage'))
+    expect(cardFor('primary').dataset['stage']).toBe('free')
+    // The last one off: Stage is closed.
+    await act(async () => button(cardFor('tv@1920x1080'), off)!.click())
+    await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('free'))
+  })
+
+  it('closes Stage from its own button, and opens it again where it was (beta.10)', async () => {
+    await openMonitors()
+    await act(async () => button(cardFor('tv@1920x1080'), 'Send Stage here')!.click())
+    await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('stage'))
+    await act(async () => screen.getByRole('button', { name: 'Close Stage' }).click())
+    await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('free'))
+    expect(fake.calls.some((c) => c.name === 'stage_close')).toBe(true)
+    await act(async () => screen.getByRole('button', { name: 'Open Stage' }).click())
+    await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('stage'))
   })
 
   /**

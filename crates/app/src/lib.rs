@@ -52,6 +52,42 @@ use crate::state::{AppState, Host, catalog_path, open_options};
 /// library), then show Studio. The **Stage window is not created here**: §9
 /// says first Control Load, and an empty fullscreen window on the projector
 /// while the operator is still choosing a game is worse than no window.
+/// A window is gone (beta.10). Stage's and the mirrors' through the host's
+/// policy (`StageDisplay::window_closed`: the first mirror takes over, or Stage
+/// is closed, or a mirror is dropped); Statistics' by telling Studio. Off the
+/// event loop's thread: carrying it out may build a window, and the host lock
+/// must never be held across that.
+fn window_gone(app: &tauri::AppHandle, label: &str) {
+    let stage = windows::stage_window_of(label);
+    if stage.is_none() && label != guard::STATS {
+        return;
+    }
+    let app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        // Studio gone means the app is quitting and every window goes with
+        // it: nothing to hand over, and building a Stage now would outlive it.
+        if app.get_webview_window(guard::MAIN).is_none() {
+            return;
+        }
+        let Some(state) = app.try_state::<state::AppState>() else {
+            return;
+        };
+        let result = match stage {
+            Some(which) => {
+                let closed = state.lock().display.window_closed(which);
+                windows::carry_out(&app, &state, &closed)
+            }
+            None => {
+                windows::tell_studio(&app, &state);
+                Ok(())
+            }
+        };
+        if let Err(error) = result {
+            tracing::warn!(?error, "a closed window could not be accounted for");
+        }
+    });
+}
+
 pub fn run() {
     tauri::Builder::default()
         // First, by the plugin's own rule: a second process must find the
@@ -66,6 +102,13 @@ pub fn run() {
         // the first press asks Studio, a second exits regardless (`quit`).
         .manage(quit::QuitState::default())
         .on_window_event(|window, event| {
+            // A Stage, mirror or Statistics window is gone (beta.10) — the OS
+            // closed it (Alt+F4, Alt-Tab, the taskbar, Cmd+W) or the app did.
+            // Before this, nothing heard it and Studio kept saying it was open.
+            if let tauri::WindowEvent::Destroyed = event {
+                window_gone(window.app_handle(), window.label());
+                return;
+            }
             let tauri::WindowEvent::CloseRequested { api, .. } = event else {
                 return;
             };
@@ -344,6 +387,8 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
         commands::presentation::stage_set_monitor,
         commands::presentation::stage_add_mirror,
         commands::presentation::stage_remove_mirror,
+        commands::presentation::stage_close,
+        commands::presentation::stage_remove_display,
         commands::presentation::stage_open,
         commands::presentation::stage_report,
         // FlagService

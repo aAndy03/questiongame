@@ -582,6 +582,13 @@ commands:
     file: crates/app/src/commands/presentation.rs
     params: ["monitor_id: String"]
     returns: "AppResult<()>"
+  stage_close:
+    async: true
+    callers: [main]
+    doc: "*Close Stage* (beta.10): every Stage window goes; where it was, and the mirrors asked for, are kept for the next *Open Stage*."
+    file: crates/app/src/commands/presentation.rs
+    params: []
+    returns: "AppResult<()>"
   stage_open:
     async: true
     callers: [main]
@@ -595,6 +602,13 @@ commands:
     doc: "Stage has mounted and is listening."
     file: crates/app/src/commands/presentation.rs
     params: ["contract_version: u32"]
+    returns: "AppResult<()>"
+  stage_remove_display:
+    async: true
+    callers: [main]
+    doc: "**Untick Stage on a display** (beta.10): a mirror stops, the pacer hands over to the first mirror, the last one closes Stage (`StageDisplay::remove_display`)."
+    file: crates/app/src/commands/presentation.rs
+    params: ["monitor_id: String"]
     returns: "AppResult<()>"
   stage_remove_mirror:
     async: true
@@ -970,6 +984,8 @@ contract:
       - stage_set_monitor
       - stage_add_mirror
       - stage_remove_mirror
+      - stage_close
+      - stage_remove_display
       - stage_open
       - stage_ready
       - show_overlay
@@ -1016,7 +1032,7 @@ contract:
   files:
     packages/contract/src/commands.ts:
       COMMANDS: {kind: const, sig: "#e3696517"}
-      COMMAND_GROUPS: {doc: "Commands grouped by the module that owns them.", kind: const, sig: "{ catalog, match, presentation, flags, stats, organise, workspace, app } #f08ef256"}
+      COMMAND_GROUPS: {doc: "Commands grouped by the module that owns them.", kind: const, sig: "{ catalog, match, presentation, flags, stats, organise, workspace, app } #0c0c00ac"}
       CatalogChange: {doc: "`catalog-changed`.", kind: interface, sig: "{ kind, id, op }"}
       Command: {kind: type, sig: "(typeof COMMAND_GROUPS)[CommandGroup][number]"}
       CommandGroup: {kind: type, sig: "keyof typeof COMMAND_GROUPS"}
@@ -1834,9 +1850,11 @@ host_api:
     "monitor::MonitorKey::as_str": {kind: method, sig: "fn as_str(&self) -> &str"}
     "monitor::MonitorKey::derive": {doc: "The key the app crate derives from a `tauri::window::Monitor`.", kind: method, sig: "fn derive(name: Option<&str>, width: u32, height: u32) -> Self"}
     "monitor::MonitorKey::new": {kind: method, sig: "fn new(value: impl Into<String>) -> Self"}
+    "monitor::StageClosed": {doc: "What a Stage window going away means, for the app crate to carry out.", kind: enum, sig: "enum StageClosed { Ignored | Promoted(MonitorKey) | Closed | MirrorDropped(MonitorKey) }"}
     "monitor::StageDisplay": {doc: "The connected displays and where the Stage window actually is.", kind: struct, sig: "struct StageDisplay {  }"}
     "monitor::StageDisplay::add_mirror": {doc: "Ask for another mirror.", kind: method, sig: "fn add_mirror(&mut self, key: MonitorKey) -> Result<Vec<MonitorKey>, MonitorError>"}
     "monitor::StageDisplay::current": {doc: "Where the window is now, as opposed to where the pick says it belongs.", kind: method, sig: "fn current(&self) -> Option<&MonitorKey>"}
+    "monitor::StageDisplay::is_open": {doc: "Is Stage up?", kind: method, sig: "fn is_open(&self) -> bool"}
     "monitor::StageDisplay::is_single_display": {doc: "One display total is a valid configuration (§9): Stage fullscreens on it, Studio is an Alt-Tab away.", kind: method, sig: "fn is_single_display(&self) -> bool"}
     "monitor::StageDisplay::live_mirrors": {doc: "**Which connected displays should carry a mirror right now.**", kind: method, sig: "fn live_mirrors(&self) -> Vec<MonitorKey>"}
     "monitor::StageDisplay::monitors": {kind: method, sig: "fn monitors(&self) -> &[MonitorInfo]"}
@@ -1844,15 +1862,19 @@ host_api:
     "monitor::StageDisplay::new": {kind: method, sig: "fn new() -> Self"}
     "monitor::StageDisplay::placement": {doc: "Resolve a remembered pick against the list as it is now.", kind: method, sig: "fn placement(&self, wanted: Option<&MonitorKey>) -> StagePlacement"}
     "monitor::StageDisplay::primary": {kind: method, sig: "fn primary(&self) -> Option<&MonitorInfo>"}
+    "monitor::StageDisplay::remove_display": {doc: "**Untick Stage on a display** (beta.10, the displays popover and Settings ▸ Monitors): a mirror stops; the pacer hands over to the first mirror; the last one closes Stage.", kind: method, sig: "fn remove_display(&mut self, key: &MonitorKey) -> StageClosed"}
     "monitor::StageDisplay::remove_mirror": {doc: "Stop mirroring on a display.", kind: method, sig: "fn remove_mirror(&mut self, key: &MonitorKey) -> Vec<MonitorKey>"}
     "monitor::StageDisplay::set_monitor": {doc: "`stage_set_monitor` — the manual send.", kind: method, sig: "fn set_monitor(&mut self, key: Option<MonitorKey>) -> Result<StageMove, MonitorError>"}
+    "monitor::StageDisplay::set_open": {doc: "Stage was opened (Control Load, *Open Stage*) or closed (*Close Stage*).", kind: method, sig: "fn set_open(&mut self, open: bool)"}
     "monitor::StageDisplay::set_wanted_mirrors": {doc: "Replace the wanted list — what a settings load does.", kind: method, sig: "fn set_wanted_mirrors(&mut self, wanted: Vec<MonitorKey>)"}
     "monitor::StageDisplay::wanted_mirrors": {doc: "The mirrors the operator has asked for, connected or not.", kind: method, sig: "fn wanted_mirrors(&self) -> &[MonitorKey]"}
+    "monitor::StageDisplay::window_closed": {doc: "**A Stage window is gone** — whoever closed it: the OS (Alt+F4, the taskbar, Alt-Tab, Cmd+W) or the app itself (beta.10).", kind: method, sig: "fn window_closed(&mut self, which: StageWindow) -> StageClosed"}
     "monitor::StageMove": {doc: "What the caller has to do about a monitor event: move the window, and/or raise a notice.", kind: struct, sig: "struct StageMove { to: Option<Option<MonitorKey>>, notice: Option<Notice> }"}
     "monitor::StagePlacement": {doc: "Where Stage can be right now, given the remembered pick and the OS list.", kind: enum, sig: "enum StagePlacement { Primary | On(MonitorKey) | WaitingFor(MonitorKey) | Ambiguous(MonitorKey) }"}
     "monitor::StagePlacement::target": {doc: "The display Stage should be shown on, or `None` for primary.", kind: method, sig: "fn target(&self) -> Option<&MonitorKey>"}
     "monitor::StageReattach": {doc: "§4.2 `stage.reattach`, control-behaviour: it decides what happens when the remembered display comes back **while a Play is open**, and it can therefore change mid-Play without touching anything sco...", kind: enum, sig: "enum StageReattach { Ask | Auto | Stay }"}
     "monitor::StageReattach::as_str": {doc: "The §4.2 flag value, as `FlagService::flag` reports it.", kind: method, sig: "fn as_str(self) -> &'static str"}
+    "monitor::StageWindow": {doc: "Which Stage window went (beta.10).", kind: enum, sig: "enum StageWindow { Pacer | Mirror(usize) }"}
   crates/host/src/notice.rs:
     "notice::MAX_ACTIONS": {doc: "§14: \"A notice carries 2, max 3 solve actions.\"", kind: const, sig: "const MAX_ACTIONS: usize = 3"}
     "notice::Notice": {kind: struct, sig: "struct Notice { code: &'static str, severity: Severity, target_path: Option<String>, actions: Vec<&'static str>, detail: BTreeMap<&'static str, String> }"}
@@ -2243,8 +2265,9 @@ studio_calls:
       - apps/studio/src/organisms/StripsPanel.tsx
       - apps/studio/src/organisms/useControlHotkeys.ts
     stage_add_mirror: [apps/studio/src/organisms/useDisplays.ts]
+    stage_close: [apps/studio/src/organisms/useDisplays.ts]
     stage_open: [apps/studio/src/organisms/useDisplays.ts, apps/studio/src/organisms/useNoticeActions.ts]
-    stage_remove_mirror: [apps/studio/src/organisms/useDisplays.ts]
+    stage_remove_display: [apps/studio/src/organisms/useDisplays.ts]
     stage_set_monitor:
       - apps/studio/src/organisms/MonitorsSettings.tsx
       - apps/studio/src/organisms/useDisplays.ts
@@ -2333,7 +2356,7 @@ app_crate:
       "identity::channel": {doc: "The one place the channel is decided.", kind: fn, sig: "fn channel(identifier: &str, e2e_channel: Option<&str>) -> Result<Channel, String>"}
       "identity::check": {doc: "`is_dev` is `tauri::is_dev()`: the frontend comes from `devUrl` rather than being embedded — Tauri's own line between the two builds.", kind: fn, sig: "fn check(is_dev: bool, identifier: &str) -> Result<(), String>"}
     crates/app/src/lib.rs:
-      run: {doc: "Build and run the desktop app.", kind: fn, sig: "fn run()"}
+      run: {kind: fn, sig: "fn run()"}
     crates/app/src/logfile.rs:
       "logfile::rotate": {doc: "Rotate `dir/file` if it is larger than `at_bytes`.", kind: fn, sig: "fn rotate(dir: &Path, file: &str, at_bytes: u64, keep: usize) -> std::io::Result<bool>"}
       "logfile::rotated_name": {doc: "`questiongame.log` → `questiongame.1.log`.", kind: fn, sig: "fn rotated_name(file: &str, n: usize) -> String"}
@@ -2386,6 +2409,7 @@ app_crate:
       "whats_new::since": {doc: "`last_seen` is `META_LAST_SEEN`; `report` is what opening the library found (`None` for a library opened without one — memory, tests).", kind: fn, sig: "fn since(last_seen: Option<String>, report: Option<&OpenReport>) -> Since"}
     crates/app/src/windows.rs:
       "windows::apply": {doc: "Carry out a [`StageMove`].", kind: fn, sig: "fn apply(app: &AppHandle, mv: &StageMove) -> AppResult<()>"}
+      "windows::carry_out": {doc: "Carry out what a Stage window going away means (beta.10): the OS closed one, or the operator unticked a display.", kind: fn, sig: "fn carry_out(app: &AppHandle, state: &crate::state::AppState, closed: &questiongame_host::StageClosed) -> AppResult<()>"}
       "windows::close_stats": {doc: "Close the Statistics window if it is open.", kind: fn, sig: "fn close_stats(app: &AppHandle) -> AppResult<()>"}
       "windows::ensure_stage": {doc: "Stage, ready.", kind: fn, sig: "fn ensure_stage(app: &AppHandle, on: Option<&MonitorKey>) -> AppResult<WebviewWindow>"}
       "windows::focus_studio": {doc: "A second launch of the app (P12.2): bring the running Studio to the front rather than start a second copy of the library.", kind: fn, sig: "fn focus_studio(app: &AppHandle)"}
@@ -2395,10 +2419,14 @@ app_crate:
       "windows::reconcile_mirrors": {doc: "Make the mirror windows match `wanted` — [`StageDisplay::live_mirrors`], the connected displays that should carry one right now (§9, P11.11).", kind: fn, sig: "fn reconcile_mirrors(app: &AppHandle, wanted: &[MonitorKey]) -> AppResult<()>"}
       "windows::refresh": {doc: "Re-read the OS display list, run the §9 policy over it, and **act on the result** — move the window, raise the notice, tell `main`.", kind: fn, sig: "fn refresh(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()>"}
       "windows::retitle_stats": {doc: "Retitle the Statistics window, if it is open.", kind: fn, sig: "fn retitle_stats(app: &AppHandle, title: &str)"}
+      "windows::stage_down": {doc: "*Close Stage* (beta.10): every Stage window goes.", kind: fn, sig: "fn stage_down(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()>"}
       "windows::stage_is_open": {doc: "Is it on screen right now?", kind: fn, sig: "fn stage_is_open(app: &AppHandle) -> bool"}
+      "windows::stage_up": {doc: "**Stage up** (beta.10): the pacer where it belongs, the remembered mirrors with it, and Studio told.", kind: fn, sig: "fn stage_up(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()>"}
+      "windows::stage_window_of": {doc: "Which Stage window a label is: `stage` the pacer, `stage-N` the mirror at `N - 2` of the live list.", kind: fn, sig: "fn stage_window_of(label: &str) -> Option<questiongame_host::StageWindow>"}
       "windows::stats_is_open": {doc: "Is it on screen right now?", kind: fn, sig: "fn stats_is_open(app: &AppHandle) -> bool"}
       "windows::stats_title": {doc: "The Statistics window's title: it names the workspace it shows, because on another display nothing else says which library the numbers are from (beta.2).", kind: fn, sig: "fn stats_title(workspace: Option<&str>) -> String"}
       "windows::studio_title": {doc: "Studio.", kind: fn, sig: "fn studio_title(is_dev: bool) -> &'static str"}
+      "windows::tell_studio": {doc: "`monitors-changed`, with the window map read before the lock is taken.", kind: fn, sig: "fn tell_studio(app: &AppHandle, state: &crate::state::AppState)"}
   modules:
     - boot
     - commands

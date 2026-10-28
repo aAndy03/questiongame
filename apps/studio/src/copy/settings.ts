@@ -219,7 +219,7 @@ export const SETTINGS = {
     moveStage: 'Move Stage here',
     /** The same picture as the Stage display (§9, P11.11). */
     mirror: 'Mirroring',
-    removeStage: 'Remove Stage',
+    removeStage: 'Take Stage off this display',
     resolution: (w: number, h: number) => `${w}×${h}`,
     /** Shown only when it is not 1 — it is the reason the OS reports a smaller
      * logical size than the panel's mode, and Stage scales to suit. */
@@ -241,7 +241,6 @@ export const SETTINGS = {
     /** The popover's ticks (beta.9): their names, and why one cannot be changed. */
     stageTick: (display: string) => `Stage on ${display}`,
     statsTick: (display: string) => `Statistics on ${display}`,
-    pacerTick: 'Stage stays on at least one display; to move it, use the arrow beside a free one',
     statsBlockedTick: 'Stage is on this display',
     statsFullscreen: 'Statistics fullscreen',
     /** P21.5: a row's actions are short under the Stage and Statistics

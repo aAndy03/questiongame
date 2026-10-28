@@ -34,7 +34,6 @@ pub fn play_load(
     // The host work in its own scope: `ensure_stage` below **builds a webview**,
     // which pumps the message loop and lets the new window invoke before it
     // returns. With the lock held that is a wait on ourselves (§9).
-    let stage_on;
     {
         let mut host = state.lock();
 
@@ -59,14 +58,11 @@ pub fn play_load(
             .set_layout(questiongame_host::stage::StageLayoutNodes::of(
                 &recipe.layout,
             ));
-        // Where Stage belongs, read while the lock is already held. The
-        // window is built after it is released, and it is built *there*: a
-        // Stage that opens on primary while the host says otherwise is a show
-        // on the wrong screen and a Settings tab that disagrees with the wall.
-        stage_on = host.display.current().cloned();
     }
 
-    windows::ensure_stage(&app, stage_on.as_ref())?;
+    // Stage up, its mirrors with it, and Studio told where (beta.10): the
+    // displays strip must not say "no Stage" over a Stage that is on screen.
+    windows::stage_up(&app, &state)?;
     let mut host = state.lock();
     emit::play_state(&app, &mut host, now, true);
     Ok(())

@@ -88,7 +88,7 @@ pub use ids::{
     TeamId, WorkspaceGroupId, WorkspaceId,
 };
 pub use monitor::{
-    MonitorError, MonitorInfo, MonitorKey, StageDisplay, StageMove, StagePlacement, StageReattach,
+    MonitorError, MonitorInfo, MonitorKey, StageClosed, StageDisplay, StageMove, StagePlacement, StageReattach, StageWindow,
 };
 pub use notice::{Notice, Severity};
 pub use play::{Play, PlayStatus};

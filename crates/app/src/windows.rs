@@ -167,6 +167,119 @@ pub fn ensure_stage(app: &AppHandle, on: Option<&MonitorKey>) -> AppResult<Webvi
     Ok(window)
 }
 
+/// **Stage up** (beta.10): the pacer where it belongs, the remembered mirrors
+/// with it, and Studio told. Control Load, *Open Stage* and a send all come
+/// here, so none of them leaves the displays strip saying "no Stage" while one
+/// is on screen. The lock is taken only around decisions, never across a
+/// window being built.
+pub fn stage_up(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()> {
+    crate::state::assert_unlocked("windows::stage_up");
+    let on = state.lock().display.current().cloned();
+    ensure_stage(app, on.as_ref())?;
+    let mirrors = {
+        let mut host = state.lock();
+        host.display.set_open(true);
+        host.display.live_mirrors()
+    };
+    reconcile_mirrors(app, &mirrors)?;
+    tell_studio(app, state);
+    Ok(())
+}
+
+/// *Close Stage* (beta.10): every Stage window goes. Marked closed **first**,
+/// so the windows' own `Destroyed` events are already accounted for; the
+/// display and the mirrors asked for are kept for the next *Open Stage*.
+pub fn stage_down(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()> {
+    crate::state::assert_unlocked("windows::stage_down");
+    state.lock().display.set_open(false);
+    reconcile_mirrors(app, &[])?;
+    if let Some(pacer) = app.get_webview_window(STAGE) {
+        pacer.close()?;
+    }
+    tell_studio(app, state);
+    Ok(())
+}
+
+/// Which Stage window a label is: `stage` the pacer, `stage-N` the mirror at
+/// `N - 2` of the live list. Anything else is not a Stage window.
+pub fn stage_window_of(label: &str) -> Option<questiongame_host::StageWindow> {
+    if label == STAGE {
+        return Some(questiongame_host::StageWindow::Pacer);
+    }
+    let n: usize = label.strip_prefix("stage-")?.parse().ok()?;
+    n.checked_sub(2).map(questiongame_host::StageWindow::Mirror)
+}
+
+/// Carry out what a Stage window going away means (beta.10): the OS closed
+/// one, or the operator unticked a display. Remember the outcome, make the
+/// windows match, tell Studio.
+pub fn carry_out(
+    app: &AppHandle,
+    state: &crate::state::AppState,
+    closed: &questiongame_host::StageClosed,
+) -> AppResult<()> {
+    use questiongame_host::StageClosed;
+    crate::state::assert_unlocked("windows::carry_out");
+    if *closed == StageClosed::Ignored {
+        return Ok(());
+    }
+    let mirrors = {
+        let mut host = state.lock();
+        remember_stage(&mut host)?;
+        host.display.live_mirrors()
+    };
+    match closed {
+        StageClosed::Promoted(next) => {
+            // The pacer may still be standing (the operator unticked it) or be
+            // gone (the OS closed it): moved, or built, where the mirror was.
+            match app.get_webview_window(STAGE) {
+                Some(pacer) => move_to(app, &pacer, Some(next))?,
+                None => {
+                    ensure_stage(app, Some(next))?;
+                }
+            }
+            reconcile_mirrors(app, &mirrors)?;
+        }
+        StageClosed::Closed => {
+            reconcile_mirrors(app, &[])?;
+            if let Some(pacer) = app.get_webview_window(STAGE) {
+                pacer.close()?;
+            }
+        }
+        StageClosed::MirrorDropped(_) => reconcile_mirrors(app, &mirrors)?,
+        StageClosed::Ignored => {}
+    }
+    tell_studio(app, state);
+    Ok(())
+}
+
+/// The pick and the mirrors, as `StageDisplay` now has them, saved.
+fn remember_stage(host: &mut crate::state::Host) -> AppResult<()> {
+    use questiongame_host::flags::GlobalSetting;
+    let pick = host.display.current().map(|k| k.as_str().to_owned());
+    let mirrors: Vec<String> = host
+        .display
+        .wanted_mirrors()
+        .iter()
+        .map(|k| k.as_str().to_owned())
+        .collect();
+    let ctx = host.runtime();
+    host.flags.settings_set_global(GlobalSetting::StageMonitorId(pick), ctx)?;
+    let ctx = host.runtime();
+    host.flags.settings_set_global(GlobalSetting::StageMirrorIds(mirrors), ctx)?;
+    let globals = host.flags.globals().clone();
+    host.catalog.settings_store(&globals)?;
+    Ok(())
+}
+
+/// `monitors-changed`, with the window map read before the lock is taken.
+pub fn tell_studio(app: &AppHandle, state: &crate::state::AppState) {
+    let stats_open = stats_is_open(app);
+    let stage_open = stage_is_open(app);
+    let host = state.lock();
+    crate::emit::monitors_changed(app, &host, stats_open, stage_open);
+}
+
 /// The label of the n-th mirror. Positional, starting at 2, so the pacer keeps
 /// the bare `stage` label that `emit`, `guard`, the capabilities file and every
 /// doc name.
@@ -527,6 +640,21 @@ mod tests {
             refresh.contains("follow_stats"),
             "it should still follow one"
         );
+    }
+
+    /// beta.10: a window's label says which Stage window it was, so the host
+    /// can account for it when the OS closes it.
+    #[test]
+    fn a_label_names_the_stage_window_it_was() {
+        use questiongame_host::StageWindow;
+        assert_eq!(stage_window_of("stage"), Some(StageWindow::Pacer));
+        assert_eq!(stage_window_of("stage-2"), Some(StageWindow::Mirror(0)));
+        assert_eq!(stage_window_of("stage-5"), Some(StageWindow::Mirror(3)));
+        assert_eq!(stage_window_of(&mirror_label(1)), Some(StageWindow::Mirror(1)));
+        assert_eq!(stage_window_of("main"), None);
+        assert_eq!(stage_window_of("stats"), None);
+        assert_eq!(stage_window_of("stage-x"), None);
+        assert_eq!(stage_window_of("stage-1"), None);
     }
 
     #[test]
