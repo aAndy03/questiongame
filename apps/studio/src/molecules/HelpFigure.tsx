@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Icon, Text } from '@/atoms'
+import { Icon, Panel, Text } from '@/atoms'
 import type { HelpFigureId } from '@/copy/help'
 
 export interface HelpFigureProps {
@@ -12,13 +12,17 @@ export interface HelpFigureProps {
  * Help's pictures (beta.10): small diagrams drawn from Studio's own tokens,
  * never screenshots — a screenshot goes stale with the next change and is
  * wrong in the other theme. Each is one `role="img"` named by its caption.
+ * Drawn as Studio draws everything else: `Panel` surfaces and fills, never
+ * an outline.
  */
 export function HelpFigure({ figure, caption }: HelpFigureProps) {
   return (
     <figure className="flex flex-col gap-2" data-help-figure={figure}>
-      <div role="img" aria-label={caption} className="flex items-center justify-center overflow-x-auto rounded-[var(--radius)] bg-[var(--surface-secondary)] p-4">
-        {DRAWINGS[figure]()}
-      </div>
+      <Panel variant="secondary">
+        <div role="img" aria-label={caption} className="flex items-center justify-center overflow-x-auto">
+          {DRAWINGS[figure]()}
+        </div>
+      </Panel>
       <figcaption>
         <Text variant="studio-caption" tone="muted">
           {caption}
@@ -30,12 +34,12 @@ export function HelpFigure({ figure, caption }: HelpFigureProps) {
 
 function Box({ children, tone = 'plain', className }: { children: ReactNode; tone?: 'plain' | 'accent' | 'success' | 'muted'; className?: string }) {
   const look = {
-    plain: 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]',
-    accent: 'border-[var(--accent)] bg-[var(--surface)] text-[var(--accent)]',
-    success: 'border-[var(--success)] bg-[var(--surface)] text-[var(--success)]',
-    muted: 'border-dashed border-[var(--border)] bg-transparent text-[var(--muted)]',
+    plain: 'bg-[var(--surface)] text-[var(--foreground)]',
+    accent: 'bg-[color-mix(in_oklab,var(--accent)_16%,var(--surface))] text-[var(--accent)]',
+    success: 'bg-[color-mix(in_oklab,var(--success)_16%,var(--surface))] text-[var(--success)]',
+    muted: 'bg-[color-mix(in_oklab,var(--foreground)_4%,transparent)] text-[var(--muted)]',
   }[tone]
-  return <div className={['flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-[calc(var(--radius)*0.66)] border px-3 py-2 text-center', look, className ?? ''].join(' ')}>{children}</div>
+  return <div className={['flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-[calc(var(--radius)*0.66)] px-3 py-2 text-center', look, className ?? ''].join(' ')}>{children}</div>
 }
 
 function Arrow() {
@@ -120,8 +124,8 @@ const DRAWINGS: Readonly<Record<HelpFigureId, () => ReactNode>> = {
         <div key={t.name} className="flex flex-col items-center gap-1">
           <div
             className={[
-              'flex size-12 items-center justify-center rounded-full border-2',
-              t.state === 'token' ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-foreground)]' : 'border-[var(--border)] bg-[var(--surface)]',
+              'flex size-12 items-center justify-center rounded-full',
+              t.state === 'token' ? 'bg-[var(--accent)] text-[var(--accent-foreground)]' : 'bg-[var(--surface)]',
             ].join(' ')}
           >
             {t.state === 'played' ? <Icon name="check" size="sm" /> : t.state === 'token' ? <Text variant="studio-label">●</Text> : null}
@@ -141,7 +145,7 @@ const DRAWINGS: Readonly<Record<HelpFigureId, () => ReactNode>> = {
       ].map((d) => (
         <div key={d.name} className="flex flex-col items-center gap-1.5">
           <div
-            className={['flex items-center justify-center rounded border-2', d.stage ? 'border-[var(--accent)]' : 'border-[var(--border)]'].join(' ')}
+            className={['flex items-center justify-center rounded-[calc(var(--radius)*0.66)]', d.stage ? 'bg-[color-mix(in_oklab,var(--accent)_20%,var(--surface))]' : 'bg-[var(--surface)]'].join(' ')}
             style={{ width: d.w, height: d.w * 0.5625 }}
           >
             <Small>{d.stage ? 'Stage' : d.stats ? 'Statistics' : ''}</Small>

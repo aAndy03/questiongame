@@ -108,16 +108,18 @@ export function NameWorkspacePage({ mode, onDone }: NameWorkspacePageProps) {
           </ul>
         )}
         {/* The workspace itself, as it will look: the name as it is typed, what it holds. */}
-        <div className="flex items-center gap-3 rounded-[var(--radius)] bg-[var(--surface-secondary)] px-3 py-2.5" data-workspace-card>
-          <Icon name="workspaces" />
-          <div className="flex min-w-0 flex-col">
-            <Text variant="studio-label" truncate>
-              {name.trim() || WORKSPACE.nameLabel}
-            </Text>
-            <Text variant="studio-caption" tone="muted" tabular>
-              {held && held.teams + held.domains + held.questions + held.games > 0 ? WORKSPACE.counts(held) : WORKSPACE.emptyCounts}
-            </Text>
-          </div>
+        <div data-workspace-card>
+          <Panel variant="secondary" density="compact" className="flex items-center gap-3">
+            <Icon name="workspaces" />
+            <div className="flex min-w-0 flex-col">
+              <Text variant="studio-label" truncate>
+                {name.trim() || WORKSPACE.nameLabel}
+              </Text>
+              <Text variant="studio-caption" tone="muted" tabular>
+                {held && held.teams + held.domains + held.questions + held.games > 0 ? WORKSPACE.counts(held) : WORKSPACE.emptyCounts}
+              </Text>
+            </div>
+          </Panel>
         </div>
         {field}
       </Panel>

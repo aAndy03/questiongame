@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { matchesSearch } from '@questiongame/text'
-import { Kbd, Text } from '@/atoms'
-import { GestureList, HelpFigure, HelpText, PageHeader, SearchField, SectionIndex, helpPlain } from '@/molecules'
+import { Icon, Kbd, Text } from '@/atoms'
+import { GestureList, HelpFigure, HelpText, PageHeader, SearchField, SectionIndex, SettingsGroup, helpPlain } from '@/molecules'
 import { SettingsLayout } from '@/templates'
 import { HOTKEYS, TABS } from '@/copy'
 import { GESTURES } from '@/copy/gestures'
@@ -29,7 +29,7 @@ export function HelpPage() {
 
   return (
     <SettingsLayout
-      header={<PageHeader title={TABS.help.label} toolbar={<SearchField what="help" onSearch={setQuery} className="max-w-sm" />} />}
+      header={<PageHeader title={TABS.help.label} toolbar={<SearchField what="help" onSearch={setQuery} className="w-64 min-w-28" />} />}
       aside={sections.length > 0 ? <SectionIndex entries={sections.map((s) => ({ id: `help-${s.id}`, title: s.title }))} /> : undefined}
     >
       {sections.length === 0 ? (
@@ -38,18 +38,11 @@ export function HelpPage() {
         </Text>
       ) : (
         sections.map((s) => (
-          <section key={s.id} id={`help-${s.id}`} aria-labelledby={`help-${s.id}-title`} className="flex scroll-mt-4 flex-col gap-4" data-help-section={s.id}>
-            <div className="flex flex-col gap-1">
-              <Text as="h2" id={`help-${s.id}-title`} variant="studio-title">
-                {s.title}
-              </Text>
-              <Text as="p" variant="studio-body" tone="muted">
-                {s.summary}
-              </Text>
-            </div>
+          // One Settings group per section: the same Panel, heading and rows as Settings ▸ Settings.
+          <SettingsGroup key={s.id} id={`help-${s.id}`} title={s.title} description={s.summary} className="scroll-mt-4">
             {s.topics.map((t) => (
-              <article key={t.id} id={`help-${s.id}-${t.id}`} className="flex flex-col gap-3" data-help-topic={t.id}>
-                <Text as="h3" variant="studio-heading" highlight={query}>
+              <article key={t.id} id={`help-${s.id}-${t.id}`} className="flex flex-col gap-3 py-4" data-help-topic={t.id}>
+                <Text as="h3" variant="studio-subheading" highlight={query}>
                   {t.title}
                 </Text>
                 {t.blocks.map((b, i) => (
@@ -57,7 +50,7 @@ export function HelpPage() {
                 ))}
               </article>
             ))}
-          </section>
+          </SettingsGroup>
         ))
       )}
     </SettingsLayout>
@@ -74,9 +67,15 @@ function Block({ block, query, chord }: { block: HelpBlock; query: string; chord
       )
     case 'note':
       return (
-        <p className="rounded-[var(--radius)] border-l-2 border-[var(--accent)] bg-[var(--surface-secondary)] px-3 py-2 leading-relaxed" data-help-note>
-          <HelpText text={block.text} highlight={query} />
-        </p>
+        // An aside, as Studio says one elsewhere: the icon and muted text, no box.
+        <div className="flex items-start gap-2.5 text-[var(--muted)]" data-help-note>
+          <span className="mt-0.5 shrink-0">
+            <Icon name="info" size="sm" />
+          </span>
+          <p className="leading-relaxed">
+            <HelpText text={block.text} variant="studio-caption" highlight={query} />
+          </p>
+        </div>
       )
     case 'steps':
     case 'list': {

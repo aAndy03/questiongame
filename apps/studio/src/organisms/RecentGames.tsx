@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Text } from '@/atoms'
+import { Button, Panel, Text } from '@/atoms'
 import { useNavStore } from '@/chrome/nav'
 import { toast } from '@/chrome/toast'
 import { CONTROL, SHELL } from '@/copy'
@@ -97,27 +97,29 @@ export function RecentGames({ empty }: { empty: React.ReactNode }) {
         {games.map(({ recipe, at, why }) => {
           const questions = recipe.board.reduce((n, b) => n + b.questionIds.length, 0)
           return (
-            <li key={recipe.id} className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] p-4" style={{ background: 'var(--surface)' }} data-recent-game={recipe.id}>
-              <button
-                type="button"
-                className="flex min-w-0 flex-col items-start gap-0.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
-                onClick={() => void go({ tab: 'games', id: recipe.id })}
-              >
-                <Text variant="studio-label" truncate className="max-w-full">
-                  {recipe.name}
-                </Text>
-                <Text variant="studio-caption" tone="muted" truncate className="max-w-full">
-                  {[recipe.folder, CONTROL.recentCounts(recipe.teams.length, questions)].filter(Boolean).join(' · ')}
-                </Text>
-              </button>
-              <div className="flex items-center justify-between gap-2">
-                <Text variant="studio-caption" tone="muted">
-                  {why === 'played' ? CONTROL.recentPlayed(ago(at)) : CONTROL.recentEdited(ago(at))}
-                </Text>
-                <Button size="sm" variant="primary" icon="control" isPending={loading === recipe.id} isDisabled={loading !== null} onPress={() => void load(recipe)}>
-                  {CONTROL.recentLoad}
-                </Button>
-              </div>
+            <li key={recipe.id} className="flex" data-recent-game={recipe.id}>
+              <Panel variant="secondary" className="flex flex-1 flex-col gap-3">
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-col items-start gap-0.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+                  onClick={() => void go({ tab: 'games', id: recipe.id })}
+                >
+                  <Text variant="studio-label" truncate className="max-w-full">
+                    {recipe.name}
+                  </Text>
+                  <Text variant="studio-caption" tone="muted" truncate className="max-w-full">
+                    {[recipe.folder, CONTROL.recentCounts(recipe.teams.length, questions)].filter(Boolean).join(' · ')}
+                  </Text>
+                </button>
+                <div className="flex items-center justify-between gap-2">
+                  <Text variant="studio-caption" tone="muted">
+                    {why === 'played' ? CONTROL.recentPlayed(ago(at)) : CONTROL.recentEdited(ago(at))}
+                  </Text>
+                  <Button size="sm" variant="primary" icon="control" isPending={loading === recipe.id} isDisabled={loading !== null} onPress={() => void load(recipe)}>
+                    {CONTROL.recentLoad}
+                  </Button>
+                </div>
+                </Panel>
             </li>
           )
         })}

@@ -30,7 +30,7 @@ export function SettingsLayout({ header, tabs, children, width = 'form', aside }
       className="flex h-full min-h-0 flex-col"
       data-layout="settings"
     >
-      <div className="flex shrink-0 flex-col gap-4 px-6 pt-6">
+      <div className={['flex shrink-0 flex-col gap-4 px-6 pt-6', tabs ? '' : 'pb-4'].join(' ')}>
         {header}
         {tabs ? <div className="border-b border-[var(--separator)]">{tabs}</div> : null}
       </div>

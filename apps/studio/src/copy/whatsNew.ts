@@ -32,6 +32,63 @@ export interface WhatsNewRelease {
 
 export const WHATS_NEW: readonly WhatsNewRelease[] = [
   {
+    version: '2.0.0-beta.10',
+    notes: {
+      en: [
+        {
+          title: 'Studio’s own title bar',
+          body: 'Studio’s header is now the window’s title bar: drag it by any empty part, double-click it to maximize. On Windows, minimize, maximize and close sit at its right end; on a Mac the traffic lights stay where they are and Studio leaves them room. Prefer the system’s bar? Settings ▸ Window ▸ Use the system title bar, and it changes at once.',
+        },
+        {
+          title: 'Stage goes where you send it',
+          body: 'Stage now checks that it really landed on the display you chose, tries again once, and tells you if it could not. If you drag Stage, or Statistics, to another display yourself, Studio follows and remembers it. On a Mac, displays are called by their own names, a display that only mirrors another says so and how to make it a display of its own (AirPlay: Use as Separate Display), and Studio warns when Displays have separate Spaces is off. Still stuck? Settings ▸ Monitors ▸ Copy display report, and paste it into your bug report.',
+        },
+        {
+          title: 'Close Stage',
+          body: 'Open Stage is now a switch: Close Stage takes it down and the Play keeps going; the next Open Stage puts it back where it was. Stage closed some other way (Alt+F4, the taskbar, ⌘W) is noticed too, so Studio no longer thinks it is still open. Untick any display to take Stage off it: a mirror stops, the main one hands over to the next, and the last one closes Stage.',
+        },
+        {
+          title: 'Updating from 1.x, explained',
+          body: 'A library brought over from 1.x is told what happened before it is asked for anything: it was copied before anything changed, everything is still here, and what a workspace is for. Then one thing to do: name it, with My library already filled in, and rename it any time.',
+        },
+        {
+          title: 'Pick up where you left off',
+          body: 'With nothing loaded, Control lists the games you played or edited last, with when, and Load into Control on each. Go to Games is still there, under them.',
+        },
+        {
+          title: 'Help, and F1',
+          body: 'Help has its own place at the bottom of the sidebar, and F1 opens it from anywhere: how the game plays, preparing a show, the library, running a show, Stage and displays, and every shortcut and gesture, with a search over all of it. Settings ▸ Keyboard shortcuts now also lists the mouse and keyboard gestures that cannot be changed.',
+        },
+      ],
+      ro: [
+        {
+          title: 'Bara de titlu a Studio',
+          body: 'Antetul Studio este acum bara de titlu a ferestrei: o tragi de orice parte goală și, cu dublu clic, o maximizezi. Pe Windows, minimizarea, maximizarea și închiderea stau în capătul din dreapta; pe Mac, cele trei butoane colorate rămân unde sunt, iar Studio le lasă loc. Preferi bara sistemului? Settings ▸ Window ▸ Use the system title bar, și se schimbă pe loc.',
+        },
+        {
+          title: 'Stage merge unde îl trimiți',
+          body: 'Stage verifică acum că a ajuns chiar pe ecranul ales, mai încearcă o dată și îți spune dacă nu a reușit. Dacă tragi tu Stage sau Statistics pe alt ecran, Studio te urmează și ține minte. Pe Mac, ecranele apar cu numele lor, un ecran care doar oglindește altul spune asta și cum îl faci ecran separat (AirPlay: Use as Separate Display), iar Studio te avertizează când Displays have separate Spaces e oprit. Tot nu merge? Settings ▸ Monitors ▸ Copy display report și lipește-l în raportul de eroare.',
+        },
+        {
+          title: 'Închide Stage',
+          body: 'Open Stage e acum un comutator: Close Stage îl închide, iar Play-ul continuă; următorul Open Stage îl pune înapoi unde era. Și un Stage închis altfel (Alt+F4, bara de activități, ⌘W) e observat, așa că Studio nu mai crede că e încă deschis. Debifează orice ecran ca să scoți Stage de pe el: o oglindă se oprește, cel principal predă următorului, iar ultimul închide Stage.',
+        },
+        {
+          title: 'Actualizarea de la 1.x, explicată',
+          body: 'O bibliotecă adusă din 1.x află întâi ce s-a întâmplat: a fost copiată înainte de orice schimbare, totul e încă aici și la ce folosește un workspace. Apoi un singur lucru de făcut: să-i dai un nume, cu My library deja completat, pe care îl poți schimba oricând.',
+        },
+        {
+          title: 'Continuă de unde ai rămas',
+          body: 'Când nu e nimic încărcat, Control arată jocurile jucate sau editate ultima dată, cu momentul, și Load into Control pe fiecare. Go to Games e tot acolo, sub ele.',
+        },
+        {
+          title: 'Help și F1',
+          body: 'Help are locul lui jos în bara laterală, iar F1 îl deschide de oriunde: cum se joacă, pregătirea unui show, biblioteca, conducerea unui show, Stage și ecranele, plus fiecare scurtătură și gest, cu căutare în tot. Settings ▸ Keyboard shortcuts arată acum și gesturile de mouse și tastatură care nu se pot schimba.',
+        },
+      ],
+    },
+  },
+  {
     version: '2.0.0-beta.9',
     notes: {
       en: [
