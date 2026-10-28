@@ -2439,7 +2439,7 @@ app_crate:
       "windows::focus_studio": {doc: "A second launch of the app (P12.2): bring the running Studio to the front rather than start a second copy of the library.", kind: fn, sig: "fn focus_studio(app: &AppHandle)"}
       "windows::mirror_label": {doc: "The label of the n-th mirror.", kind: fn, sig: "fn mirror_label(index: usize) -> String"}
       "windows::open_stats": {doc: "Open the Statistics window, on the remembered display (§11.K, P11).", kind: fn, sig: "fn open_stats(app: &AppHandle, key: Option<&MonitorKey>, fullscreen: bool, title: &str) -> AppResult<()>"}
-      "windows::open_studio": {kind: fn, sig: "fn open_studio(app: &AppHandle) -> AppResult<WebviewWindow>"}
+      "windows::open_studio": {doc: "Studio's window, built once.", kind: fn, sig: "fn open_studio(app: &AppHandle, native: bool) -> AppResult<WebviewWindow>"}
       "windows::reconcile_mirrors": {doc: "Make the mirror windows match `wanted` — [`StageDisplay::live_mirrors`], the connected displays that should carry one right now (§9, P11.11).", kind: fn, sig: "fn reconcile_mirrors(app: &AppHandle, wanted: &[MonitorKey]) -> AppResult<()>"}
       "windows::refresh": {doc: "Re-read the OS display list, run the §9 policy over it, and **act on the result** — move the window, raise the notice, tell `main`.", kind: fn, sig: "fn refresh(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()>"}
       "windows::report": {doc: "**The display report** (beta.10, Settings ▸ Monitors ▸ *Copy display report*): what the app sees, as plain text an operator can paste into a bug report — each display as the OS lists it and as the ...", kind: fn, sig: "fn report(app: &AppHandle, state: &crate::state::AppState) -> String"}

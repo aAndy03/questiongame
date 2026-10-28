@@ -1,6 +1,7 @@
-import { useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Button, CheckboxField, Text, useSqueeze } from '@/atoms'
 import { LIST, SHELL } from '@/copy'
+import { tipMoment } from '@/tips/signals'
 
 export interface BulkAction {
   readonly count: number
@@ -46,6 +47,11 @@ export interface BulkBarProps {
 export function BulkBar({ count, onPage, archive, restore, onClear, isPending, extra, page }: BulkBarProps) {
   const idle = count === 0
   const actions = useRef<HTMLDivElement>(null)
+  // beta.11: several rows ticked is a moment a tip may answer (*Share*, a run).
+  const many = count >= 2
+  useEffect(() => {
+    if (many) tipMoment('list:selected-many')
+  }, [many])
   useSqueeze(actions)
   return (
     <div

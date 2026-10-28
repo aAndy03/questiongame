@@ -19,6 +19,7 @@ import type {
 } from '@/host/types'
 import { DataActions } from './DataActions'
 import { LibraryActions } from './LibraryActions'
+import { TipsSettings } from './TipsSettings'
 
 export interface SettingsFormProps {
   /** Which groups to render, in `SETTINGS_GROUPS` order. Default: all. */
@@ -249,6 +250,12 @@ export function SettingsForm({ groups, compact }: SettingsFormProps) {
                 disabledReason={reason('stage.reattach')}
               />
             </SettingRow>
+          </SettingsGroup>
+        )
+      case 'tips':
+        return (
+          <SettingsGroup {...props}>
+            <TipsSettings />
           </SettingsGroup>
         )
       case 'window':

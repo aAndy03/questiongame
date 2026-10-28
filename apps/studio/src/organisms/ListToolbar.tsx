@@ -3,6 +3,7 @@ import { useSqueeze } from '@/atoms'
 import { ArchiveToggle, FilterMenu, GroupMenu, SearchField, SortMenu, ViewSwitch, type ArchiveView } from '@/molecules'
 import type { ViewMode } from '@/chrome/chrome'
 import type { ListViewApi } from '@/host/useListView'
+import { tipLearned } from '@/tips/signals'
 
 export interface ListToolbarProps {
   view: ListViewApi<unknown, unknown>
@@ -50,7 +51,10 @@ export function ListToolbar({ view, what, layout, onLayout, status, onStatus, fi
           * would wrap, they become their icons (`useSqueeze`). */}
         <div ref={tools} className="order-3 flex w-full min-w-0 flex-nowrap items-center gap-2 @[48rem]/toolbar:order-none @[48rem]/toolbar:w-auto @[48rem]/toolbar:flex-1" data-squeeze data-list-tools>
           {/* Gives up its room first, down to 7rem — then the filter chips fold into +N, then the buttons become icons (beta.8). */}
-          <SearchField what={what} onSearch={view.setSearch} initial={state.search} className="w-64 min-w-28 shrink-[40]" />
+          <SearchField what={what} onSearch={(text) => {
+            if (text.trim()) tipLearned('search')
+            view.setSearch(text)
+          }} initial={state.search} className="w-64 min-w-28 shrink-[40]" />
           <FilterMenu
             filters={spec.filters}
             values={state.filters}

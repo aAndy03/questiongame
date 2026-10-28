@@ -8,7 +8,7 @@
  * read it, and an atom may depend on nothing but other atoms.
  */
 
-export type SettingsGroupId = 'award' | 'turn' | 'judging' | 'timer' | 'reveal' | 'control' | 'window' | 'audio' | 'library' | 'data'
+export type SettingsGroupId = 'award' | 'turn' | 'judging' | 'timer' | 'reveal' | 'control' | 'tips' | 'window' | 'audio' | 'library' | 'data'
 
 export interface SettingsGroupCopy {
   readonly id: SettingsGroupId
@@ -65,6 +65,13 @@ export const SETTINGS_GROUPS: readonly SettingsGroupCopy[] = [
     title: 'Control',
     description: 'How Control behaves. Live during a Play.',
     keys: ['override.after_lock', 'overlay_animations.enabled', 'viewer.hit_targets', 'control.mosaic_density', 'stage.reattach'],
+  },
+  // beta.11: the tips — chrome, per operator, not the host's settings document.
+  {
+    id: 'tips',
+    title: 'Help & tips',
+    description: 'One tip at a time, when it is useful; fewer as you get to know Studio. Never during a show, except a rehearsal.',
+    keys: [],
   },
   // beta.10: Studio's own title bar, or the system's.
   {

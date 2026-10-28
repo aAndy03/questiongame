@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Panel, Text } from '@/atoms'
+import { Button, Panel, Skeleton, Text } from '@/atoms'
 import { useNavStore } from '@/chrome/nav'
 import { toast } from '@/chrome/toast'
 import { CONTROL, SHELL } from '@/copy'
@@ -71,7 +71,14 @@ export function RecentGames({ empty }: { empty: React.ReactNode }) {
   const [loading, setLoading] = useState<string | null>(null)
   const games = recentGames(recipes.data ?? [], plays.data ?? [])
 
-  if (recipes.isPending) return null
+  // Loading is drawn, not blank (beta.10 review): the cards' places, then the cards.
+  if (recipes.isPending) {
+    return (
+      <div className="grid w-full max-w-4xl grid-cols-1 gap-3 px-6 sm:grid-cols-2 lg:grid-cols-3" aria-busy data-recent-loading>
+        <Skeleton shape="card" count={3} />
+      </div>
+    )
+  }
   if (games.length === 0) return <>{empty}</>
 
   const load = async (r: Recipe) => {

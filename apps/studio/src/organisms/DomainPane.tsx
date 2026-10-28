@@ -14,6 +14,7 @@ import { usePropagatingSave } from './usePropagatingSave'
 import { TRANSFER } from '@/copy/workspaces'
 import { motion, useReducedMotion } from 'motion/react'
 import { dropTarget, useQuestionDrag } from './QuestionDrag'
+import { tipLearned } from '@/tips/signals'
 
 export interface DomainPaneProps {
   selectedId: string | null
@@ -71,6 +72,7 @@ export function DomainPane({ selectedId, onSelect, pickedIds = [], onPickMany }:
       return
     }
     e.preventDefault()
+    tipLearned(e.shiftKey ? 'shift-click-domains' : 'mod-click-domains')
     if (e.shiftKey) {
       const order = (domains.data ?? []).map((d) => d.id)
       const from = anchor.current ? order.indexOf(anchor.current) : -1

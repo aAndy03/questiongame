@@ -10,6 +10,7 @@ import { useAppInfo, useSettings } from '@/host/queries'
 import { BETA_CHIP } from '@/copy/beta'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 import { TRAFFIC_LIGHTS, useTitleBar } from './WindowControls'
+import { tipLearned } from '@/tips/signals'
 
 export const SIDEBAR_WIDTH: Record<SidebarMode, number> = { expanded: 240, rail: 56, hidden: 0 }
 
@@ -52,7 +53,18 @@ export function SidebarNav() {
   // gesture: f1-help — Help from anywhere in Studio (beta.10).
   // A Control command recorded onto F1 keeps it: one key, one action.
   const f1Taken = Object.values(useSettings().data?.globals.shortcuts ?? {}).some((c) => c.toLowerCase() === 'f1')
-  useHotkeys([{ hotkey: 'F1', callback: () => void go({ tab: 'help' }) }], { enabled: !f1Taken, ignoreInputs: true, preventDefault: true })
+  useHotkeys(
+    [
+      {
+        hotkey: 'F1',
+        callback: () => {
+          tipLearned('help')
+          void go({ tab: 'help' })
+        },
+      },
+    ],
+    { enabled: !f1Taken, ignoreInputs: true, preventDefault: true },
+  )
 
   const collapsed = sidebar === 'rail'
   const width = SIDEBAR_WIDTH[sidebar]

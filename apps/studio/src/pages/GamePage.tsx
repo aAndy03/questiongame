@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, ComboField, MeaningChip, Panel, Skeleton, StatusDot, Text, TextField } from '@/atoms'
 import { ActionMenu, EmptyState, InlineNotice, NavCrumbs, PageHeader, TagField } from '@/molecules'
 import { BoardSection, PlaysSection, RosterSection, RulesPreviewPanel, RulesSection, useArchive, useGameLabels, useTransfer } from '@/organisms'
@@ -14,6 +14,7 @@ import { isPlayOpen, usePlayState } from '@/host/playState'
 import { useRecipe, useRecipeList } from '@/host/queries'
 import { isTwin } from '@/host/twins'
 import { isArchived } from '@/host/types'
+import { tipMoment } from '@/tips/signals'
 
 export interface GamePageProps {
   id: string
@@ -28,6 +29,11 @@ const SECTIONS: readonly GameSection[] = ['roster', 'board', 'rules', 'plays']
  * every control disabled with the reason, a banner to Control.
  */
 export function GamePage({ id, section = 'roster' }: GamePageProps) {
+  // beta.11: a game opened, and its Board, are moments a tip may answer.
+  useEffect(() => tipMoment('game:opened'), [id])
+  useEffect(() => {
+    if (section === 'board') tipMoment('game:board')
+  }, [section])
   const recipe = useRecipe(id)
   const play = usePlayState()
   const go = useNavStore((s) => s.go)

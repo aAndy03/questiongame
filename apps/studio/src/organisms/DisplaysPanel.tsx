@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Text } from '@/atoms'
 import { DisplayMap, DisplayRow } from '@/molecules'
 import { SETTINGS } from '@/copy/settings'
 import { useDisplays } from './useDisplays'
+import { tipMoment } from '@/tips/signals'
 
 export interface DisplaysPanelProps {
   /** The status bar's popover: a shorter map, smaller tiles, no names in the map. */
@@ -23,6 +24,7 @@ export interface DisplaysPanelProps {
  */
 export function DisplaysPanel({ compact }: DisplaysPanelProps) {
   const { displays, sendStage, removeStage, moveStage, showStats, setStatsOpen } = useDisplays()
+  useEffect(() => tipMoment('displays:opened'), [])
   const [highlighted, setHighlighted] = useState<string | null>(null)
   const nameOf = (d: (typeof displays)[number]) => d.monitor.friendlyName ?? d.monitor.name ?? SETTINGS.monitors.unnamed
 

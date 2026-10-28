@@ -2,7 +2,7 @@ import { Profiler, useEffect, useRef, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import { Text } from '@/atoms'
-import { NoticeCollector, QuitGuard, SidebarNav, StatusBar, StatusSlotProvider, TopBar, WhatsNewDialog } from '@/organisms'
+import { NoticeCollector, QuitGuard, SidebarNav, StatusBar, StatusSlotProvider, TipHost, TopBar, WhatsNewDialog } from '@/organisms'
 import {
   ControlPage,
   BetaWelcomePage,
@@ -218,6 +218,8 @@ function Shell() {
           <>
             <NoticeCollector />
             <WhatsNewDialog />
+            {/* beta.11: Studio's main window only — the Statistics window never gets here. */}
+            <TipHost />
             <Toaster theme={theme} position="bottom-right" closeButton duration={3500} toastOptions={{ style: { fontFamily: 'var(--font-sans)' } }} />
           </>
         }
@@ -276,7 +278,7 @@ function Page({ route }: { route: Route }) {
     case 'workspaces':
       return <WorkspacesPage />
     case 'help':
-      return <HelpPage />
+      return <HelpPage section={route.section} topic={route.topic} />
   }
 }
 

@@ -7,6 +7,7 @@ import { footerText, listView, rangeBetween, type ListItem, type ListSpec } from
 import { useListView, type ListViewApi } from '@/host/useListView'
 import { ListToolbar } from './ListToolbar'
 import { InStatusBar } from './StatusSlot'
+import { tipLearned } from '@/tips/signals'
 
 /** What a picker row shows. */
 export interface PickerRow {
@@ -236,6 +237,7 @@ function PickRow({
     if (!(e.shiftKey || e.ctrlKey || e.metaKey)) return
     e.preventDefault()
     e.stopPropagation()
+    tipLearned(e.shiftKey ? 'shift-click-run' : 'mod-click-tick')
     onPick(id, e.shiftKey)
   }
   return (

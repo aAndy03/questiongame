@@ -80,6 +80,8 @@ export const ICONS = {
 
   // states
   info: 'circle-info',
+  /** beta.11: a tip. */
+  tip: 'bulb',
   warn: 'triangle-exclamation',
   error: 'circle-exclamation',
   correct: 'circle-check',

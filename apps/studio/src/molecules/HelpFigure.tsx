@@ -6,6 +6,8 @@ export interface HelpFigureProps {
   figure: HelpFigureId
   /** Under the picture, and its accessible name. */
   caption: string
+  /** beta.11: a tip names the picture by its own title; the caption is then only its accessible name. */
+  hideCaption?: boolean | undefined
 }
 
 /**
@@ -15,7 +17,7 @@ export interface HelpFigureProps {
  * Drawn as Studio draws everything else: `Panel` surfaces and fills, never
  * an outline.
  */
-export function HelpFigure({ figure, caption }: HelpFigureProps) {
+export function HelpFigure({ figure, caption, hideCaption }: HelpFigureProps) {
   return (
     <figure className="flex flex-col gap-2" data-help-figure={figure}>
       <Panel variant="secondary">
@@ -23,11 +25,13 @@ export function HelpFigure({ figure, caption }: HelpFigureProps) {
           {DRAWINGS[figure]()}
         </div>
       </Panel>
-      <figcaption>
-        <Text variant="studio-caption" tone="muted">
-          {caption}
-        </Text>
-      </figcaption>
+      {hideCaption ? null : (
+        <figcaption>
+          <Text variant="studio-caption" tone="muted">
+            {caption}
+          </Text>
+        </figcaption>
+      )}
     </figure>
   )
 }

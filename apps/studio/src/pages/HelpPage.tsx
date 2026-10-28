@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { matchesSearch } from '@questiongame/text'
 import { Icon, Kbd, Text } from '@/atoms'
 import { GestureList, HelpFigure, HelpText, PageHeader, SearchField, SectionIndex, SettingsGroup, helpPlain } from '@/molecules'
@@ -8,6 +8,7 @@ import { GESTURES } from '@/copy/gestures'
 import { HELP, HELP_COPY, type HelpBlock, type HelpSection, type HelpTopic } from '@/copy/help'
 import { SETTINGS } from '@/copy/settings'
 import { useSettings } from '@/host/queries'
+import { tipLearned } from '@/tips/signals'
 
 /**
  * **Help** (beta.10): how the game plays and how Studio runs it, in plain
@@ -16,8 +17,23 @@ import { useSettings } from '@/host/queries'
  * answer to — `HOTKEYS` with the operator's own chords, and `GESTURES` — so
  * the page cannot drift from the app. Opened from the sidebar or with F1.
  */
-export function HelpPage() {
+export interface HelpPageProps {
+  /** beta.11: open at this section's topic (*More in Help* from a tip). */
+  section?: string | undefined
+  topic?: string | undefined
+}
+
+export function HelpPage({ section, topic }: HelpPageProps = {}) {
   const [query, setQuery] = useState('')
+  useEffect(() => {
+    tipLearned('help')
+    if (section === 'how-the-game-plays') tipLearned('how-the-game-plays')
+  }, [section])
+  useEffect(() => {
+    if (!section) return
+    const el = document.getElementById(topic ? `help-${section}-${topic}` : `help-${section}`)
+    el?.scrollIntoView?.({ block: 'start' })
+  }, [section, topic])
   const settings = useSettings()
   const overrides = settings.data?.globals.shortcuts
   const chord = (command: string) => overrides?.[command] ?? HOTKEYS.defaults[command] ?? ''

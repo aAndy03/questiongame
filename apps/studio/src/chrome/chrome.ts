@@ -19,6 +19,7 @@ import type { ArchiveScope } from '@/host/types'
 import type { Changed, FilterValue, LibraryTab, PageSize } from '@/host/listView'
 import type { Tab } from './nav'
 import { crumb } from './diagnostics'
+import { EMPTY_TIPS_STATE, type TipsState } from '@/tips/engine'
 
 export type SidebarMode = 'expanded' | 'rail' | 'hidden'
 export type ThemeChoice = 'system' | 'light' | 'dark'
@@ -46,6 +47,10 @@ export interface OperatorPrefs {
    * first workspace's, so a document 1.x wrote reads as the migrated one's.
    */
   readonly workspaceLists?: Readonly<Record<string, Readonly<Partial<Record<LibraryTab, ListPrefs>>>>>
+  /** beta.11: what the tips engine has learned of this operator (`tips/engine.ts`). Absent: new. */
+  readonly tips?: TipsState
+  /** beta.11: Settings ▸ Help & tips ▸ *Show tips*. Absent: on. */
+  readonly showTips?: boolean
 }
 
 /** The workspace a 1.x library migrates into — whose list views `lists` holds. */
@@ -110,6 +115,11 @@ interface ChromeState {
   setListPrefs(tab: LibraryTab, patch: Partial<ListPrefs>): void
   setListState(tab: LibraryTab, patch: Partial<ListState>): void
   setSettingsInner(inner: SettingsInner): void
+  /** beta.11: the tips engine's memory for the active operator, changed by a pure step. */
+  updateTips(step: (state: TipsState) => TipsState): void
+  setShowTips(on: boolean): void
+  /** *Start tips over*: as if new. */
+  resetTips(): void
 }
 
 const ORDER: SidebarMode[] = ['expanded', 'rail', 'hidden']
@@ -177,6 +187,15 @@ export const useChromeStore = create<ChromeState>()(
         setSettingsInner(settingsInner) {
           update({ settingsInner })
         },
+        updateTips(step) {
+          update({ tips: step(tipsOf(current(get()))) })
+        },
+        setShowTips(showTips) {
+          update({ showTips })
+        },
+        resetTips() {
+          update({ tips: EMPTY_TIPS_STATE })
+        },
       }
     },
     {
@@ -190,6 +209,31 @@ export const useChromeStore = create<ChromeState>()(
 /** The active operator's preferences. */
 export function usePrefs(): OperatorPrefs {
   return useChromeStore((s) => s.prefs[s.operatorId] ?? DEFAULT_PREFS)
+}
+
+/**
+ * The tips memory in an operator's document. Anything that is not the shape
+ * the engine wrote — an older build's, a hand-edited one — is a new operator,
+ * never a crash (beta.11).
+ */
+export function tipsOf(prefs: OperatorPrefs | undefined): TipsState {
+  const t = prefs?.tips
+  const ok =
+    t !== undefined &&
+    t !== null &&
+    typeof t === 'object' &&
+    typeof t.skills === 'object' &&
+    typeof t.tips === 'object' &&
+    Array.isArray(t.activeDays) &&
+    typeof t.today === 'object' &&
+    t.today !== null
+  return ok ? t : EMPTY_TIPS_STATE
+}
+
+/** The active operator's tips memory, and whether they want tips. */
+export function useTipsPrefs(): { readonly tips: TipsState; readonly showTips: boolean } {
+  const prefs = useChromeStore((s) => s.prefs[s.operatorId])
+  return { tips: tipsOf(prefs), showTips: prefs?.showTips ?? true }
 }
 
 /** Older persisted documents predate `settingsInner`; the default fills it. */

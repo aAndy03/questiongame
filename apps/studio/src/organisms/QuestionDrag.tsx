@@ -5,6 +5,7 @@ import { AutoScroller, PointerActivationConstraints, PointerSensor } from '@dnd-
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Icon } from '@/atoms'
 import { DRAG } from '@/copy'
+import { tipLearned } from '@/tips/signals'
 
 /** Where the pointer is and what it is over, while questions are dragged. */
 export interface QuestionDragState {
@@ -215,10 +216,12 @@ export function QuestionDragProvider({ children, idsFor, homesOf, onDrop }: Ques
           const from = up && 'clientX' in up && up.type === 'pointerup' ? { x: up.clientX, y: up.clientY } : last.current
           const over = event.canceled || cancelled.current ? null : domainAt(from)
           if (!over) {
+            if (cancelled.current) tipLearned('escape-cancel-drag')
             setSettle({ kind: 'cancel', from, to: start.current, label: label({ ...s, over: null }), key: Date.now() })
             return
           }
           const move = moveKey.current
+          tipLearned(move ? 'mod-drag-move' : 'drag-to-domain')
           setSettle({ kind: 'drop', from, to: from, label: label({ ...s, over, move }), key: Date.now() })
           void onDrop(s.ids, over.id, over.name, move).then((ok) => {
             if (ok) setPulse((p) => ({ id: over.id, n: (p?.n ?? 0) + 1 }))

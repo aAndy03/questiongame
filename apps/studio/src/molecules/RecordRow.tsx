@@ -1,5 +1,6 @@
 import { useRef, type MouseEvent, type ReactNode } from 'react'
 import { CheckboxField, Text } from '@/atoms'
+import { tipLearned } from '@/tips/signals'
 
 export type RecordLayout = 'grid' | 'table'
 
@@ -123,6 +124,7 @@ export function RecordRow({
   const click = (e: MouseEvent) => {
     if (onSelectGesture && (e.shiftKey || e.ctrlKey || e.metaKey)) {
       e.preventDefault()
+      tipLearned(e.shiftKey ? 'shift-click-run' : 'mod-click-tick')
       onSelectGesture(e.shiftKey)
       return
     }

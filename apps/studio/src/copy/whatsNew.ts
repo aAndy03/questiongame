@@ -32,6 +32,39 @@ export interface WhatsNewRelease {
 
 export const WHATS_NEW: readonly WhatsNewRelease[] = [
   {
+    version: '2.0.0-beta.11',
+    notes: {
+      en: [
+        {
+          title: 'Tips that teach as you go',
+          body: 'Now and then, when it fits what you are doing, a short tip appears at the bottom right: make a domain before your first question, import many questions with the AI template, drag questions onto a domain, run a show from the keyboard. It shows keys and gestures as you press them, stays as long as it takes to read, waits while your pointer is on it, and opens the right page of Help if you want more. Nothing dims, nothing takes your keys.',
+        },
+        {
+          title: 'Fewer as you learn',
+          body: 'A new operator sees more tips, an experienced one hardly any. Each time you use something, its tips grow less likely, and something you use often stops being explained; leave it for months and a reminder can come back. Close a tip and it waits longer before it returns. There are no tips during a show, except a rehearsal.',
+        },
+        {
+          title: 'Your choice',
+          body: 'Settings ▸ Help & tips turns tips off, or starts them over as if you were new. Each operator has their own.',
+        },
+      ],
+      ro: [
+        {
+          title: 'Sfaturi care te învață pe parcurs',
+          body: 'Din când în când, când se potrivește cu ce faci, apare un sfat scurt în dreapta jos: fă un domeniu înainte de prima întrebare, importă multe întrebări cu șablonul pentru AI, trage întrebările pe un domeniu, condu un show de la tastatură. Arată tastele și gesturile așa cum le apeși, stă cât îți trebuie să-l citești, așteaptă cât ții cursorul pe el și deschide pagina potrivită din Help dacă vrei mai mult. Nimic nu se întunecă, nimic nu-ți ia tastele.',
+        },
+        {
+          title: 'Tot mai puține pe măsură ce înveți',
+          body: 'Un operator nou vede mai multe sfaturi, unul cu experiență aproape deloc. De fiecare dată când folosești ceva, sfaturile despre el devin mai rare, iar ce folosești des nu mai e explicat; dacă nu-l folosești luni de zile, poate reveni o amintire. Un sfat închis așteaptă mai mult până revine. În timpul unui show nu apar sfaturi, cu excepția unei repetiții.',
+        },
+        {
+          title: 'Alegerea ta',
+          body: 'Settings ▸ Help & tips oprește sfaturile sau le ia de la capăt, ca pentru un începător. Fiecare operator le are pe ale lui.',
+        },
+      ],
+    },
+  },
+  {
     version: '2.0.0-beta.10',
     notes: {
       en: [

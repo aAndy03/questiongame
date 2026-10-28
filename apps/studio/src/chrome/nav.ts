@@ -50,7 +50,8 @@ export type Route =
   | { readonly tab: 'statistics'; readonly view?: 'live' | 'all' }
   | { readonly tab: 'settings'; readonly inner?: SettingsInner }
   | { readonly tab: 'workspaces' }
-  | { readonly tab: 'help' }
+  /** beta.11: a section and topic to open at (*More in Help*). */
+  | { readonly tab: 'help'; readonly section?: string; readonly topic?: string }
 
 export type GameSection = 'roster' | 'board' | 'rules' | 'plays'
 export type SettingsInner = 'monitors' | 'settings' | 'shortcuts' | 'about'

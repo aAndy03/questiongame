@@ -5,6 +5,7 @@ import { useHostCommand } from '@/host/commands'
 import { usePlayState } from '@/host/playState'
 import { canChooseDomain, liveSession } from '@/host/session'
 import { useSettings } from '@/host/queries'
+import { tipLearned } from '@/tips/signals'
 
 /**
  * Chords → the same `run` the buttons and the Viewer call (05_STUDIO_DESIGN.md
@@ -64,7 +65,13 @@ export function useControlHotkeys(enabled: boolean): void {
   ].filter((d) => d.hotkey !== '')
 
   useHotkeys(
-    definitions.map((d) => ({ hotkey: d.hotkey as RegisterableHotkeyChord, callback: d.callback })),
+    definitions.map((d) => ({
+      hotkey: d.hotkey as RegisterableHotkeyChord,
+      callback: () => {
+        tipLearned('control-keys')
+        d.callback()
+      },
+    })),
     { enabled: enabled && open, ignoreInputs: true, preventDefault: true },
   )
 }

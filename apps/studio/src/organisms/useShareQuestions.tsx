@@ -4,6 +4,7 @@ import { ConfirmDialog } from '@/molecules'
 import { toast } from '@/chrome/toast'
 import { SHARE } from '@/copy'
 import { useHostCommand } from '@/host/commands'
+import { tipLearned } from '@/tips/signals'
 
 /** What *Import questions…* takes at once — sharing more would hand over a text it refuses whole. */
 const IMPORT_MAX = 2000
@@ -37,6 +38,7 @@ export function useShareQuestions(): ShareQuestions {
     if (text === null) return
     try {
       await navigator.clipboard.writeText(text)
+      tipLearned('share')
       toast.success(SHARE.copied(ids.length))
     } catch {
       // No clipboard in this webview: the text goes where it can be copied by hand.

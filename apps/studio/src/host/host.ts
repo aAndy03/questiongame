@@ -99,7 +99,31 @@ export function command<T>(name: Command, args?: Record<string, unknown>): Promi
   if (!transport) {
     return Promise.reject({ code: 'no_host', message: `no host for ${name}` } satisfies HostError)
   }
-  return transport.invoke<T>(name, args)
+  const answer = transport.invoke<T>(name, args)
+  // Watched beside the caller, never in front of it: chaining here would put
+  // a tick between every answer and the code awaiting it.
+  if (observers.size > 0) {
+    answer.then(
+      () => {
+        for (const observer of observers) observer(name, args)
+      },
+      () => {},
+    )
+  }
+  return answer
+}
+
+type CommandObserver = (name: Command, args: Record<string, unknown> | undefined) => void
+const observers = new Set<CommandObserver>()
+
+/**
+ * Told of every command the host **accepted**, after the fact (beta.11: the
+ * tips learn what the operator does from it — `tips/skills.ts`). An observer
+ * only watches; it cannot change or delay the answer. Returns its removal.
+ */
+export function onCommandDone(observer: CommandObserver): () => void {
+  observers.add(observer)
+  return () => void observers.delete(observer)
 }
 
 /**
