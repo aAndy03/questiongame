@@ -48,7 +48,7 @@ const CONFIRM_LABEL: Record<TransferOp, string> = {
 const picked = (s: Selection) => (s.teams?.length ?? 0) + (s.domains?.length ?? 0) + (s.questions?.length ?? 0) + (s.recipes?.length ?? 0)
 
 /**
- * Copy to… · Move to… (Beta 2.0, 05_STUDIO_DESIGN.md §21; the shared library
+ * Copy to workspace… · Move to workspace… (Beta 2.0, 05_STUDIO_DESIGN.md §21; the shared library
  * went in beta.2). Both preview first — what comes along, what is reused,
  * which domains a copied question joins or arrives in, what refuses and who
  * still uses it — through `transfer_preview`, which is the host's own write
@@ -68,8 +68,14 @@ export function useTransfer(): TransferController {
   const [pending, setPending] = useState(false)
 
   const others = (workspaces.data?.workspaces ?? []).filter((w) => w.archivedAt === null && w.id !== workspaces.data?.current)
+  // A pick archived (or deleted) while the dialog is open is no target any
+  // more (C14): drop it rather than copy into a workspace the switcher hides.
+  const gone = target !== null && workspaces.data !== undefined && !others.some((w) => w.id === target)
+  useEffect(() => {
+    if (gone) setTarget(null)
+  }, [gone])
   // The list may arrive after the dialog opened: fall back to the first other workspace.
-  const chosen = target ?? others[0]?.id ?? null
+  const chosen = (gone ? null : target) ?? others[0]?.id ?? null
   const hasQuestions = (state?.selection.questions?.length ?? 0) > 0
   const askDomains = state?.op === 'copy' && hasQuestions
 

@@ -374,9 +374,12 @@ export function useWorkspaceGeneration(): number {
 
 /** Every workspace, every group, and the one Studio works in (Beta 2.0). */
 /** What each workspace holds (beta.5): refreshed with the library and the workspaces. */
+/** What each workspace holds: every library change and workspace change refreshes it (beta.12, A4). */
+export const WORKSPACE_COUNTS = ['catalog', 'workspace-counts'] as const
+
 export function useWorkspaceCounts() {
   return useQuery({
-    queryKey: ['catalog', 'workspace-counts'] as const,
+    queryKey: WORKSPACE_COUNTS,
     queryFn: () => command<WorkspaceCounts[]>('workspace_counts'),
     enabled: enabled(),
   })
@@ -433,6 +436,10 @@ export function invalidateForCatalogChange(
   id: string,
 ): void {
   void client.invalidateQueries({ queryKey: keys.seedStatus.all })
+  // What each workspace holds moves with any row (beta.12, A4), and Statistics
+  // names games, teams and domains — a rename or an archive is a new label (B2).
+  void client.invalidateQueries({ queryKey: WORKSPACE_COUNTS })
+  if (kind === 'recipe' || kind === 'team' || kind === 'domain') void client.invalidateQueries({ queryKey: ['stats'] })
   if (kind === 'recipe') {
     void client.invalidateQueries({ queryKey: keys.recipes.all })
     // `wipe_plays` reports through this event too (§12.3).
@@ -450,11 +457,23 @@ export function invalidateForCatalogChange(
 
 export function invalidateForRecipeChange(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: keys.seedStatus.all })
+  void client.invalidateQueries({ queryKey: WORKSPACE_COUNTS })
   void client.invalidateQueries({ queryKey: keys.recipes.list('active') })
   void client.invalidateQueries({ queryKey: keys.recipes.list('archived') })
   void client.invalidateQueries({ queryKey: keys.recipes.list('all') })
   void client.invalidateQueries({ queryKey: keys.recipes.item(id) })
   void client.invalidateQueries({ queryKey: keys.settings })
+}
+
+/**
+ * A Play loaded, started, ended, restarted or unloaded (beta.12, B2/B9): the
+ * Plays lists, recent games and Statistics read the closed-Play history, which
+ * only the host's projection of it can say. Called on a change of the Play's
+ * id or status — not on every emission.
+ */
+export function invalidateForPlayChange(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: ['plays', 'list'] })
+  void client.invalidateQueries({ queryKey: ['stats'] })
 }
 
 export function invalidateSettings(client: QueryClient): void {

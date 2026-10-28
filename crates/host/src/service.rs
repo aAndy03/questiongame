@@ -28,8 +28,13 @@ use crate::snapshot::PlaySnapshot;
 
 /// §2.7: Restart is a new Play now, on the same recipe.
 pub enum RestartMode {
-    /// Reuse the snapshot bodies — the same questions, from the top.
-    SameQuestions { new_play_id: PlayId },
+    /// Reuse the snapshot bodies — the same questions, from the top — under
+    /// the rules as they are now (beta.12, A1: a Completed Play's game may have
+    /// been edited since; the old snapshot's rules were reused).
+    SameQuestions {
+        new_play_id: PlayId,
+        settings: Box<crate::settings::FrozenSettings>,
+    },
     /// Re-read the recipe as it is now; `CatalogService` builds the snapshot.
     DifferentQuestions { snapshot: Box<PlaySnapshot> },
 }
@@ -109,6 +114,27 @@ impl MatchService {
         Ok(())
     }
 
+    /// **A loaded Play takes the game as it is now** (beta.12, A1). Settings
+    /// and board are frozen at `play_start` (§2.5), but the snapshot was built
+    /// at Load: rules or questions edited in between never reached the show,
+    /// which then scored by the old rules while Control showed the new. Only a
+    /// Play not started yet is rebuilt — nothing in its log but the load and
+    /// who loaded it, which is carried over. `true` when it changed.
+    pub fn reload(&mut self, snapshot: PlaySnapshot, now_ms: u64) -> MatchResult<bool> {
+        self.require_status(&[PlayStatus::Loaded])?;
+        snapshot.settings.validate()?;
+        let play = self.play.as_ref().ok_or(MatchError::NoPlay)?;
+        if *play.snapshot() == snapshot {
+            return Ok(false);
+        }
+        let operator = play.operator_id().cloned();
+        self.play = Some(Play::load(snapshot, now_ms));
+        if let Some(operator) = operator {
+            self.operator_switched(operator, now_ms)?;
+        }
+        Ok(true)
+    }
+
     /// `play_start`. Fails on an empty board; one team is allowed (rehearsal,
     /// §4.3) — [`Play::is_rehearsal`] is what raises the warn.
     pub fn play_start(&mut self, now_ms: u64) -> MatchResult<()> {
@@ -152,9 +178,11 @@ impl MatchService {
         ])?;
         let old = self.play.as_ref().ok_or(MatchError::NoPlay)?;
         let (snapshot, same_questions) = match mode {
-            RestartMode::SameQuestions { new_play_id } => {
+            RestartMode::SameQuestions { new_play_id, settings } => {
+                settings.validate()?;
                 let mut snapshot = old.snapshot().clone();
                 snapshot.play_id = new_play_id;
+                snapshot.settings = *settings;
                 (snapshot, true)
             }
             RestartMode::DifferentQuestions { snapshot } => (*snapshot, false),

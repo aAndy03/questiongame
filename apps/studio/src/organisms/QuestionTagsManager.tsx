@@ -55,6 +55,14 @@ export function QuestionTagsManager({ isOpen, onClose, onShowInList }: QuestionT
     return [...ways]
   }, [carriers, current])
 
+  // Says what it did, as Rename and Merge do (C14); a refusal is the notice's.
+  const adoptSpelling = async (from: string, to: string) => {
+    const done = await run<BulkReport>('tag_rename', { from, to, preview: false })
+    if (done === null) return
+    toast.success(GROUPS_TAGS.spellingNote(to, done.changed.length))
+    setPicked(to)
+  }
+
   const chip = (q: Question) => <DifficultyChip difficulty={q.difficulty} />
 
   const detail = !current ? (
@@ -93,7 +101,7 @@ export function QuestionTagsManager({ isOpen, onClose, onShowInList }: QuestionT
               key={s}
               size="sm"
               variant="ghost"
-              onPress={() => void run.ok('tag_rename', { from: current.tag, to: s, preview: false })}
+              onPress={() => void adoptSpelling(current.tag, s)}
             >
               {GROUPS_TAGS.useSpelling(s)}
             </Button>

@@ -101,7 +101,7 @@ export function ActionPanel({ density }: ActionPanelProps) {
         {/* A completed Play may be restarted — the board is empty and playing
           * it again is the obvious next act (`MatchService::restart`). Only an
           * abandoned or already-restarted record refuses. */}
-        <TransportButton icon="restart" label={TRANSPORT.restart} onPress={() => setConfirm('restart-same')} isDisabled={!open && play.status !== 'completed'} disabledReason={waitReason ?? (play.status === 'abandoned' ? TRANSPORT.ended : null)} />
+        <TransportButton icon="restart" label={TRANSPORT.restart} onPress={() => setConfirm('restart-same')} isDisabled={!open && play.status !== 'completed'} disabledReason={waitReason ?? (play.status === 'abandoned' ? TRANSPORT.ended : !open && play.status !== 'completed' ? TRANSPORT.notStarted : null)} />
         <TransportButton icon="abandon" label={TRANSPORT.abandon} state="rest" onPress={() => setConfirm('abandon')} isDisabled={!open} disabledReason={waitReason ?? notOpen} />
       </div>
 

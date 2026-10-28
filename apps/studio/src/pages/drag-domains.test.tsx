@@ -147,7 +147,7 @@ describe('the keyboard way: a question row and the strip (beta.9)', () => {
     const strip = document.querySelector<HTMLElement>('[data-bulk-strip]')!
     fireEvent.click(within(strip).getByRole('button', { name: 'Copy or move…' }))
     expect(await screen.findByRole('menuitem', { name: 'Add to domain…' })).toBeTruthy()
-    expect(screen.getByRole('menuitem', { name: 'Copy to…' })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Copy to workspace…' })).toBeTruthy()
     fireEvent.click(screen.getByRole('menuitem', { name: 'Move to domain…' }))
     expect(await screen.findByText('Each question leaves every other domain it is in, so it ends in this one alone.')).toBeTruthy()
   })

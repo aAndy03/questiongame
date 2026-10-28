@@ -65,6 +65,10 @@ export function LiveStats({ onGoToControl }: LiveStatsProps) {
   const byDomain = useStats({ filter, groupBy: 'domain', metrics: DOMAIN_METRICS }, eventCount, isOpen)
   const byDifficulty = useStats({ filter, groupBy: 'difficulty', metrics: DIFFICULTY_METRICS }, eventCount, isOpen)
   const pair = useAgreeingPair(current, byTeam.data, byTeam.isPlaceholderData, byTeam.isError)
+  // Each chart drawn only from an answer about this Play (beta.12, B16): the
+  // last Play's answer stands in while a new one loads, under the new tiles.
+  const domainData = useThisPlays(byDomain, playId)
+  const difficultyData = useThisPlays(byDifficulty, playId)
 
   if (!pair || playId === null) {
     return (
@@ -115,8 +119,13 @@ export function LiveStats({ onGoToControl }: LiveStatsProps) {
       {/* Side by side once the column fits two charts, not once the window does: the sidebar takes its share. */}
       <div className="@container/live-charts">
         <div className="grid grid-cols-1 gap-4 @[48rem]/live-charts:grid-cols-2">
-          {byDomain.data ? <StatsChart kind="verdicts" result={byDomain.data} title={STATS.live.byDomain} /> : null}
-          {byDifficulty.data ? <StatsChart kind="bands" result={byDifficulty.data} title={STATS.live.byDifficulty} /> : null}
+          {domainData ? <StatsChart kind="verdicts" result={domainData} title={STATS.live.byDomain} /> : null}
+          {difficultyData ? <StatsChart kind="bands" result={difficultyData} title={STATS.live.byDifficulty} /> : null}
+          {byDomain.isError || byDifficulty.isError ? (
+            <Text variant="studio-caption" tone="danger" data-live-error>
+              {STATS.live.chartsFailed}
+            </Text>
+          ) : null}
         </div>
       </div>
 
@@ -346,4 +355,11 @@ function inRingOrder(play: PlayStateForMain): PlayStateForMain['teams'] {
     return at < 0 ? play.ring.order.length : at
   }
   return [...play.teams].sort((a, b) => seat(a.id) - seat(b.id))
+}
+
+/** A stats answer, only once it is about this Play: a placeholder from another Play is not shown (beta.12, B16). */
+function useThisPlays<T>(q: { data: T | undefined; isPlaceholderData: boolean }, playId: string | null): T | undefined {
+  const settledFor = useRef<string | null>(null)
+  if (q.data !== undefined && !q.isPlaceholderData) settledFor.current = playId
+  return q.data !== undefined && settledFor.current === playId ? q.data : undefined
 }

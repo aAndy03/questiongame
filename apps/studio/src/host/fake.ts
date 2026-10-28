@@ -425,6 +425,17 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
     library.set(k, { kind: row.kind, item: { ...row.item, archivedAt: at } } as CatalogItem)
   }
 
+  /** A game's overlays keyed by the ids its rows have in the copy. */
+  const remapOverlays = (o: Recipe['overlays'], map: (kind: 'team' | 'domain' | 'question', id: string) => string): Recipe['overlays'] =>
+    ({
+      teams: Object.fromEntries(Object.entries(o.teams).map(([id, p]) => [map('team', id), p])),
+      domains: Object.fromEntries(Object.entries(o.domains).map(([id, p]) => [map('domain', id), p])),
+      questions: Object.fromEntries(Object.entries(o.questions).map(([id, p]) => [map('question', id), p])),
+    }) as Recipe['overlays']
+
+  /** A Play in Control at all, closed or not: what holds the workspace (`refuse_while_play_loaded`, beta.12 A7). */
+  const playInControl = () => fake.playState !== null
+
   /** The gated commands' first check (§12.3): nothing here can reach a Play. */
   const playOpen = () => {
     const status = fake.playState?.status
@@ -791,7 +802,15 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
       }
 
       if (a.scope === 'original') {
-        delete map[target.id]
+        // Only the fields applied leave the patch, as the host does (beta.4
+        // review; beta.12, A7): a patch's other fields still stand.
+        const standing = map[target.id] as Record<string, unknown> | undefined
+        const applied = Object.keys((target.patch as Record<string, unknown> | null) ?? {})
+        if (standing) {
+          const rest = Object.fromEntries(Object.entries(standing).filter(([k]) => !applied.includes(k)))
+          if (Object.keys(rest).length === 0) delete map[target.id]
+          else map[target.id] = rest as never
+        }
         const row = library.get(key(target.target, target.id))
         if (row && target.patch) {
           const patched = Object.fromEntries(
@@ -1415,6 +1434,8 @@ displays: ${monitors.length}`,
           rev: 1,
           teams: game.teams.map((t) => map('team', t)),
           board: game.board.map((b) => ({ domainId: map('domain', b.domainId), questionIds: b.questionIds.map((q) => map('question', q)) })),
+          // Its patches name the copies, as the host remaps them (beta.12, A7).
+          overlays: remapOverlays(game.overlays, map),
         })
         recipeHomes.set(id, target)
       }
@@ -1426,8 +1447,11 @@ displays: ${monitors.length}`,
     for (const r of rows) {
       for (const usedBy of stayingUsers(r.kind, r.id, going, goingGames)) report.refused.push({ kind: r.kind, id: r.id, usedBy })
     }
-    report.moved.push(...rows.map((r) => ({ kind: r.kind, id: r.id, from: r.id, picked: r.picked })))
-    report.moved.push(...games.map((g) => ({ kind: 'recipe' as const, id: g.id, from: g.id, picked: true })))
+    // A refused move moves nothing: the host returns only what refused it (beta.12, A7).
+    if (report.refused.length === 0) {
+      report.moved.push(...rows.map((r) => ({ kind: r.kind, id: r.id, from: r.id, picked: r.picked })))
+      report.moved.push(...games.map((g) => ({ kind: 'recipe' as const, id: g.id, from: g.id, picked: true })))
+    }
     if (report.refused.length === 0 && write) {
       rows.forEach((r) => homes.set(key(r.kind, r.id), target))
       games.forEach((g) => recipeHomes.set(g.id, target))
@@ -1764,6 +1788,8 @@ displays: ${monitors.length}`,
           rev: 1,
           teams: game.teams.map((t) => map('team', t)),
           board: game.board.map((b) => ({ domainId: map('domain', b.domainId), questionIds: b.questionIds.map((q) => map('question', q)) })),
+          // Its patches name the copies, as the host remaps them (beta.12, A7).
+          overlays: remapOverlays(game.overlays, map),
         })
         recipeHomes.set(id, copy.id)
       }
@@ -1795,7 +1821,7 @@ displays: ${monitors.length}`,
     },
     workspace_delete: (a: Record<string, unknown>) => {
       const row = workspaceRow(a.id as string)
-      if (playOpen()) refuse('match', 'a Play is open')
+      if (playInControl()) refuse('match', 'a game is loaded in Control')
       verifyActivePin(a.pin as string | null | undefined)
       if (row.archivedAt === null) refuse('catalog', `workspace/${row.id}: only an archived workspace can be deleted`)
       const counts = commands.workspace_delete_preview?.({ id: row.id }) as DeletePreview
@@ -1809,7 +1835,7 @@ displays: ${monitors.length}`,
     },
     workspace_switch: (a: Record<string, unknown>) => {
       const row = workspaceRow(a.id as string)
-      if (playOpen()) refuse('match', 'a Play is open')
+      if (playInControl()) refuse('match', 'a game is loaded in Control')
       if (row.archivedAt !== null) refuse('catalog', `workspace/${row.id}: an archived workspace cannot be opened`)
       fake.currentWorkspace = row.id
       return workspacesChanged()
@@ -1915,7 +1941,8 @@ displays: ${monitors.length}`,
         }
         if (kind === 'question') {
           for (const [k, d] of library) {
-            if (d.kind !== 'domain' || !inView(k)) continue
+            // Active domains only, as the host's duplicate does (beta.12, A7).
+            if (d.kind !== 'domain' || !inView(k) || d.item.archivedAt !== null) continue
             const member = d.item.questions.find((m) => m.questionId === row.item.id)
             if (!member) continue
             const sortKey = Math.max(-1, ...d.item.questions.map((m) => m.sortKey)) + 1
@@ -2043,6 +2070,8 @@ function applyGameSetting(g: GameSettings, s: GameSetting): GameSettings {
       return { ...g, reveal: { ...g.reveal, [s.value[0]]: s.value[1] } }
     case 'language':
       return { ...g, language: s.value }
+    case 'allow_repeated_difficulty':
+      return { ...g, board: { ...g.board, allow_repeated_difficulty: s.value } }
   }
 }
 

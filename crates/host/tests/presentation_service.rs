@@ -395,6 +395,7 @@ fn a_restart_empties_the_queue_and_opens_the_new_play_with_its_first_token() {
         .restart(
             questiongame_host::RestartMode::SameQuestions {
                 new_play_id: "play-2".into(),
+                settings: Box::new(questiongame_host::settings::FrozenSettings::default()),
             },
             20,
         )

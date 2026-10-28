@@ -66,6 +66,7 @@ export const GROUPS_TAGS = {
   showInList: 'Show in list',
   spellings: (n: number) => `Written ${n} ways`,
   useSpelling: (s: string) => `Use “${s}”`,
+  spellingNote: (s: string, n: number) => `Now written “${s}”. ${n} ${n === 1 ? 'question' : 'questions'} changed.`,
   moreMembers: (n: number) => `and ${n} more — Show in list`,
   sortAz: 'A–Z',
   sortUsed: 'Most used',
@@ -81,7 +82,7 @@ export const GROUPS_TAGS = {
   bulkUntag: 'Remove question tag…',
   bulkGroup: 'Set domain group…',
   bulkAdd: 'Add to domain…',
-  bulkRemove: 'Remove from domain',
+  bulkRemove: 'Remove from domain…',
   /** beta.9: into one domain and out of every other. */
   bulkMove: 'Move to domain…',
   moveBody: 'Each question leaves every other domain it is in, so it ends in this one alone.',

@@ -13,8 +13,8 @@ import {
   type TextKey,
 } from '@questiongame/contract'
 import { Button, Panel, StatusDot, Text } from '@/atoms'
-import { DecorDials, NodeInspector, ScreenTabs, TextInspector, canvasOverlay, canvasScreen, type CanvasView } from '@/molecules'
-import { SCREENS_TAB } from '@/copy'
+import { ConfirmDialog, DecorDials, NodeInspector, ScreenTabs, TextInspector, canvasOverlay, canvasScreen, type CanvasView } from '@/molecules'
+import { SCREENS, SCREENS_TAB } from '@/copy'
 import { useHostCommand } from '@/host/commands'
 import { previewOverlay, previewPlay } from '@/host/previewPlay'
 import { useCatalogList, useRecipe } from '@/host/queries'
@@ -46,6 +46,7 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
   const [selected, setSelected] = useState<string | null>(null)
   const [draft, setDraft] = useState<StageLayout | null>(null)
   const [saving, setSaving] = useState(false)
+  const [resetting, setResetting] = useState<'screen' | 'all' | null>(null)
   const dirty = useRef(false)
 
   // Adopt the recipe's document once per recipe (and after our own save lands
@@ -200,23 +201,32 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
       </Panel>
       </section>
       <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="ghost"
-          icon="undo"
-          onPress={() => {
+        <Button size="sm" variant="ghost" icon="undo" onPress={() => setResetting('screen')}>
+          {SCREENS_TAB.resetScreen}
+        </Button>
+        <Button size="sm" variant="ghost" icon="undo" onPress={() => setResetting('all')}>
+          {SCREENS_TAB.resetAll}
+        </Button>
+      </div>
+      {/* Both act at once on many overrides, so they confirm first (B7). */}
+      <ConfirmDialog
+        isOpen={resetting !== null}
+        onOpenChange={(open) => !open && setResetting(null)}
+        severity="warning"
+        title={resetting === 'all' ? SCREENS_TAB.resetAllTitle : SCREENS_TAB.resetScreenTitle(SCREENS[screen])}
+        body={resetting === 'all' ? SCREENS_TAB.resetAllBody : SCREENS_TAB.resetScreenBody}
+        confirmLabel={SCREENS_TAB.resetConfirm}
+        onConfirm={() => {
+          if (resetting === 'all') update({ ...layout, nodes: {}, screens: {}, text: {} })
+          else {
             const nodes = Object.fromEntries(Object.entries(layout.nodes).filter(([id]) => !id.startsWith(`${screen}.`)))
             const screens = { ...layout.screens }
             delete screens[screen]
             update({ ...layout, nodes, screens })
-          }}
-        >
-          {SCREENS_TAB.resetScreen}
-        </Button>
-        <Button size="sm" variant="ghost" icon="undo" onPress={() => update({ ...layout, nodes: {}, screens: {}, text: {} })}>
-          {SCREENS_TAB.resetAll}
-        </Button>
-      </div>
+          }
+          setResetting(null)
+        }}
+      />
     </div>
   )
 

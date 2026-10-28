@@ -39,7 +39,7 @@ export const CONTROL = {
   settings: 'Control settings',
   settingsGlobal: 'Global',
   settingsCurrentGame: 'Current game',
-  settingsNoGame: 'No recipe in Control.',
+  settingsNoGame: 'No game in Control.',
   hitTargets: 'Viewer hit targets',
   viewerLoading: 'Stage is loading…',
   viewerNoHost: 'The Viewer embeds the Stage window; it needs the desktop app.',
@@ -53,7 +53,7 @@ export const TRANSPORT = {
   restartSame: 'Same questions',
   restartDifferent: 'Different questions',
   restartTitle: 'Restart this Play?',
-  restartBody: 'The current Play closes and a new one opens now, from the same recipe. Scores reset.',
+  restartBody: 'The current Play closes and a new one opens now, from the same game. Scores reset.',
   abandon: 'Abandon',
   abandonTitle: 'Abandon this Play?',
   abandonBody: 'The Play ends as abandoned. Its events stay on record. This cannot be undone from Control.',
@@ -64,14 +64,14 @@ export const TRANSPORT = {
   notStarted: 'Press Start Play first',
 } as const
 
-/** Taking the recipe back out of Control (§5.1). */
+/** Taking the game back out of Control (§5.1). */
 export const UNLOAD = {
   action: 'Unload game',
-  hint: 'Take this recipe out of Control. Stage goes back to Idle and stays where it is.',
+  hint: 'Take this game out of Control. Stage goes back to Idle and stays where it is.',
   title: 'Unload the game?',
   /** An open Play is abandoned on the way out — say so before it happens. */
   bodyOpen: 'This Play is still open. Unloading abandons it.',
-  bodyClosed: 'Stage returns to Idle. The recipe stays in the library.',
+  bodyClosed: 'Stage returns to Idle. The game stays in the library.',
   /** The record question. Keeping is the answer that needs no thought. */
   keep: 'Keep the record',
   keepHint: 'The Play, its Timeline and its numbers stay under this game.',
@@ -139,7 +139,8 @@ export const PHASE = {
   resolved: { title: 'Question resolved', hint: null },
   handover: { title: 'The token is free', hint: 'Give it to a team to continue.' },
   standings: { title: 'Final standings', hint: 'Every question is used. Reveal the places, lowest first.' },
-  ended: { title: 'Play abandoned', hint: 'Restart the recipe to play it again.' },
+  /** Restart is disabled once a Play is abandoned (B1): another Play needs the game loaded again. */
+  ended: { title: 'Play abandoned', hint: 'Unload the game, then load it into Control again to play it again.' },
   showLeaderboard: 'Show final leaderboard',
   onLeaderboard: 'Showing on Stage',
 } as const
@@ -206,7 +207,11 @@ export const TIMELINE = {
   expand: 'Expand timeline',
   collapse: 'Collapse timeline',
   empty: 'No events yet',
-  rewindWarning: 'Undoing toward the first event? Restart may be cleaner.',
+  undoWarning: 'Undoing back to the first event? Restart may be cleaner.',
+  /** A `selection_set` row's detail: how many answers the selection holds. */
+  selected: (n: number) => (n === 1 ? '1 answer selected' : `${n} answers selected`),
+  /** A kind this build has no name for (a newer host) — never the raw type. */
+  unknownKind: 'Other event',
   kinds: {
     play_loaded: 'Play loaded',
     play_started: 'Play started',

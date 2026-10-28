@@ -428,6 +428,8 @@ export type GameSetting =
   | { readonly key: 'timer_duration_ms'; readonly value: number | null }
   | { readonly key: 'reveal'; readonly value: readonly [RevealChannel, RevealMode] }
   | { readonly key: 'language'; readonly value: StageLanguage }
+  /** beta.12 (B3): the Board's *Allow repeated difficulties*, as a default for new games too. */
+  | { readonly key: 'allow_repeated_difficulty'; readonly value: boolean }
 
 /** `settings_set_global`'s payload. */
 export type GlobalSetting =

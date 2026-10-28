@@ -2,7 +2,7 @@
 
 export const SCREENS_TAB = {
   title: 'Screens',
-  hint: 'Stage layout per recipe',
+  hint: 'Stage layout per game',
   game: 'Game',
   pickGame: 'Pick a game',
   noGames: 'No games yet. Create one in Games first.',
@@ -32,7 +32,13 @@ export const SCREENS_TAB = {
   applyAllHint: 'The same style on this slot on every screen that has it.',
   resetNode: 'Reset node',
   resetScreen: 'Reset this screen',
-  resetAll: 'Reset every override',
+  resetScreenTitle: (screen: string) => `Reset ${screen}?`,
+  resetScreenBody: 'Every node on this screen and its boundary box go back to the built-in. The words and the decor dials stay as they are.',
+  /** Nodes, boundary boxes and words — not the decor dials, so the label does not claim "every" (B7). */
+  resetAll: 'Reset screens and words',
+  resetAllTitle: 'Reset every screen and word?',
+  resetAllBody: 'Every node, every boundary box and every edited word, on every screen and in every language, go back to the built-in. The decor dials stay as they are.',
+  resetConfirm: 'Reset',
   overridden: (n: number) => (n === 1 ? '1 override' : `${n} overrides`),
   text: 'Text',
   textHint: (language: string) => `${language} words for this game. Empty means the built-in word; the Game tab picks the language.`,
@@ -54,7 +60,7 @@ export const SCREENS_TAB = {
   overlayTab: (name: string) => `Overlay · ${name}`,
   overlayInspector: 'An overlay has no node to restyle. Its words follow the Stage language; the screen underneath is the one you picked last.',
   decor: 'Decor',
-  decorHint: 'The loose shapes. Live on the canvas; saved with the recipe.',
+  decorHint: 'The loose shapes. Live on the canvas; saved with the game.',
   dials: {
     mode: 'Mode',
     modes: { collide: 'Collide', 'collide-attract': 'Collide + attract' },
@@ -79,5 +85,5 @@ export const SCREENS_TAB = {
     h: 'H',
   },
   preview: 'Preview',
-  previewHint: 'A stand-in Play built from the recipe, for the canvas only.',
+  previewHint: 'A stand-in Play built from the game, for the canvas only.',
 } as const

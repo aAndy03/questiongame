@@ -46,30 +46,34 @@ export function PlaysSection({ recipe }: PlaysSectionProps) {
               </Text>
             ))}
           </div>
-          {(plays.data ?? []).map((p) => (
-            <div key={p.id} className="grid grid-cols-[1fr_7rem_6rem_1fr] items-center gap-3 border-b border-[var(--separator)] px-3 py-2 last:border-b-0">
-              <div className="flex min-w-0 flex-col">
-                <Text variant="studio-label" truncate title={p.id}>
-                  {GAME.play(numbers.get(p.id) ?? 0)}
+          {(plays.data ?? []).map((p) => {
+            // Cut off on a narrow window, so the whole line rides on the title (B11).
+            const scores = Object.entries(p.scores)
+              .sort(([, a], [, b]) => b - a)
+              .map(([id, score]) => `${nameOf(id)} ${score}`)
+              .join(' · ')
+            return (
+              <div key={p.id} className="grid grid-cols-[1fr_7rem_6rem_1fr] items-center gap-3 border-b border-[var(--separator)] px-3 py-2 last:border-b-0">
+                <div className="flex min-w-0 flex-col">
+                  <Text variant="studio-label" truncate title={p.id}>
+                    {GAME.play(numbers.get(p.id) ?? 0)}
+                  </Text>
+                  <Text variant="studio-caption" tone="muted">
+                    {fmt.date(p.startedAtMs)}
+                  </Text>
+                </div>
+                <MeaningChip meaning={p.status === 'playing' ? 'playing' : 'seed'}>
+                  {PLAY_STATUS[p.status as keyof typeof PLAY_STATUS] ?? p.status}
+                </MeaningChip>
+                <Text variant="studio-body" tabular>
+                  {p.questionsConsumed}
                 </Text>
-                <Text variant="studio-caption" tone="muted">
-                  {fmt.date(p.startedAtMs)}
+                <Text variant="studio-caption" tone="muted" truncate title={scores}>
+                  {scores}
                 </Text>
               </div>
-              <MeaningChip meaning={p.status === 'playing' ? 'playing' : 'seed'}>
-                {PLAY_STATUS[p.status as keyof typeof PLAY_STATUS] ?? p.status}
-              </MeaningChip>
-              <Text variant="studio-body" tabular>
-                {p.questionsConsumed}
-              </Text>
-              <Text variant="studio-caption" tone="muted" truncate>
-                {Object.entries(p.scores)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([id, score]) => `${nameOf(id)} ${score}`)
-                  .join(' · ')}
-              </Text>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </Panel>

@@ -68,12 +68,42 @@ pub fn play_load(
     Ok(())
 }
 
+/// Rebuild a loaded Play from its game as it is now, if anything changed
+/// since Load (beta.12, A1). The rules freeze at Start, so Start is where they
+/// are read: the row, through `FlagService`, then the snapshot.
+fn refresh_loaded(host: &mut crate::state::Host, now: u64) -> AppResult<()> {
+    let Some(play) = host.play.get_state() else {
+        return Ok(());
+    };
+    if play.status() != questiongame_host::PlayStatus::Loaded {
+        return Ok(());
+    }
+    let play_id = play.id().clone();
+    let recipe_id = play.snapshot().recipe_id.clone();
+    let recipe = host.catalog.recipe_get(&recipe_id)?;
+    host.flags.sync_current_game(recipe.settings.clone())?;
+    let settings = host.flags.freeze()?;
+    let snapshot = host.catalog.build_snapshot(&recipe_id, play_id.clone(), settings)?;
+    if host.play.reload(snapshot, now)? {
+        // The load's own rows, if any were written, belong to the old build.
+        host.catalog.play_delete(&play_id)?;
+        let live = host.flags.live();
+        host.play.set_live_settings(live);
+        host.presentation.set_decor(crate::decor::of(&recipe.layout));
+        host.presentation
+            .set_layout(questiongame_host::stage::StageLayoutNodes::of(&recipe.layout));
+    }
+    Ok(())
+}
+
 #[tauri::command(async)]
 pub fn play_start(
     window: WebviewWindow,
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
+    guard::allow(window.label(), "play_start")?;
+    refresh_loaded(&mut state.lock(), now_ms())?;
     play_write(&window, &app, &state, "play_start", |h, now| {
         Ok(h.play.play_start(now)?)
     })?;
@@ -193,16 +223,21 @@ pub fn restart(
     let now = now_ms();
     let mut host = state.lock();
 
+    // The rules as the game holds them now (beta.12, A1): a Completed Play's
+    // game may have been edited since, and both kinds of Restart read them.
+    let recipe_id = host
+        .play
+        .get_state()
+        .map(|p| p.snapshot().recipe_id.clone())
+        .ok_or(AppError::Match(questiongame_host::MatchError::NoPlay))?;
+    let recipe = host.catalog.recipe_get(&recipe_id)?;
+    host.flags.sync_current_game(recipe.settings)?;
     let mode = if same_questions {
         RestartMode::SameQuestions {
             new_play_id: new_play_id.clone(),
+            settings: Box::new(host.flags.freeze()?),
         }
     } else {
-        let recipe_id = host
-            .play
-            .get_state()
-            .map(|p| p.snapshot().recipe_id.clone())
-            .ok_or(AppError::Match(questiongame_host::MatchError::NoPlay))?;
         let settings = host.flags.freeze()?;
         let snapshot = host
             .catalog
@@ -226,6 +261,27 @@ pub fn restart(
         Ok(())
     })?;
     emit::play_state(&app, &mut host, now, true);
+    // A new Play, as `play_start` says for its own (beta.12, A5): the
+    // operator's Play count and the game's Plays list read it.
+    let operator = host.flags.globals().active_operator_id.clone();
+    if let Some(id) = operator {
+        emit::catalog_changed(
+            &app,
+            &questiongame_host::catalog::CatalogChange {
+                kind: questiongame_host::catalog::CatalogKind::Operator,
+                id: id.as_str().to_owned(),
+                op: questiongame_host::catalog::ChangeOp::Upserted,
+            },
+        );
+    }
+    emit::catalog_changed(
+        &app,
+        &questiongame_host::catalog::CatalogChange {
+            kind: questiongame_host::CatalogKind::Recipe,
+            id: recipe_id.to_string(),
+            op: questiongame_host::catalog::ChangeOp::Upserted,
+        },
+    );
     Ok(())
 }
 

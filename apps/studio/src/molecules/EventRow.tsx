@@ -15,7 +15,7 @@ export interface EventRowProps {
 
 /** One Timeline row: seq · time · kind · detail. Read-only; undo is a button, not a row action. */
 export function EventRow({ seq, atMs, type, detail, isInverted, isLast, compact }: EventRowProps) {
-  const label = TIMELINE.kinds[type] ?? type.replace(/_/g, ' ')
+  const label = TIMELINE.kinds[type] ?? TIMELINE.unknownKind
   return (
     <div
       data-event-row={type}

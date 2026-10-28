@@ -1,5 +1,5 @@
 import { useMemo, useState, type CSSProperties } from 'react'
-import { Button, IconButton, MeaningChip, Panel, SwitchField, Text } from '@/atoms'
+import { Button, DisabledReason, IconButton, MeaningChip, Panel, SwitchField, Text } from '@/atoms'
 import { BoardBalance, BoardDomainRow, DifficultyChip, DifficultyDialog, difficultyLabel, EmptyState, IncompleteMark, InlineNotice, SettingRow, SortableList } from '@/molecules'
 import { DOMAIN, GAME, PICKER, QUESTION } from '@/copy'
 import { noticesAt, useNoticeStore } from '@/chrome/notices'
@@ -374,19 +374,23 @@ function BoardQuestion(props: {
 }) {
   const { stem, missing, difficulty, gaps, overridden, frozenReason, pending } = props
   const label = difficultyLabel(difficulty)
+  // The same reason its sibling buttons give: a bare disabled chip said nothing (B11).
+  const blocked = frozenReason ?? (missing ? GAME.missingQuestion : null)
   return (
     <li className="group/q flex h-9 min-w-0 items-center gap-2 rounded px-1.5 hover:bg-[var(--surface-secondary)]" data-board-question>
-      <button
-        type="button"
-        // One width for every chip, so the stems start in one column.
-        className="flex w-24 shrink-0 rounded outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
-        aria-label={GAME.editDifficulty(stem || QUESTION.noStem, label)}
-        title={QUESTION.difficulty}
-        disabled={frozenReason !== null || missing}
-        onClick={props.onDifficulty}
-      >
-        <DifficultyChip difficulty={difficulty} />
-      </button>
+      <DisabledReason reason={blocked}>
+        <button
+          type="button"
+          // One width for every chip, so the stems start in one column.
+          className="flex w-24 shrink-0 rounded outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+          aria-label={GAME.editDifficulty(stem || QUESTION.noStem, label)}
+          title={blocked ?? QUESTION.difficulty}
+          disabled={blocked !== null}
+          onClick={props.onDifficulty}
+        >
+          <DifficultyChip difficulty={difficulty} />
+        </button>
+      </DisabledReason>
       <Text variant="studio-body" truncate className="min-w-0 flex-1">
         {missing ? GAME.missingQuestion : stem || QUESTION.noStem}
       </Text>

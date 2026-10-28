@@ -81,6 +81,44 @@ fn undo_only_grows_the_log() {
     assert_eq!(play.remaining_in(&domain_id(0)), 3);
 }
 
+/// beta.12 (A3): an undo takes back a turn, not the operator's pause. Undo
+/// while paused left the show running, and Resume was then refused.
+#[test]
+fn undo_while_paused_keeps_the_play_paused() {
+    let mut service = started(snapshot(2, 1, 3, FrozenSettings::default()));
+    service.choose_domain(&domain_id(0), 100).unwrap();
+    answer_correctly(&mut service, 200);
+    service.pause(300).unwrap();
+
+    service.undo_turn(400).unwrap();
+    let play = service.get_state().unwrap();
+    assert_eq!(play.status(), PlayStatus::Paused);
+    assert_eq!(play.consumed_count(), 0, "the turn is still undone");
+    service.resume(500).expect("a paused Play resumes after an undo");
+
+    // And the log replays to the same Play.
+    let replayed = Play::replay(service.get_state().unwrap().events()).unwrap();
+    assert_eq!(replayed.status(), PlayStatus::Playing);
+}
+
+/// beta.12 (A1): a Play loaded and not yet started takes the game as it is
+/// at Start — the rules freeze there, not at Load.
+#[test]
+fn a_loaded_play_reloads_with_new_rules_and_a_started_one_refuses() {
+    let mut service = MatchService::new();
+    service.play_load(snapshot(2, 1, 3, FrozenSettings::default()), 0).unwrap();
+    let mut edited = FrozenSettings::default();
+    edited.scoring.mode = ScoringMode::Flat;
+    edited.scoring.flat_points = 7;
+    let changed = snapshot(2, 1, 3, edited.clone());
+    assert!(service.reload(changed.clone(), 10).unwrap(), "new rules rebuild it");
+    assert_eq!(service.get_state().unwrap().snapshot().settings, edited);
+    assert!(!service.reload(changed.clone(), 20).unwrap(), "the same game, nothing to do");
+
+    service.play_start(30).unwrap();
+    assert!(service.reload(changed, 40).is_err(), "a started Play keeps its rules");
+}
+
 /// Undo reaches past the end of the Play: the completion, the consumption and
 /// the ring tally all come back with it.
 #[test]
@@ -583,6 +621,7 @@ fn restart_closes_the_old_play_and_opens_a_new_one() {
         .restart(
             RestartMode::SameQuestions {
                 new_play_id: questiongame_host::PlayId::from("play-restarted"),
+                settings: Box::new(FrozenSettings::default()),
             },
             200,
         )

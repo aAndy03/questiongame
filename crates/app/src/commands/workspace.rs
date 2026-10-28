@@ -217,6 +217,8 @@ pub fn workspace_delete(
     let report = host.catalog.workspace_delete(&id, &options)?;
     tracing::info!(workspace = %id, rows = report.rows, games = report.games, plays = report.plays, "workspace deleted");
     changed(&app, &host)?;
+    drop(host);
+    crate::tick::health_once(&app);
     Ok(report)
 }
 
@@ -239,7 +241,12 @@ pub fn workspace_switch(
     let globals = host.flags.globals().clone();
     host.catalog.settings_store(&globals)?;
     tracing::info!(workspace = %id, "workspace switched");
-    changed(&app, &host)
+    let list = changed(&app, &host)?;
+    // Health belongs to a workspace: what was wrong in the last one must not
+    // linger (and its *Repair* run here) for the 30 s watch (beta.12, A6).
+    drop(host);
+    crate::tick::health_once(&app);
+    Ok(list)
 }
 
 #[tauri::command(async)]

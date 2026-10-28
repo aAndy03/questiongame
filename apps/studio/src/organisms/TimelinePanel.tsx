@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { IconButton, Text, TransportButton } from '@/atoms'
 import { EmptyState, EventRow } from '@/molecules'
 import { useControlLayoutStore, useTimelineCollapsed } from '@/chrome/control'
-import { CONTROL, HOTKEYS, TIMELINE, TRANSPORT } from '@/copy'
+import { CONTROL, HOTKEYS, SESSION, TIMELINE, TRANSPORT } from '@/copy'
 import { useHostCommand } from '@/host/commands'
 import { command } from '@/host/host'
 import { usePlayState } from '@/host/playState'
@@ -56,14 +56,14 @@ export function TimelinePanel({ density }: TimelinePanelProps) {
         </Text>
         {collapsed && last ? (
           <Text variant="studio-caption" truncate className="min-w-0 flex-1">
-            {`${TIMELINE.kinds[last.kind.type] ?? last.kind.type} · ${detailOf(last, play)}`}
+            {[TIMELINE.kinds[last.kind.type] ?? TIMELINE.unknownKind, detailOf(last, play)].filter(Boolean).join(' · ')}
           </Text>
         ) : (
           <div className="flex-1" />
         )}
         {count <= 2 && play.operator.canUndo ? (
           <Text variant="studio-caption" tone="warning" truncate>
-            {TIMELINE.rewindWarning}
+            {TIMELINE.undoWarning}
           </Text>
         ) : null}
         <TransportButton icon="undo" label={TRANSPORT.undo} size="sm" onPress={() => void run('undo_turn')} isDisabled={!play.operator.canUndo} disabledReason={busy ? TRANSPORT.waitOverlay : null} kbd={HOTKEYS.defaults['undo_turn']} />
@@ -88,6 +88,9 @@ export function TimelinePanel({ density }: TimelinePanelProps) {
   )
 }
 
+/** The verdict's operator words; a verdict this build does not know shows nothing rather than its wire name. */
+const VERDICTS: Readonly<Record<string, string>> = SESSION.verdict
+
 /** A one-line detail from the event's own fields; names come from the snapshot. */
 function detailOf(e: PlayEvent, play: PlayStateForMain): string {
   const k = e.kind
@@ -97,10 +100,13 @@ function detailOf(e: PlayEvent, play: PlayStateForMain): string {
       return teamName(k['team'])
     case 'question_issued':
       return String(play.domains.find((d) => d.id === k['domain'])?.name ?? k['domain'] ?? '')
-    case 'turn_resolved':
-      return [k['verdict'], k['points'] !== undefined ? `+${String(k['points'])}` : ''].filter(Boolean).join(' ')
+    case 'turn_resolved': {
+      const verdict = k['verdict']
+      const points = k['points']
+      return [typeof verdict === 'string' ? (VERDICTS[verdict] ?? '') : '', typeof points === 'number' ? SESSION.points(points) : ''].filter(Boolean).join(' ')
+    }
     case 'selection_set':
-      return Array.isArray(k['options']) ? `${(k['options'] as unknown[]).length} selected` : ''
+      return Array.isArray(k['options']) ? TIMELINE.selected((k['options'] as unknown[]).length) : ''
     case 'leaderboard_rank_revealed':
       return k['rank'] !== undefined ? `#${String(k['rank'])}` : ''
     default:

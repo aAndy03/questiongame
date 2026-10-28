@@ -508,6 +508,7 @@ fn s11_restart_reaches_a_completed_play_but_not_an_abandoned_one() {
         .restart(
             questiongame_host::service::RestartMode::SameQuestions {
                 new_play_id: PlayId::new("play-demo-2"),
+                settings: Box::new(demo.play.get_state().unwrap().snapshot().settings.clone()),
             },
             now,
         )
@@ -522,6 +523,7 @@ fn s11_restart_reaches_a_completed_play_but_not_an_abandoned_one() {
             .restart(
                 questiongame_host::service::RestartMode::SameQuestions {
                     new_play_id: PlayId::new("play-demo-3"),
+                    settings: Box::new(questiongame_host::settings::FrozenSettings::default()),
                 },
                 now,
             )

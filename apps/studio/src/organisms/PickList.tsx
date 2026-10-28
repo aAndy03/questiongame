@@ -140,7 +140,8 @@ export function PickList<T>({ spec, items, chosen, onChosen, disabledReason, cou
         <ListToolbar view={view as ListViewApi<unknown, unknown>} what={spec.noun.many} />
       </div>
       <div className="flex shrink-0 items-center gap-2 px-2">
-        {groupCheckbox(page.pageIds, LIST.selectAll)}
+        {/* Every matching row on every page, as the library list's header tick does (C14). */}
+        {groupCheckbox(page.selectableIds, LIST.selectAll)}
         <Text variant="studio-caption" tone="muted">
           {count}
         </Text>

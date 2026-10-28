@@ -77,7 +77,7 @@ describe('workspaces', () => {
     await sees('Red')
     await select('Red')
     await press('Copy or move…')
-    await pick('Copy to…')
+    await pick('Copy to workspace…')
     await sees('1 picked')
     await press('Copy')
     await browser.waitUntil(async () => !(await body()).includes('1 picked'), { timeoutMsg: 'the copy dialog did not close' })
@@ -86,8 +86,8 @@ describe('workspaces', () => {
     expect(await (await named('Select Red')).isSelected()).toBe(true)
     await press('Copy or move…')
     // The menu draws its items a moment after it opens: read them once they are there.
-    await browser.waitUntil(async () => JSON.stringify(await $$('[role="menuitem"]').map((i) => i.getText())) === JSON.stringify(['Copy to…', 'Move to…']), {
-      timeoutMsg: 'the menu is not exactly Copy to… and Move to…',
+    await browser.waitUntil(async () => JSON.stringify(await $$('[role="menuitem"]').map((i) => i.getText())) === JSON.stringify(['Copy to workspace…', 'Move to workspace…']), {
+      timeoutMsg: 'the menu is not exactly Copy to workspace… and Move to workspace…',
     })
     await browser.keys('Escape')
     await press('Clear')
@@ -96,7 +96,7 @@ describe('workspaces', () => {
     await press('Domains & Questions')
     await select('What is the capital of Australia?')
     await press('Copy or move…')
-    await pick('Copy to…')
+    await pick('Copy to workspace…')
     await sees('Bring their domains')
     await sees('New there: Geography, with only these questions')
     await press('Copy')

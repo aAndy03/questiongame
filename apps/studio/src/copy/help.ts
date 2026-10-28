@@ -168,7 +168,7 @@ export const HELP: readonly HelpSection[] = [
             ],
           },
           { kind: 'p', text: 'The board holds one question per difficulty in each domain, so every domain gets strictly harder as it goes and teams always know what they are choosing. Turn on **Allow repeated difficulties** when you want more than one at a level.' },
-          { kind: 'note', text: 'While a game is playing, its rules are frozen: you can still see them, but not change them until the Play ends.' },
+          { kind: 'note', text: 'While a game is playing, its name, roster, board and the rules that decide the score (scoring, the timer, the cap and bonus, judging) are frozen: you can still see them, but not change them until the Play ends. Its folder, tags, how reveals happen and the language Stage speaks can still change.' },
         ],
       },
       {
@@ -185,7 +185,7 @@ export const HELP: readonly HelpSection[] = [
         blocks: [
           { kind: 'p', text: 'A **workspace** is one library: its own teams, domains, questions and games. Keep a club, a classroom and a TV show apart, each in its own workspace.' },
           { kind: 'p', text: 'Switch workspace at the top of the sidebar, and make or organise them with {{ui:New workspace…}} and {{ui:Manage workspaces…}}. Unload the game in Control before you switch.' },
-          { kind: 'p', text: '{{ui:Copy to…}} and {{ui:Move to…}} take a row, or a whole game, to another workspace with what it needs. Copies know each other: when you save one, Studio offers to update the others.' },
+          { kind: 'p', text: '{{ui:Copy to workspace…}} and {{ui:Move to workspace…}} take a row, or a whole game, to another workspace with what it needs. Copies know each other: when you save one, Studio offers to update the others.' },
         ],
       },
     ],

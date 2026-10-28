@@ -1788,6 +1788,7 @@ host_api:
     "flags::FlagService::settings_set_shortcut": {doc: "`settings_set_shortcut`.", kind: method, sig: "fn settings_set_shortcut(&mut self, command: &str, chord: Option<Chord>) -> MatchResult<()>"}
     "flags::FlagService::show_give_token": {doc: "§4.2/§2.6: under `refuse_until_reveal` the GiveToken affordance is disabled while an answer is locked and unrevealed.", kind: method, sig: "fn show_give_token(&self, ctx: RuntimeContext) -> bool"}
     "flags::FlagService::show_timer_controls": {doc: "§4.2: `timer.enabled = false` hides StartTimer and the Stage clock.", kind: method, sig: "fn show_timer_controls(&self) -> bool"}
+    "flags::FlagService::sync_current_game": {doc: "**The loaded game's document as the library now holds it** (beta.12, A1).", kind: method, sig: "fn sync_current_game(&mut self, game: GameSettings) -> MatchResult<()>"}
     "flags::FlagService::timer_cascade": {doc: "The §2.18 cascade as it stands now — what a Play *would* freeze.", kind: method, sig: "fn timer_cascade(&self) -> TimerCascade"}
     "flags::FlagService::unload_recipe": {doc: "The recipe left Control.", kind: method, sig: "fn unload_recipe(&mut self)"}
     "flags::FlagService::workspace_defaults": {doc: "The current workspace's half of the globals document.", kind: method, sig: "fn workspace_defaults(&self) -> WorkspaceDefaults"}
@@ -1797,6 +1798,7 @@ host_api:
     "flags::GameSetting::is_game_affecting": {doc: "True for the keys that freeze at `play_start` (§2.5).", kind: method, sig: "fn is_game_affecting(&self) -> bool"}
     "flags::GameSetting::key": {doc: "The §4.2 path.", kind: method, sig: "fn key(&self) -> &'static str"}
     "flags::GameSettings": {doc: "The recipe's B5 document — every key §4.2 marks *Game*, plus the reveal defaults, which are a Game default that Control may then change live.", kind: struct, sig: "struct GameSettings { scoring: ScoringSettings, judging: JudgingSettings, turn: TurnSettings, timer: TimerLevel, reveal: RevealSettings, language: Language, board: BoardSettings }"}
+    "flags::GameSettings::game_affecting_differs": {doc: "Do two documents differ in anything an open Play freezes (§2.5)?", kind: method, sig: "fn game_affecting_differs(&self, other: &GameSettings) -> bool"}
     "flags::GlobalSetting": {doc: "One key of the all-games document.", kind: enum, sig: "enum GlobalSetting { TimerEnabled(bool) | TimerDurationMs(u32) | Game(GameSetting) | OverrideAfterLock(OverrideAfterLock) | Reveal(RevealChannel, RevealMode) | OverlayAnimationsEnabled(bool) | ViewerHitTargets(bool) | MosaicDensity(MosaicDensity) | StageMonitorId(Option<String>) | StageMirrorIds(Vec<String>) | StatsMonitorId(Option<String>) | StatsFullscreen(bool) | StageReattach(StageReattach) | AudioVolume(u8) | AudioMuted(bool) | AudioCue(CueKey, Option<String>) | Feature(FeatureRoot, bool) | ActiveOperatorId(Option<OperatorId>) | UpdatesCheckOnStart(bool) | WindowNativeTitleBar(bool) }"}
     "flags::GlobalSetting::key": {kind: method, sig: "fn key(&self) -> &'static str"}
     "flags::GlobalSettings": {doc: "The all-games document (§11.L L1/L2): first run writes it, the Settings tab and Control Global edit it.", kind: struct, sig: "struct GlobalSettings { timer: TimerLevel, game_defaults: GameSettings, control: ControlSettings, features: FeatureRoots, shortcuts: ShortcutMap, active_operator_id: Option<OperatorId>, updates: UpdateSettings, window: WindowSettings }"}
@@ -2016,6 +2018,7 @@ host_api:
     "service::MatchService::play_load": {doc: "`play_load` — put a recipe into Control (§5.1).", kind: method, sig: "fn play_load(&mut self, snapshot: PlaySnapshot, now_ms: u64) -> MatchResult<()>"}
     "service::MatchService::play_start": {doc: "`play_start`.", kind: method, sig: "fn play_start(&mut self, now_ms: u64) -> MatchResult<()>"}
     "service::MatchService::redo_turn": {doc: "`redo_turn` (§5.8).", kind: method, sig: "fn redo_turn(&mut self, now_ms: u64) -> MatchResult<()>"}
+    "service::MatchService::reload": {doc: "**A loaded Play takes the game as it is now** (beta.12, A1).", kind: method, sig: "fn reload(&mut self, snapshot: PlaySnapshot, now_ms: u64) -> MatchResult<bool>"}
     "service::MatchService::reorder_ring": {doc: "`reorder_ring` — the future ring only (§5.4).", kind: method, sig: "fn reorder_ring(&mut self, order: Vec<TeamId>, now_ms: u64) -> MatchResult<()>"}
     "service::MatchService::restart": {doc: "`restart`.", kind: method, sig: "fn restart(&mut self, mode: RestartMode, now_ms: u64) -> MatchResult<Play>"}
     "service::MatchService::resume": {kind: method, sig: "fn resume(&mut self, now_ms: u64) -> MatchResult<()>"}
@@ -2031,7 +2034,7 @@ host_api:
     "service::MatchService::tick_due": {doc: "Would a tick change anything?", kind: method, sig: "fn tick_due(&self, now_ms: u64) -> bool"}
     "service::MatchService::undo_turn": {doc: "`undo_turn` (§2.7).", kind: method, sig: "fn undo_turn(&mut self, now_ms: u64) -> MatchResult<()>"}
     "service::MatchService::unload": {doc: "`play_unload` — take the recipe out of Control (§5.1's other direction).", kind: method, sig: "fn unload(&mut self, now_ms: u64) -> MatchResult<Option<Play>>"}
-    "service::RestartMode": {doc: "§2.7: Restart is a new Play now, on the same recipe.", kind: enum, sig: "enum RestartMode { SameQuestions { new_play_id: PlayId } | DifferentQuestions { snapshot: Box<PlaySnapshot> } }"}
+    "service::RestartMode": {doc: "§2.7: Restart is a new Play now, on the same recipe.", kind: enum, sig: "enum RestartMode { SameQuestions { new_play_id: PlayId, settings: Box<crate::settings::FrozenSettings> } | DifferentQuestions { snapshot: Box<PlaySnapshot> } }"}
   crates/host/src/session.rs:
     "session::Outcome": {doc: "Written once, by `reveal_outcome` (§2.4).", kind: struct, sig: "struct Outcome { verdict: Verdict, points_awarded: u32, bonus_awarded: Option<u32>, correct_option_ids: Vec<OptionId>, token_ends: bool }"}
     "session::Reveals": {doc: "What has been revealed so far.", kind: struct, sig: "struct Reveals { stem: bool, option_ids: Vec<OptionId>, outcome: bool }"}
@@ -2179,8 +2182,6 @@ studio_calls:
     app_info: [apps/studio/src/host/queries.ts]
     app_quit: [apps/studio/src/organisms/QuitGuard.tsx]
     beta_welcome_get: [apps/studio/src/host/queries.ts]
-    catalog_archive: [apps/studio/src/organisms/useArchive.tsx]
-    catalog_archive_many: [apps/studio/src/organisms/useArchive.tsx]
     catalog_bulk_edit: [apps/studio/src/organisms/useBulkEdit.tsx, apps/studio/src/pages/LibraryPage.tsx]
     catalog_duplicate:
       - apps/studio/src/organisms/DomainPane.tsx
@@ -2193,8 +2194,6 @@ studio_calls:
     catalog_list: [apps/studio/src/host/queries.ts]
     catalog_propagation_preview: [apps/studio/src/organisms/usePropagatingSave.tsx]
     catalog_rebuild_search: [apps/studio/src/organisms/useNoticeActions.ts]
-    catalog_restore: [apps/studio/src/organisms/useArchive.tsx]
-    catalog_restore_many: [apps/studio/src/organisms/useArchive.tsx]
     catalog_search: [apps/studio/src/host/queries.ts]
     catalog_seed_demo:
       - apps/studio/src/organisms/FirstRunFlow.tsx
@@ -2240,13 +2239,11 @@ studio_calls:
     play_load: [apps/studio/src/organisms/RecentGames.tsx, apps/studio/src/pages/GamePage.tsx]
     play_start: [apps/studio/src/organisms/ActionPanel.tsx]
     play_unload: [apps/studio/src/organisms/UnloadGame.tsx]
-    recipe_archive: [apps/studio/src/organisms/useArchive.tsx]
     recipe_bulk_edit: [apps/studio/src/organisms/GameLabelsManager.tsx, apps/studio/src/organisms/useGameLabels.tsx]
     recipe_duplicate: [apps/studio/src/pages/GamePage.tsx, apps/studio/src/pages/GamesPage.tsx]
     recipe_get: [apps/studio/src/host/queries.ts]
     recipe_list: [apps/studio/src/host/queries.ts]
     recipe_new: [apps/studio/src/pages/GamesPage.tsx]
-    recipe_restore: [apps/studio/src/organisms/useArchive.tsx]
     recipe_set_layout: [apps/studio/src/organisms/LayoutEditor.tsx]
     recipe_set_membership: [apps/studio/src/organisms/BoardSection.tsx, apps/studio/src/organisms/RosterSection.tsx]
     recipe_set_overlay: [apps/studio/src/organisms/BoardSection.tsx]
@@ -2316,6 +2313,7 @@ studio_calls:
     workspace_group_reorder: [apps/studio/src/pages/WorkspacesPage.tsx]
     workspace_list: [apps/studio/src/host/queries.ts]
     workspace_rename: [apps/studio/src/pages/NameWorkspacePage.tsx, apps/studio/src/pages/WorkspacesPage.tsx]
+    workspace_restore: [apps/studio/src/pages/WorkspacesPage.tsx]
     workspace_set_group: [apps/studio/src/pages/WorkspacesPage.tsx]
     workspace_switch: [apps/studio/src/organisms/useSwitchWorkspace.ts]
   dynamic_call_files:
@@ -2324,6 +2322,7 @@ studio_calls:
     - apps/studio/src/molecules/HelpText.tsx
     - apps/studio/src/organisms/DataActions.tsx
     - apps/studio/src/organisms/Viewer.tsx
+    - apps/studio/src/organisms/useArchive.tsx
     - apps/studio/src/organisms/useControlHotkeys.ts
     - apps/studio/src/organisms/useTransfer.tsx
     - apps/studio/src/pages/BetaWelcomePage.tsx

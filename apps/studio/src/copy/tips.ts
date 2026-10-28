@@ -263,7 +263,7 @@ export const TIPS: readonly Tip[] = [
     skill: 'copy-to-workspace',
     requires: 'workspaces',
     title: 'Take rows to another workspace',
-    body: '{{ui:Copy to…}} and {{ui:Move to…}} take rows, or a whole game, to another workspace with what they need.',
+    body: '{{ui:Copy to workspace…}} and {{ui:Move to workspace…}} take rows, or a whole game, to another workspace with what they need.',
     help: { section: 'prepare-a-show', topic: 'workspaces' },
   },
   {

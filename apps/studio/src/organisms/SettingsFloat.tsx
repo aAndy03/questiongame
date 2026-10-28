@@ -1,9 +1,9 @@
 import { Popover, Tabs } from '@heroui/react'
 import type { RevealChannel } from '@questiongame/contract'
-import { IconButton, NumberField, SelectField, SwitchField, Text } from '@/atoms'
+import { DurationField, IconButton, SegmentedField, SelectField, SwitchField, Text } from '@/atoms'
 import { SettingRow } from '@/molecules'
 import { SettingsForm } from './SettingsForm'
-import { CONTROL, RULES } from '@/copy'
+import { CONTROL, FIELD, RULES } from '@/copy'
 import { useHostCommand } from '@/host/commands'
 import { usePlayState } from '@/host/playState'
 import { useSettings } from '@/host/queries'
@@ -26,7 +26,10 @@ export function SettingsFloat() {
   const setGame = (setting: GameSetting) => void run('settings_set_current_game', { setting })
   const game = view?.currentGame ?? null
   const frozen = view?.gameAffectingFrozen ?? false
-  const frozenReason = frozen ? 'Frozen while a Play is open' : null
+  const frozenReason = frozen ? FIELD.frozen : null
+  // The same controls as the Game page's Rules (beta.12, B4): seconds, not
+  // milliseconds, and Inherit saying what it inherits.
+  const globalsTimer = view?.globals.timer
 
   return (
     <Popover>
@@ -62,7 +65,7 @@ export function SettingsFloat() {
               ) : (
                 <div className="flex max-h-[min(60vh,34rem)] flex-col divide-y divide-[var(--separator)] overflow-y-auto overflow-x-hidden pr-1">
                   <SettingRow label={RULES.scoringMode} disabled={disabledFor('scoring.mode')}>
-                    <SelectField
+                    <SegmentedField
                       label={RULES.scoringMode}
                       hideLabel
                       value={game.scoring.mode}
@@ -82,13 +85,13 @@ export function SettingsFloat() {
                     <SwitchField label={RULES.orderMatters} hideLabel isSelected={game.judging.order_matters} onChange={(value) => setGame({ key: 'order_matters', value })} disabledReason={frozenReason} />
                   </SettingRow>
                   <SettingRow label={RULES.timerEnabled} disabled={disabledFor('timer.enabled')}>
-                    <SelectField
+                    <SegmentedField
                       label={RULES.timerEnabled}
                       hideLabel
                       value={game.timer.enabled === null ? 'inherit' : game.timer.enabled ? 'on' : 'off'}
                       onChange={(v) => setGame({ key: 'timer_enabled', value: v === 'inherit' ? null : v === 'on' })}
                       options={[
-                        { value: 'inherit', label: RULES.inherit },
+                        { value: 'inherit', label: `${RULES.inherit}${globalsTimer ? ` (${globalsTimer.enabled === false ? RULES.off : RULES.on})` : ''}` },
                         { value: 'on', label: RULES.on },
                         { value: 'off', label: RULES.off },
                       ]}
@@ -96,7 +99,14 @@ export function SettingsFloat() {
                     />
                   </SettingRow>
                   <SettingRow label={RULES.timerDuration} disabled={disabledFor('timer.duration_ms')}>
-                    <NumberField label={RULES.timerDuration} hideLabel value={game.timer.duration_ms} onChange={(value) => setGame({ key: 'timer_duration_ms', value })} minValue={1000} step={1000} disabledReason={frozenReason} />
+                    <DurationField
+                      label={RULES.timerDuration}
+                      hideLabel
+                      value={game.timer.duration_ms}
+                      onChange={(value) => setGame({ key: 'timer_duration_ms', value })}
+                      description={globalsTimer?.duration_ms ? RULES.inheritSeconds(Math.round(globalsTimer.duration_ms / 1000)) : undefined}
+                      disabledReason={frozenReason}
+                    />
                   </SettingRow>
                   <SettingRow label={RULES.reveal} description={RULES.revealHint}>
                     <div className="grid grid-cols-1 gap-2 @[18rem]/setting-row:grid-cols-2">

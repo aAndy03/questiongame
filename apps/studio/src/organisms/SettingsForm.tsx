@@ -1,8 +1,9 @@
 import { Fragment, useRef, useState } from 'react'
 import { CUE_KEYS, DEFAULT_AUDIO, type CueKey } from '@questiongame/contract'
-import { DurationField, NumberField, OptionalNumberField, SegmentedField, SelectField, SliderField, SwitchField, Text } from '@/atoms'
-import { CueMapRow, DifficultyMapField, InlineNotice, SettingRow, SettingsGroup, disabledReasonText } from '@/molecules'
-import { FIELD } from '@/copy'
+import { DurationField, NumberField, OptionalNumberField, SegmentedField, SelectField, Skeleton, SliderField, SwitchField, Text } from '@/atoms'
+import { CueMapRow, DifficultyMapField, EmptyState, InlineNotice, SettingRow, SettingsGroup, SpeedWindowField, disabledReasonText } from '@/molecules'
+import { STAGE_LANGUAGES } from '@questiongame/contract'
+import { FIELD, RULES } from '@/copy'
 import { SETTINGS, SETTINGS_GROUPS, type SettingsGroupId } from '@/copy/settings'
 import { useHostCommand } from '@/host/commands'
 import { useSettings } from '@/host/queries'
@@ -50,7 +51,17 @@ export function SettingsForm({ groups, compact }: SettingsFormProps) {
   const setGlobal = (setting: GlobalSetting) => void run('settings_set_global', { setting })
   const setGame = (setting: GameSetting) => setGlobal({ key: 'game', value: setting })
 
-  if (!view) return null
+  // Loading is drawn and a failure is said (beta.12, B6): a blank Settings
+  // tab, Control float or first-run step read as a broken page.
+  if (!view) {
+    return settings.isError ? (
+      <EmptyState kind="error" what={SETTINGS.what} detail={settings.error.message} />
+    ) : (
+      <div aria-busy data-settings-loading>
+        <Skeleton shape="row" count={4} />
+      </div>
+    )
+  }
   const g = view.globals
   const defaults = g.game_defaults
   const control = view.control
@@ -124,6 +135,59 @@ export function SettingsForm({ groups, compact }: SettingsFormProps) {
                 maxValue={2}
                 step={0.05}
                 disabledReason={reason('scoring.speed_weight') ?? weightInert}
+              />
+            </SettingRow>
+            {/* beta.12 (B3): the rest of what Rules sets, as defaults for new games. */}
+            <SettingRow label={row('scoring.speed_window').label} description={row('scoring.speed_window').description} nested disabled={disabledFor('scoring.speed_window')}>
+              <SpeedWindowField
+                value={defaults.scoring.speed_window}
+                durationMs={g.timer.duration_ms}
+                onChange={(value) => setGame({ key: 'speed_window', value })}
+                disabledReason={reason('scoring.speed_window') ?? weightInert}
+              />
+            </SettingRow>
+            <SettingRow label={row('scoring.speed_steps').label} description={row('scoring.speed_steps').description} nested disabled={disabledFor('scoring.speed_steps')}>
+              <div className="flex items-center gap-3">
+                <SwitchField
+                  label={row('scoring.speed_steps').label}
+                  hideLabel
+                  isSelected={defaults.scoring.speed_steps !== null}
+                  onChange={(on) => setGame({ key: 'speed_steps', value: on ? 3 : null })}
+                  disabledReason={reason('scoring.speed_steps') ?? weightInert}
+                />
+                {defaults.scoring.speed_steps !== null ? (
+                  <NumberField
+                    label={row('scoring.speed_steps').label}
+                    hideLabel
+                    value={defaults.scoring.speed_steps}
+                    onChange={(v) => setGame({ key: 'speed_steps', value: Math.max(1, v ?? 1) })}
+                    minValue={1}
+                    disabledReason={reason('scoring.speed_steps') ?? weightInert}
+                  />
+                ) : null}
+              </div>
+            </SettingRow>
+          </SettingsGroup>
+        )
+      case 'board':
+        return (
+          <SettingsGroup {...props}>
+            <SettingRow label={row('board.allow_repeated_difficulty').label} description={row('board.allow_repeated_difficulty').description} disabled={disabledFor('board.allow_repeated_difficulty')}>
+              <SwitchField
+                label={row('board.allow_repeated_difficulty').label}
+                hideLabel
+                isSelected={defaults.board.allow_repeated_difficulty}
+                onChange={(value) => setGame({ key: 'allow_repeated_difficulty', value })}
+                disabledReason={reason('board.allow_repeated_difficulty')}
+              />
+            </SettingRow>
+            <SettingRow label={row('stage.language').label} description={row('stage.language').description}>
+              <SelectField
+                label={row('stage.language').label}
+                hideLabel
+                value={defaults.language}
+                onChange={(value) => setGame({ key: 'language', value })}
+                options={STAGE_LANGUAGES.map((value) => ({ value, label: RULES.languageName[value] }))}
               />
             </SettingRow>
           </SettingsGroup>

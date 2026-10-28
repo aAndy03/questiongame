@@ -62,7 +62,8 @@ export function MonitorsSettings() {
   return (
     <div className="flex flex-col gap-6" data-monitors-settings>
       <SettingsGroup
-        title={SETTINGS.monitors.title(list.length)}
+        // Nothing counted before the host answers (beta.12, B6): "(0)" read as a fault.
+        title={monitors.isPending ? SETTINGS.monitors.titleLoading : SETTINGS.monitors.title(list.length)}
         action={
           <span className="flex items-center gap-1.5">
             {/* beta.10: what the app sees, as text for a bug report. */}

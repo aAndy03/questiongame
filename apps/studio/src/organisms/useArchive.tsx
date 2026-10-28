@@ -51,32 +51,41 @@ export function useArchive(): ArchiveController {
       })
   }
 
+  // How many rows the host took (C3): each recipe is its own call, a catalog
+  // batch is one call that lands whole or not at all. `run.ok`, not the value
+  // — a write that answers nothing is still a write the host accepted.
+  const apply = async (req: ArchiveRequest, verb: 'archive' | 'restore'): Promise<number> => {
+    const archiving = verb === 'archive'
+    if (req.kind === 'recipe') {
+      let done = 0
+      for (const id of req.ids) if (await run.ok(archiving ? 'recipe_archive' : 'recipe_restore', { id })) done++
+      return done
+    }
+    if (req.ids.length === 1) return (await run.ok(archiving ? 'catalog_archive' : 'catalog_restore', { kind: req.kind, id: req.ids[0] })) ? 1 : 0
+    return (await run.ok(archiving ? 'catalog_archive_many' : 'catalog_restore_many', { kind: req.kind, ids: req.ids })) ? req.ids.length : 0
+  }
+  // Say only what happened: nothing taken is the refusal notice's to say.
+  const report = (req: ArchiveRequest, done: number, says: (n: number, what: string) => string) => {
+    if (done === 0) return
+    const failed = req.ids.length - done
+    if (failed === 0) toast.info(says(done, req.what))
+    else toast.warn(says(done, req.what), CONFIRM.notDone(failed))
+  }
+
   const confirm = async () => {
     if (!request) return
     setPending(true)
-    if (request.kind === 'recipe') {
-      for (const id of request.ids) await run('recipe_archive', { id })
-    } else if (request.ids.length === 1) {
-      await run('catalog_archive', { kind: request.kind, id: request.ids[0] })
-    } else {
-      await run('catalog_archive_many', { kind: request.kind, ids: request.ids })
-    }
+    const done = await apply(request, 'archive')
     setPending(false)
     setRequest(null)
-    toast.info(n === 1 ? `Archived 1 ${request.what}` : `Archived ${n} ${request.what}`)
+    report(request, done, CONFIRM.archivedN)
   }
 
   const restore = async (req: ArchiveRequest) => {
     setPending(true)
-    if (req.kind === 'recipe') {
-      for (const id of req.ids) await run('recipe_restore', { id })
-    } else if (req.ids.length === 1) {
-      await run('catalog_restore', { kind: req.kind, id: req.ids[0] })
-    } else {
-      await run('catalog_restore_many', { kind: req.kind, ids: req.ids })
-    }
+    const done = await apply(req, 'restore')
     setPending(false)
-    toast.info(req.ids.length === 1 ? `Restored 1 ${req.what}` : `Restored ${req.ids.length} ${req.what}`)
+    report(req, done, CONFIRM.restoredN)
   }
 
   const n = request?.ids.length ?? 0

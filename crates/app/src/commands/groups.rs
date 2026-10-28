@@ -41,10 +41,18 @@ pub fn catalog_bulk_edit(
     let report = host.catalog.catalog_bulk_edit(&ids, &edit, !preview, now_ms())?;
     if !preview {
         let domain = match &edit {
-            BulkEdit::Group { domain_id, .. } | BulkEdit::AddToDomain { domain_id } | BulkEdit::RemoveFromDomain { domain_id } => Some(domain_id),
+            BulkEdit::Group { domain_id, .. }
+            | BulkEdit::AddToDomain { domain_id }
+            | BulkEdit::RemoveFromDomain { domain_id }
+            | BulkEdit::MoveToDomain { domain_id } => Some(domain_id),
             _ => None,
         };
         report_changes(&app, &report, domain);
+        // A move also empties the domains the questions left (beta.12, A8);
+        // which ones the report does not say, so every domain list refreshes.
+        if matches!(edit, BulkEdit::MoveToDomain { .. }) && !report.changed.is_empty() {
+            changed(&app, CatalogKind::Domain, "");
+        }
     }
     Ok(report)
 }

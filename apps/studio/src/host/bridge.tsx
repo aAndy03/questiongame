@@ -43,7 +43,7 @@ import { useQuitStore } from '@/chrome/quit'
 import { useWindowsStore } from '@/chrome/windows'
 import { command, hasHost, on } from './host'
 import { receivePlayState, receivePlayTick } from './playState'
-import { invalidateForCatalogChange, invalidateForRecipeChange, invalidateSettings, keys, receiveWorkspaces } from './queries'
+import { WORKSPACE_COUNTS, invalidateForCatalogChange, invalidateForPlayChange, invalidateForRecipeChange, invalidateSettings, keys, receiveWorkspaces } from './queries'
 import type { Workspaces } from './types'
 
 export function HostBridge() {
@@ -76,11 +76,14 @@ export function HostBridge() {
 
     // `null` is a value here: it is what the host emits when the recipe
     // leaves Control (`play_unload`), and Control reads it as "no Play".
+    // Which Play, in which status, the last emission was: a change of either
+    // is history moving (beta.12, B2/B9) — not the 100 ms ticks between.
+    let lastPlay: string | null | undefined
     add(
       on<PlayStateForMain | null>('play-state', (next) => {
-        // Unloaded: the Play just closed is history now, and Control's recent
-        // games order by it (beta.10 review).
-        if (next === null) void client.invalidateQueries({ queryKey: ['plays', 'list'] })
+        const now = next ? `${next.playId}:${next.status}` : null
+        if (lastPlay !== undefined && now !== lastPlay) invalidateForPlayChange(client)
+        lastPlay = now
         receivePlayState(next)
       }),
     )
@@ -91,6 +94,8 @@ export function HostBridge() {
     add(on<RecipeChange>('recipe-changed', (c) => invalidateForRecipeChange(client, c.id)))
     add(
       on<Workspaces>('workspace-changed', (w) => {
+        // A workspace made, copied into or deleted holds something new (A4).
+        void client.invalidateQueries({ queryKey: WORKSPACE_COUNTS })
         // Another workspace: Back would land on its rows, and a notice about
         // one of its rows points at nothing here (beta.2).
         if (receiveWorkspaces(client, w)) {

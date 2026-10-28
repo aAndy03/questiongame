@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button, Panel, Skeleton, Text } from '@/atoms'
+import { EmptyState } from '@/molecules'
 import { useNavStore } from '@/chrome/nav'
 import { toast } from '@/chrome/toast'
 import { CONTROL, SHELL } from '@/copy'
@@ -79,6 +80,7 @@ export function RecentGames({ empty }: { empty: React.ReactNode }) {
       </div>
     )
   }
+  if (recipes.isError) return <EmptyState kind="error" what={CONTROL.recentTitle.toLowerCase()} detail={recipes.error.message} />
   if (games.length === 0) return <>{empty}</>
 
   const load = async (r: Recipe) => {

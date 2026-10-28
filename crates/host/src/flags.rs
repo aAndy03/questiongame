@@ -371,6 +371,20 @@ pub struct GameSettings {
     pub board: BoardSettings,
 }
 
+impl GameSettings {
+    /// Do two documents differ in anything an open Play freezes (§2.5)?
+    /// Reveal and Stage language stay live; everything else here can move a
+    /// score or the board (beta.12, A1: the host's own refusal, not only a
+    /// disabled input).
+    pub fn game_affecting_differs(&self, other: &GameSettings) -> bool {
+        self.scoring != other.scoring
+            || self.judging != other.judging
+            || self.turn != other.turn
+            || self.timer != other.timer
+            || self.board != other.board
+    }
+}
+
 /// Control-behaviour keys: live for the whole Play (§2.5), so none of them is
 /// in [`FrozenSettings`] and none of them can move a score.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -861,6 +875,20 @@ impl FlagService {
         validate(&game)?;
         self.control.reveal = game.reveal;
         self.current_game = Some(game);
+        Ok(())
+    }
+
+    /// **The loaded game's document as the library now holds it** (beta.12,
+    /// A1). The Games tab writes the recipe row; without this the Current
+    /// game copy here went stale, and a later Control edit wrote that stale
+    /// copy back over the row. Unlike [`Self::load_recipe`] it leaves the live
+    /// reveal copy alone — the operator may have moved it in Control. Nothing
+    /// loaded, nothing to keep in step.
+    pub fn sync_current_game(&mut self, game: GameSettings) -> MatchResult<()> {
+        validate(&game)?;
+        if self.current_game.is_some() {
+            self.current_game = Some(game);
+        }
         Ok(())
     }
 

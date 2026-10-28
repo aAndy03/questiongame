@@ -145,6 +145,11 @@ describe('Manage workspaces', () => {
     const club = await screen.findByLabelText(`${WORKSPACE.actions}: Club`)
     fireEvent.click(club)
     fireEvent.click(await screen.findByText(WORKSPACE.archive))
+    // C13: it asks first, as Teams, Games and Questions do.
+    const confirm = await screen.findByRole('alertdialog')
+    expect(within(confirm).getByText(WORKSPACE.archiveTitle('Club'))).toBeTruthy()
+    expect(calls('workspace_archive')).toHaveLength(0)
+    fireEvent.click(within(confirm).getByRole('button', { name: WORKSPACE.archive }))
     await waitFor(() => expect(calls('workspace_archive')).toHaveLength(1))
     expect(await screen.findByText(WORKSPACE.archived)).toBeTruthy()
 
@@ -169,6 +174,9 @@ describe('Manage workspaces', () => {
     })
     expect(within(strip).getByText('3 selected')).toBeTruthy()
     fireEvent.click(within(strip).getByRole('button', { name: 'Archive 2' }))
+    const confirm = await screen.findByRole('alertdialog')
+    expect(within(confirm).getByText(WORKSPACE.archiveManyTitle(2))).toBeTruthy()
+    fireEvent.click(within(confirm).getByRole('button', { name: WORKSPACE.archive }))
     await waitFor(() => expect(calls('workspace_archive')).toHaveLength(2))
     expect(calls('workspace_archive').map((c) => c.args?.['id'])).not.toContain(fake.workspaces[0]?.id)
     expect(await screen.findByText(WORKSPACE.archivedMany(2))).toBeTruthy()

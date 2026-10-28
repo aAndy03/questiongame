@@ -27,6 +27,7 @@ type Dialog =
   | { readonly kind: 'renameGroup'; readonly group: WorkspaceGroup }
   | { readonly kind: 'deleteGroup'; readonly group: WorkspaceGroup }
   | { readonly kind: 'delete'; readonly workspace: Workspace; readonly counts: DeletePreview }
+  | { readonly kind: 'archive'; readonly ids: readonly string[] }
 
 /**
  * *Manage workspaces* (Beta 2.0, 05_STUDIO_DESIGN.md §21): every workspace by
@@ -187,9 +188,12 @@ export function WorkspacesPage() {
         setGroupPick(w.groupId ?? '')
         setDialog({ kind: 'group', ids: [w.id] })
         return
+      // Archive asks first, as a team, a game or a question does (C13); Restore undoes it.
       case 'archive':
+        setDialog({ kind: 'archive', ids: [w.id] })
+        return
       case 'restore':
-        await run.ok(action === 'archive' ? 'workspace_archive' : 'workspace_restore', { id: w.id })
+        await run.ok('workspace_restore', { id: w.id })
         return
       case 'delete': {
         const counts = await run<DeletePreview>('workspace_delete_preview', { id: w.id })
@@ -250,14 +254,19 @@ export function WorkspacesPage() {
         />
         <LibraryList
           view={lv}
-          total={data.workspaces.length}
+          // The rows of this view, as every other tab counts them (C13): an
+          // empty Archived view is "nothing archived", not "no results".
+          total={items?.length}
           scope={scope}
           isLoading={false}
           layout={layout}
           what={WORKSPACE.many}
           columns={{ title: { sortId: 'name', label: VIEWS.name }, meta: [{ sortId: 'changed', label: VIEWS.changed }] }}
           bulk={{
-            onArchive: (ids) => void bulkRun('workspace_archive', ids.filter((id) => id !== data.current)),
+            onArchive: (ids) => {
+              const picked = ids.filter((id) => id !== data.current)
+              if (picked.length > 0) setDialog({ kind: 'archive', ids: picked })
+            },
             onRestore: (ids) => void bulkRun('workspace_restore', ids),
             keep: [data.current],
             extra: (ids) => (
@@ -342,6 +351,22 @@ export function WorkspacesPage() {
           let ok = true
           for (const id of dialog.ids) ok = (await run.ok('workspace_set_group', { id, groupId, sortKey: sortKey++ })) && ok
           return ok
+        }}
+      />
+      <ConfirmDialog
+        isOpen={dialog?.kind === 'archive'}
+        onOpenChange={(o) => (o ? undefined : close())}
+        title={(() => {
+          if (dialog?.kind !== 'archive') return ''
+          const one = dialog.ids.length === 1 ? data.workspaces.find((w) => w.id === dialog.ids[0]) : undefined
+          return one ? WORKSPACE.archiveTitle(workspaceName(one)) : WORKSPACE.archiveManyTitle(dialog.ids.length)
+        })()}
+        body={WORKSPACE.archiveBody}
+        severity="danger"
+        confirmLabel={WORKSPACE.archive}
+        isPending={bulkPending}
+        onConfirm={async () => {
+          if (dialog?.kind === 'archive') await bulkRun('workspace_archive', dialog.ids)
         }}
       />
       <ConfirmDialog

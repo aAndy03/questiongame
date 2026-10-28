@@ -94,6 +94,8 @@ export const STATS = {
     noPlay: 'No Play is open.',
     noPlayHint: 'Load a game into Control to watch it here.',
     goToControl: 'Go to Control',
+    /** beta.12 (B6): a chart's answer failed — said, not left blank. */
+    chartsFailed: 'Some charts could not be drawn. They try again as the Play moves on.',
     score: 'Score',
     turnsTaken: 'Turns',
     accuracy: 'Accuracy',

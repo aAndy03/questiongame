@@ -8,7 +8,7 @@
  * read it, and an atom may depend on nothing but other atoms.
  */
 
-export type SettingsGroupId = 'award' | 'turn' | 'judging' | 'timer' | 'reveal' | 'control' | 'tips' | 'window' | 'audio' | 'library' | 'data'
+export type SettingsGroupId = 'award' | 'turn' | 'judging' | 'board' | 'timer' | 'reveal' | 'control' | 'tips' | 'window' | 'audio' | 'library' | 'data'
 
 export interface SettingsGroupCopy {
   readonly id: SettingsGroupId
@@ -34,6 +34,8 @@ export const SETTINGS_GROUPS: readonly SettingsGroupCopy[] = [
       'scoring.lock_speed_base',
       'scoring.lock_speed.enabled',
       'scoring.speed_weight',
+      'scoring.speed_window',
+      'scoring.speed_steps',
     ],
   },
   {
@@ -47,6 +49,13 @@ export const SETTINGS_GROUPS: readonly SettingsGroupCopy[] = [
     title: 'Judging',
     description: 'How a locked answer is compared with the correct set.',
     keys: ['judging.partial_credit', 'judging.order_matters'],
+  },
+  // beta.12 (B3): what a new game's board may hold, and the language Stage speaks — as Rules has them.
+  {
+    id: 'board',
+    title: 'Board and Stage',
+    description: 'What a new game’s board may hold, and the language Stage speaks. Seeds new games only.',
+    keys: ['board.allow_repeated_difficulty', 'stage.language'],
   },
   {
     id: 'timer',
@@ -101,6 +110,8 @@ export const SETTINGS_GROUPS: readonly SettingsGroupCopy[] = [
 ]
 
 export const SETTINGS = {
+  /** What the empty state names when the settings cannot be read (beta.12, B6). */
+  what: 'settings',
   title: 'Settings',
   description: 'Displays, defaults, shortcuts.',
   inner: {
@@ -157,6 +168,10 @@ export const SETTINGS = {
     'scoring.lock_speed_base': { label: 'Base for lock speed', description: 'Lock speed multiplies this base.' },
     'scoring.lock_speed.enabled': { label: 'Add lock-speed bonus', description: 'Faster locks earn more, on top of the base.' },
     'scoring.speed_weight': { label: 'Speed weight', description: 'points = floor(base × (1 + weight × remaining ÷ duration)).' },
+    'scoring.speed_window': { label: 'Speed bonus lasts', description: 'How long a fast answer is worth extra: a share of the question’s clock, or fixed seconds.' },
+    'scoring.speed_steps': { label: 'Round the bonus into steps', description: 'Every answer inside a step is worth the same. Off is a smooth slope.' },
+    'board.allow_repeated_difficulty': { label: 'Allow repeated difficulties', description: 'A domain on the board may hold several questions at one difficulty; they are asked one after the other and pay the same.' },
+    'stage.language': { label: 'Stage language', description: 'The language Stage’s own words are shown in.' },
     'turn.max_consecutive_correct': { label: 'Cap after consecutive correct', description: 'The token ends after this many correct answers in a row. Off means no cap.' },
     'turn.bonus_after_consecutive': { label: 'Bonus after consecutive correct', description: 'Extra points once a team answers this many in a row.' },
     'judging.partial_credit': { label: 'Partial credit', description: 'Off: a multiple-answer question is correct only when the locked set equals the correct set.' },
@@ -229,6 +244,7 @@ export const SETTINGS = {
 
   monitors: {
     title: (n: number) => (n === 1 ? 'Displays (1)' : `Displays (${n})`),
+    titleLoading: 'Displays',
     primary: 'Primary',
     stage: 'Stage',
     notConnected: 'Not connected',

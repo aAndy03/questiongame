@@ -73,6 +73,10 @@ export const WORKSPACE = {
   moveManyTitle: (n: number) => `Move ${n} ${n === 1 ? 'workspace' : 'workspaces'} to a workspace group`,
   archivedMany: (n: number) => `Archived ${n} ${n === 1 ? 'workspace' : 'workspaces'}`,
   restoredMany: (n: number) => `Restored ${n} ${n === 1 ? 'workspace' : 'workspaces'}`,
+  /** Archive confirms first, as on Teams, Games and Questions (C13). */
+  archiveTitle: (name: string) => `Archive ${name}?`,
+  archiveManyTitle: (n: number) => `Archive ${n} ${n === 1 ? 'workspace' : 'workspaces'}?`,
+  archiveBody: 'An archived workspace leaves the switcher and stays restorable from here. Nothing in it is deleted.',
   deleteGroupTitle: 'Delete this workspace group?',
   deleteGroupBody: 'Its workspaces stay, ungrouped.',
   deleteTitle: 'Delete this workspace permanently?',
@@ -90,8 +94,8 @@ export const WORKSPACE = {
 export const TRANSFER = {
   /** The bulk bar's menu of the two. */
   menu: 'Copy or move…',
-  copyTo: 'Copy to…',
-  moveTo: 'Move to…',
+  copyTo: 'Copy to workspace…',
+  moveTo: 'Move to workspace…',
   copyTitle: 'Copy to another workspace',
   moveTitle: 'Move to another workspace',
   target: 'Workspace',

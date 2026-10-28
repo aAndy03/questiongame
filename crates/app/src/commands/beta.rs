@@ -227,6 +227,12 @@ pub fn beta_copy_stable_library(
         emit::catalog_changed(&app, &CatalogChange { kind, id: String::new(), op: ChangeOp::Upserted });
     }
     emit::play_state(&app, &mut host, crate::state::now_ms(), true);
+    // The whole host was swapped: its workspaces too (beta.12, A9).
+    if let Ok(list) = crate::commands::workspace::workspaces(&host) {
+        emit::workspace_changed(&app, &list);
+    }
+    drop(host);
+    crate::tick::health_once(&app);
     swapped
 }
 

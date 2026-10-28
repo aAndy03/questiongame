@@ -128,7 +128,7 @@ describe('menus have section names (P20)', () => {
     for (const title of ['Team', 'Copy and move', 'Status']) expect(within(menu).getByText(title)).toBeTruthy()
     const names = within(menu).getAllByRole('menuitem').map((i) => i.getAttribute('data-key') ?? i.textContent)
     expect(names.length).toBe(6)
-    expect(within(menu).getByRole('menuitem', { name: 'Copy to…' })).toBeTruthy()
+    expect(within(menu).getByRole('menuitem', { name: 'Copy to workspace…' })).toBeTruthy()
     expect(within(menu).getByRole('menuitem', { name: 'Archive' })).toBeTruthy()
   })
 

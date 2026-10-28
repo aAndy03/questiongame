@@ -507,6 +507,7 @@ fn a_restart_empties_the_overlay_queue_and_persists_both_plays() {
         let closed = h.play.restart(
             questiongame_host::RestartMode::SameQuestions {
                 new_play_id: questiongame_host::PlayId::from("play-2"),
+                settings: Box::new(h.play.get_state().unwrap().snapshot().settings.clone()),
             },
             3_000,
         )?;

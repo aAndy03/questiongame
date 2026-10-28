@@ -13,7 +13,7 @@ import {
 } from '@questiongame/contract'
 import { HitTarget, Text } from '@/atoms'
 import { EmptyState } from '@/molecules'
-import { CONTROL, RING_ROLE, SESSION } from '@/copy'
+import { CONTROL, RING_ROLE, SESSION, TIMER } from '@/copy'
 import { useHostCommand } from '@/host/commands'
 import { hasTauri } from '@/host/host'
 import { usePlayClock, usePlayState } from '@/host/playState'
@@ -217,7 +217,7 @@ function nodesToTargets(play: PlayStateForMain, nodes: readonly ViewerNodeRect[]
       const selected = session.selectedOptionIds.includes(option.id)
       const next = session.answerMode === 'multiple' ? (selected ? session.selectedOptionIds.filter((id) => id !== option.id) : [...session.selectedOptionIds, option.id]) : [option.id]
       const legal = session.lockedOptionIds === null
-      out.push({ ...geom, label: option.text, legal, reason: legal ? null : TIMER_LOCKED, selected, command: 'set_selection', args: { optionIds: next } })
+      out.push({ ...geom, label: option.text, legal, reason: legal ? null : TIMER.locked, selected, command: 'set_selection', args: { optionIds: next } })
     } else if (slot === 'question.stem' && session) {
       out.push({ ...geom, label: SESSION.revealStem, legal: !session.reveals.stem, reason: null, selected: session.reveals.stem, command: 'reveal_stem', args: undefined })
     } else if (slot === 'question.result' && session) {
@@ -244,5 +244,3 @@ function nodesToTargets(play: PlayStateForMain, nodes: readonly ViewerNodeRect[]
   }
   return out
 }
-
-const TIMER_LOCKED = 'Locked'

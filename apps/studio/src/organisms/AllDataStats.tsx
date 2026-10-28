@@ -99,6 +99,7 @@ export function AllDataStats({ view }: AllDataStatsProps) {
       />
 
       {stats.isPending ? <Skeleton shape="row" count={4} /> : null}
+      {stats.isError ? <EmptyState kind="error" what={STATS.empty.what} detail={stats.error.message} /> : null}
       {stats.data && stats.data.rows.length === 0 ? (
         <EmptyState kind="noResults" what={STATS.empty.what} detail={STATS.empty.body} />
       ) : null}

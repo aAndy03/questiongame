@@ -19,10 +19,10 @@ export const APP = {
 export const TABS: Readonly<Record<Tab, { label: string; hint: string }>> = {
   teams: { label: 'Teams', hint: 'Who competes' },
   library: { label: 'Domains & Questions', hint: 'What gets asked' },
-  games: { label: 'Games', hint: 'Recipes: roster, board, rules' },
+  games: { label: 'Games', hint: 'What you prepare: roster, board, rules' },
   operators: { label: 'Operators', hint: 'Who runs the studio' },
   control: { label: 'Control', hint: 'Run a Play' },
-  screens: { label: 'Screens', hint: 'Stage layout per recipe' },
+  screens: { label: 'Screens', hint: 'Stage layout per game' },
   statistics: { label: 'Statistics', hint: 'Results and history' },
   settings: { label: 'Settings', hint: 'Displays, defaults, shortcuts' },
   workspaces: { label: 'Workspaces', hint: 'Libraries in this file, and the workspace groups they sit in' },
@@ -30,7 +30,7 @@ export const TABS: Readonly<Record<Tab, { label: string; hint: string }>> = {
 }
 
 export const PLAY_STATUS = {
-  none: 'No recipe loaded',
+  none: 'No game loaded',
   loaded: 'Loaded',
   playing: 'Playing',
   paused: 'Paused',
@@ -347,6 +347,11 @@ export const CONFIRM = {
   referencedByMany: (by: string) => `Some are still used, by ${by}. They stay there; only the library rows are archived.`,
   arm: 'Archive',
   armed: 'Confirm archive',
+  /** The toast counts what the host took, never what was asked (C3). */
+  archivedN: (n: number, what: string) => `Archived ${n} ${what}`,
+  restoredN: (n: number, what: string) => `Restored ${n} ${what}`,
+  /** Under a partial toast: the refusals themselves are in the notices. */
+  notDone: (n: number) => (n === 1 ? '1 was refused — see the notices.' : `${n} were refused — see the notices.`),
   dirtyTitle: 'Unsaved changes',
   dirtyBody: 'Save them, or discard and leave?',
   save: 'Save',
@@ -746,12 +751,13 @@ export const GAME = {
   rules: 'Rules',
   rulesHint: 'Award, judging, cap and bonus, the timer. Frozen at Play start.',
   plays: 'Plays',
-  playsHint: 'Every Play of this recipe. Read-only.',
+  playsHint: 'Every Play of this game. Read-only.',
   playsEmpty: 'No Plays yet.',
   loadIntoControl: 'Load into Control',
   loadedInControl: 'In Control',
   frozen: 'Frozen',
-  frozenBanner: 'This game is playing. Its recipe is frozen until the Play ends.',
+  /** Only what the Play froze — never overstate it: folder, tags, reveal and Stage language stay editable. */
+  frozenBanner: 'This game is playing. Its name, roster, board and scoring, timer, cap and bonus and judging rules are frozen until the Play ends; folder, tags, reveal and Stage language stay editable.',
   goToControl: 'Go to Control',
   overridden: 'Overridden',
   reset: 'Reset to original',

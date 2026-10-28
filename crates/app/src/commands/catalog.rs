@@ -16,7 +16,7 @@ use questiongame_host::catalog::{
     RecipeChange, RecipeEdit,
     SearchHit, SearchQuery, SeedMode, SeedResult, SeedStatus, TeamOverlay,
 };
-use questiongame_host::flags::{GameSetting, GameSettings};
+use questiongame_host::flags::GameSettings;
 use questiongame_host::{DomainId, QuestionId, RecipeId, TeamId};
 use serde::Deserialize;
 use tauri::{AppHandle, State, WebviewWindow};
@@ -405,19 +405,29 @@ pub fn recipe_set_settings(
     guard::allow(window.label(), "recipe_set_settings")?;
     let now = crate::state::now_ms();
     let mut host = state.lock();
-    let language = settings.language;
-    let change = host.catalog.recipe_set_settings(&id, settings, now)?;
-    emit::recipe_changed(&app, &change);
-
     let loaded = host
         .play
         .get_state()
         .map(|p| p.snapshot().recipe_id.clone() == id)
         .unwrap_or(false);
-    if loaded && host.flags.language() != language {
-        let ctx = host.runtime();
-        host.flags
-            .settings_set_current_game(GameSetting::Language(language), ctx)?;
+    // §2.5, enforced here and not only by a disabled input (beta.12, A1): the
+    // game in an open Play keeps its rules until the Play ends.
+    if loaded
+        && host.runtime().play_is_open()
+        && host
+            .flags
+            .current_game()
+            .is_some_and(|now| now.game_affecting_differs(&settings))
+    {
+        return Err(questiongame_host::MatchError::SettingFrozen("game").into());
+    }
+    let change = host.catalog.recipe_set_settings(&id, settings.clone(), now)?;
+    emit::recipe_changed(&app, &change);
+
+    // The game in Control follows its row (beta.12, A1): Control's copy went
+    // stale, and its next edit wrote the stale copy back over this one.
+    if loaded {
+        host.flags.sync_current_game(settings)?;
         emit::play_state(&app, &mut host, now, true);
     }
     Ok(change)
@@ -655,12 +665,22 @@ pub fn recipe_set_overlay(
     scope: EditScope,
     also_copies: Option<bool>,
 ) -> AppResult<RecipeChange> {
+    // *Apply to original* rewrites the library row itself: said, or the Board,
+    // the list and the editor keep the old body (beta.12, A2).
+    let original = matches!(scope, EditScope::Original).then(|| {
+        let (kind, id) = match &target {
+            OverlaySpec::Team { id, .. } => (questiongame_host::CatalogKind::Team, id.to_string()),
+            OverlaySpec::Domain { id, .. } => (questiongame_host::CatalogKind::Domain, id.to_string()),
+            OverlaySpec::Question { id, .. } => (questiongame_host::CatalogKind::Question, id.to_string()),
+        };
+        questiongame_host::catalog::CatalogChange { kind, id, op: questiongame_host::catalog::ChangeOp::Upserted }
+    });
     // `alsoCopies` (beta.4): *Apply to original* updates the row's copies too.
     let (change, copies) = catalog_write(&window, &state, "recipe_set_overlay", |h, now| {
         Ok(h.catalog.recipe_set_overlay_with(&id, target.into(), scope, also_copies.unwrap_or(false), now)?)
     })?;
     emit::recipe_changed(&app, &change);
-    for copy in &copies {
+    for copy in original.iter().chain(&copies) {
         emit::catalog_changed(&app, copy);
     }
     Ok(change)

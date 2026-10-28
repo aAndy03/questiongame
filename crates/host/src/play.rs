@@ -148,7 +148,14 @@ impl Play {
 
         let spans = active_inversions(events);
         for event in events.iter().skip(1) {
-            if event.is_bookkeeping() || is_inverted(&spans, event.seq) {
+            if event.is_bookkeeping() {
+                continue;
+            }
+            if is_inverted(&spans, event.seq) {
+                // An undo takes back a turn, not the operator's pause (beta.12,
+                // A3): a Pause inside the span is still a Pause, or Undo while
+                // paused would set the show running and count the paused time.
+                play.apply_lifecycle(event);
                 continue;
             }
             play.apply(event)?;
@@ -291,6 +298,22 @@ impl Play {
 
     /// The fold step. Infallible in practice — a failure here means a command
     /// was appended without being validated first.
+    /// Only what a Pause or a Resume does to the Play itself: its status and
+    /// its clock. For events inside an undone span ([`Self::replay`]).
+    fn apply_lifecycle(&mut self, event: &Event) {
+        match event.kind {
+            EventKind::Paused => {
+                self.status = PlayStatus::Paused;
+                self.clock.stop(event.at_ms);
+            }
+            EventKind::Resumed => {
+                self.status = PlayStatus::Playing;
+                self.clock.start(event.at_ms);
+            }
+            _ => {}
+        }
+    }
+
     fn apply(&mut self, event: &Event) -> MatchResult<()> {
         let at = event.at_ms;
         match &event.kind {
