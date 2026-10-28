@@ -25,6 +25,7 @@ export type Moment =
   | 'route:workspaces'
   | 'route:settings'
   | 'editor:new-question'
+  | 'domain:opened'
   | 'question:saved'
   | 'questions:selected-many'
   | 'game:opened'
@@ -45,6 +46,7 @@ export const MOMENTS: readonly Moment[] = [
   'route:workspaces',
   'route:settings',
   'editor:new-question',
+  'domain:opened',
   'question:saved',
   'questions:selected-many',
   'game:opened',

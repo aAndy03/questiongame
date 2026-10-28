@@ -274,8 +274,7 @@ export function useBulkEdit(): BulkEditController {
         title: MENU.domains,
         items: [
           ...(inside ? [{ id: 'group', label: GROUPS_TAGS.bulkGroup, icon: 'folder' as const }] : []),
-          { id: 'add_to_domain', label: GROUPS_TAGS.bulkAdd, icon: 'add' },
-          { id: 'move_to_domain', label: GROUPS_TAGS.bulkMove, icon: 'transfer' },
+          // Add to / Move to domain are in *Copy or move…* (beta.12), as a row's menu has them.
           ...(inside ? [{ id: 'remove_from_domain', label: GROUPS_TAGS.bulkRemove, icon: 'remove' as const }] : []),
         ],
       },
@@ -288,7 +287,7 @@ export function useBulkEdit(): BulkEditController {
         </Button>
         <Dropdown.Popover placement="bottom start" className="min-w-[14rem]">
           <Dropdown.Menu aria-label={GROUPS_TAGS.edit} onAction={(k) => start(String(k) as Op, ids, context)}>
-            {renderMenuSections(sections)}
+            {renderMenuSections(sections.filter((s) => s.items.length > 0))}
           </Dropdown.Menu>
         </Dropdown.Popover>
       </Dropdown>

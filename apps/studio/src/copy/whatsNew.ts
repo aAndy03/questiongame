@@ -65,9 +65,9 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
     },
   },
   {
+    // Published inside 2.0.0-beta.11, but its own entry all the same: What's
+    // new is the whole changelog (beta.12 — the maintainer wants it listed).
     version: '2.0.0-beta.10',
-    // Built, never published on its own: it went out inside 2.0.0-beta.11.
-    unreleased: true,
     notes: {
       en: [
         {

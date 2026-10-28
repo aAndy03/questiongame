@@ -14,7 +14,16 @@ export interface QuestionDragState {
   /** Ctrl (⌘ on a Mac) held: the drop moves rather than adds. */
   readonly move: boolean
   /** Every domain the carried questions are in now, archived ones too — what a Move replaces. */
-  readonly homes: readonly { readonly id: string; readonly name: string }[]
+  readonly homes: readonly Home[]
+  /** beta.12: of the carried questions, how many are already in the domain under the pointer. */
+  readonly already?: number | undefined
+}
+
+/** A domain the carried questions are in; `archived` ones count for a Move, not for "in n domains". */
+export interface Home {
+  readonly id: string
+  readonly name: string
+  readonly archived?: boolean | undefined
 }
 
 /**
@@ -23,9 +32,21 @@ export interface QuestionDragState {
  * target), once Ctrl is down.
  */
 export function chipNote(s: QuestionDragState): { readonly text: string; readonly replaces: number | null } {
-  if (!s.move) return { text: DRAG.inDomains(s.homes.length), replaces: null }
-  const replaces = s.homes.filter((h) => h.id !== s.over?.id).length
+  // Each domain once, and only the ones the rows count (beta.12: a question
+  // shown under two groups read "in 4 domains" — its archived copies counted).
+  const homes = [...new Map(s.homes.map((h) => [h.id, h])).values()]
+  if (!s.move) return { text: DRAG.inDomains(homes.filter((h) => !h.archived).length), replaces: null }
+  const replaces = homes.filter((h) => h.id !== s.over?.id).length
   return { text: DRAG.replaces(replaces), replaces }
+}
+
+/**
+ * beta.12: what the drop would find already there, said before the drop — the
+ * toast says it after. `null` when the pointer is over no domain, or none is.
+ */
+export function alreadyNote(s: QuestionDragState): string | null {
+  if (!s.over || !s.already) return null
+  return s.already >= s.ids.length ? DRAG.chipAllThere(s.ids.length) : DRAG.chipSomeThere(s.already)
 }
 
 interface Context {
@@ -71,7 +92,9 @@ export interface QuestionDragProviderProps {
   /** The questions a grab carries: the selection when the grabbed row is in it, else that row. */
   idsFor(id: string): readonly string[]
   /** The domains those questions are in now (all of them, archived too), for the chip's count. */
-  homesOf?: ((ids: readonly string[]) => readonly { readonly id: string; readonly name: string }[]) | undefined
+  homesOf?: ((ids: readonly string[]) => readonly Home[]) | undefined
+  /** beta.12: how many of those questions are in this domain already. */
+  alreadyIn?: ((ids: readonly string[], domainId: string) => number) | undefined
   /** One write; `false` when the host refused (the notice says why). */
   onDrop(ids: readonly string[], domainId: string, domainName: string, move: boolean): Promise<boolean>
 }
@@ -110,7 +133,7 @@ export function domainAt(p: { readonly x: number; readonly y: number }): { id: s
  * held at the release moves instead of adding; the chip says which as the key
  * goes down and up.
  */
-export function QuestionDragProvider({ children, idsFor, homesOf, onDrop }: QuestionDragProviderProps) {
+export function QuestionDragProvider({ children, idsFor, homesOf, alreadyIn, onDrop }: QuestionDragProviderProps) {
   const [state, setState] = useState<QuestionDragState | null>(null)
   // The handlers below are the provider's, bound once: they read the drag through this.
   const live = useRef<QuestionDragState | null>(null)
@@ -170,7 +193,11 @@ export function QuestionDragProvider({ children, idsFor, homesOf, onDrop }: Ques
     if (ctrl !== null) moveKey.current = ctrl
     if (chip.current) chip.current.style.transform = chipAt(at)
     const over = domainAt(at)
-    setState((s) => (s && (s.over?.id !== over?.id || s.move !== moveKey.current) ? { ...s, over, move: moveKey.current } : s))
+    setState((s) =>
+      s && (s.over?.id !== over?.id || s.move !== moveKey.current)
+        ? { ...s, over, move: moveKey.current, already: over && alreadyIn ? alreadyIn(s.ids, over.id) : undefined }
+        : s,
+    )
   }
 
   const context = useMemo(() => ({ state, pulse }), [state, pulse])
@@ -189,7 +216,10 @@ export function QuestionDragProvider({ children, idsFor, homesOf, onDrop }: Ques
         // feedback, drawn here) and nothing restyles the page under the operator.
         plugins={PLUGINS}
         onDragStart={(event) => {
-          const id = String(event.operation.source?.id ?? '')
+          // The row's draggable id is per row (a question shows once per domain
+          // group); the question is in its data (beta.12).
+          const source = event.operation.source
+          const id = String((source?.data as { questionId?: string } | undefined)?.questionId ?? source?.id ?? '')
           const native = event.nativeEvent as PointerEvent | undefined
           const at = native && 'clientX' in native ? { x: native.clientX, y: native.clientY } : last.current
           start.current = at
@@ -235,7 +265,7 @@ export function QuestionDragProvider({ children, idsFor, homesOf, onDrop }: Ques
         : createPortal(
             <AnimatePresence>
               {state ? (
-                <Chip key="live" chipRef={chip} at={last.current} label={label(state)} note={chipNote(state)} move={state.move} over={state.over !== null} />
+                <Chip key="live" chipRef={chip} at={last.current} label={label(state)} note={chipNote(state)} already={alreadyNote(state)} move={state.move} over={state.over !== null} />
               ) : settle ? (
                 <motion.div
                   key={`settle-${settle.key}`}
@@ -262,15 +292,43 @@ export function QuestionDragProvider({ children, idsFor, homesOf, onDrop }: Ques
 
 const chipAt = (at: Point) => `translate(${at.x + 14}px, ${at.y + 14}px)`
 
-function Chip({ chipRef, at, label, note, move, over }: { chipRef: Ref<HTMLDivElement>; at: Point; label: string; note: ReturnType<typeof chipNote>; move: boolean; over: boolean }) {
+function Chip({
+  chipRef,
+  at,
+  label,
+  note,
+  already,
+  move,
+  over,
+}: {
+  chipRef: Ref<HTMLDivElement>
+  at: Point
+  label: string
+  note: ReturnType<typeof chipNote>
+  already: string | null
+  move: boolean
+  over: boolean
+}) {
   return (
     <div ref={chipRef} className="pointer-events-none fixed left-0 top-0 z-[100]" style={{ transform: chipAt(at) }} data-drag-chip>
-      <ChipBody label={label} note={note} move={move} over={over} />
+      <ChipBody label={label} note={note} already={already} move={move} over={over} />
     </div>
   )
 }
 
-function ChipBody({ label, note, move, over }: { label: string; note?: ReturnType<typeof chipNote> | undefined; move: boolean; over: boolean }) {
+function ChipBody({
+  label,
+  note,
+  already,
+  move,
+  over,
+}: {
+  label: string
+  note?: ReturnType<typeof chipNote> | undefined
+  already?: string | null | undefined
+  move: boolean
+  over: boolean
+}) {
   return (
     <div
       className={[
@@ -293,6 +351,12 @@ function ChipBody({ label, note, move, over }: { label: string; note?: ReturnTyp
           {note.text}
         </span>
       ) : null}
+      {/* beta.12: already in the domain under the pointer — some or all. */}
+      {already ? (
+        <span className="whitespace-nowrap rounded-full bg-[color-mix(in_oklab,currentColor_14%,transparent)] px-1.5 py-px text-[0.6875rem] tabular-nums" data-drag-already>
+          {already}
+        </span>
+      ) : null}
     </div>
   )
 }
@@ -301,8 +365,17 @@ function ChipBody({ label, note, move, over }: { label: string; note?: ReturnTyp
  * One draggable question row: the row element is the draggable — no handle —
  * and draws nothing for it; the row dims while it is carried.
  */
-export function DraggableQuestion({ id, children }: { id: string; children: (ref: (el: Element | null) => void, carried: boolean) => ReactNode }) {
-  const { ref } = useDraggable({ id })
+export function DraggableQuestion({
+  id,
+  instance,
+  children,
+}: {
+  id: string
+  /** The row's own key: a question grouped by domain is a row in each group, and each must be grabbable (beta.12). */
+  instance?: string | undefined
+  children: (ref: (el: Element | null) => void, carried: boolean) => ReactNode
+}) {
+  const { ref } = useDraggable({ id: instance ?? id, data: { questionId: id } })
   const { state } = useQuestionDrag()
   return <>{children(ref, state?.ids.includes(id) ?? false)}</>
 }

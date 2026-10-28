@@ -9,7 +9,7 @@ import { demoLibrary, demoRecipe } from '@/host/devFake'
 import { setHostTransport } from '@/host/host'
 import { receivePlayState } from '@/host/playState'
 import type { BulkReport, Domain } from '@/host/types'
-import { domainAt, dropSummary, grabbed } from '@/organisms'
+import { alreadyNote, chipNote, domainAt, dropSummary, grabbed, type QuestionDragState } from '@/organisms'
 
 /**
  * beta.9: drag questions onto a domain. dnd-kit's pointer sensor does not
@@ -100,6 +100,29 @@ describe('the write a drop makes, through the host (beta.9)', () => {
   })
 })
 
+describe('the chip, before the drop (beta.12)', () => {
+  const base: QuestionDragState = { ids: ['a', 'b', 'c'], over: { id: 'd1', name: 'Astronomie' }, move: false, homes: [] }
+
+  it('counts each domain once, and archived ones only for a move', () => {
+    // A question grouped under two domains is two rows; its archived copies are not where it is.
+    const homes = [
+      { id: 'd1', name: 'Astronomie' },
+      { id: 'd2', name: 'Biblie' },
+      { id: 'd1', name: 'Astronomie' },
+      { id: 'old', name: 'Biblie (old)', archived: true },
+    ]
+    expect(chipNote({ ...base, over: null, homes }).text).toBe('in 2 domains')
+    expect(chipNote({ ...base, move: true, homes }).replaces).toBe(2)
+  })
+
+  it('says some or all are already in the domain under the pointer', () => {
+    expect(alreadyNote({ ...base, already: 3 })).toBe('all 3 already there')
+    expect(alreadyNote({ ...base, already: 1 })).toBe('1 already there')
+    expect(alreadyNote({ ...base, already: 0 })).toBeNull()
+    expect(alreadyNote({ ...base, over: null, already: 3 })).toBeNull()
+  })
+})
+
 describe('the keyboard way: a question row and the strip (beta.9)', () => {
   async function onLibrary() {
     render(<App />)
@@ -118,12 +141,24 @@ describe('the keyboard way: a question row and the strip (beta.9)', () => {
     expect(await screen.findByText('Each question leaves every other domain it is in, so it ends in this one alone.')).toBeTruthy()
   })
 
-  it('offers Move to domain… in the strip’s Edit… menu', async () => {
+  it('offers Add to and Move to domain… in the strip’s Copy or move…, as a row’s menu does (beta.12)', async () => {
+    await onLibrary()
+    fireEvent.click(screen.getByRole('checkbox', { name: /^Select What does the L/ }))
+    const strip = document.querySelector<HTMLElement>('[data-bulk-strip]')!
+    fireEvent.click(within(strip).getByRole('button', { name: 'Copy or move…' }))
+    expect(await screen.findByRole('menuitem', { name: 'Add to domain…' })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Copy to…' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Move to domain…' }))
+    expect(await screen.findByText('Each question leaves every other domain it is in, so it ends in this one alone.')).toBeTruthy()
+  })
+
+  it('keeps Edit… for what edits the questions where they are', async () => {
     await onLibrary()
     fireEvent.click(screen.getByRole('checkbox', { name: /^Select What does the L/ }))
     const strip = document.querySelector<HTMLElement>('[data-bulk-strip]')!
     fireEvent.click(within(strip).getByRole('button', { name: 'Edit…' }))
-    expect(await screen.findByRole('menuitem', { name: 'Move to domain…' })).toBeTruthy()
+    expect(await screen.findByRole('menuitem', { name: 'Add question tag…' })).toBeTruthy()
+    expect(screen.queryByRole('menuitem', { name: 'Add to domain…' })).toBeNull()
   })
 
   it('makes question rows draggable without drawing any sign of it', async () => {

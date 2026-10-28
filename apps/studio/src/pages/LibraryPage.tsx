@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button, MeaningChip, Text } from '@/atoms'
 import { ActionMenu, DifficultyChip, IncompleteMark, PageHeader } from '@/molecules'
 import { DomainPane, ImportQuestionsDialog, LibraryList, ListToolbar, QuestionDetail, useArchive, useTransfer, useBulkEdit, DomainGroupsManager, QuestionTagsManager, useGroupEditing, useShareQuestions, QuestionDragProvider, dropSummary, grabbed, type RecordView } from '@/organisms'
+import { tipMoment } from '@/tips/signals'
 import { ListArea, SplitLayout } from '@/templates'
 import { useArchiveScope, useChromeStore, useListState, usePrefs } from '@/chrome/chrome'
 import { useNavStore } from '@/chrome/nav'
@@ -33,6 +34,10 @@ export interface LibraryPageProps {
  * find a question in no domain.
  */
 export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
+  // beta.12: a domain opened is a moment a tip may answer (its groups).
+  useEffect(() => {
+    if (domainId !== null) tipMoment('domain:opened')
+  }, [domainId])
   const scope = useArchiveScope('library')
   const setScope = useChromeStore((s) => s.setArchiveScope)
   const { view } = usePrefs()
@@ -195,11 +200,18 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
   // of the questions the drop writes, so archived ones, left out, count for nothing.
   const homesOf = (ids: readonly string[]) => {
     const carried = new Set(liveOf(ids))
-    return (domains.data ?? []).filter((d) => d.questions.some((m) => carried.has(m.questionId))).map((d) => ({ id: d.id, name: d.name }))
+    return (domains.data ?? [])
+      .filter((d) => d.questions.some((m) => carried.has(m.questionId)))
+      .map((d) => ({ id: d.id, name: d.name, archived: d.archivedAt !== null }))
+  }
+  // beta.12: the chip says what the drop would find there, before the drop.
+  const alreadyIn = (ids: readonly string[], domainId: string) => {
+    const there = new Set((domains.data ?? []).find((d) => d.id === domainId)?.questions.map((m) => m.questionId) ?? [])
+    return liveOf(ids).filter((id) => there.has(id)).length
   }
 
   return (
-    <QuestionDragProvider idsFor={idsFor} homesOf={homesOf} onDrop={dropOn}>
+    <QuestionDragProvider idsFor={idsFor} homesOf={homesOf} alreadyIn={alreadyIn} onDrop={dropOn}>
     <SplitLayout
       header={
         <PageHeader
@@ -361,7 +373,16 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
                       <Button size="sm" variant="secondary" icon="share" onPress={() => void sharing.share(inViewOrder(ids))}>
                         {SHARE.action}
                       </Button>
-                      {transfer.menu({ questions: ids })}
+                      {transfer.menu(
+                        { questions: ids },
+                        undefined,
+                        archivedView
+                          ? undefined
+                          : {
+                              add: () => bulkEdit.start('add_to_domain', ids, { domain: domain && domain.archivedAt === null ? domain : null, questions: picked }),
+                              move: () => bulkEdit.start('move_to_domain', ids, { domain: domain && domain.archivedAt === null ? domain : null, questions: picked }),
+                            },
+                      )}
                     </>
                   )
                 },

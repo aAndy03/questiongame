@@ -22,7 +22,6 @@ function kindOf(args: Args): string | null {
 export function skillOf(name: Command, args: Args): string | null {
   switch (name) {
     case 'catalog_upsert':
-    case 'catalog_upsert_propagating':
       return kindOf(args) === 'domain' ? 'make-domain' : null
     case 'catalog_import_questions':
       // The dialog previews with `commit: false` on every edit (review).
@@ -30,9 +29,22 @@ export function skillOf(name: Command, args: Args): string | null {
     case 'tag_rename':
     case 'tag_delete':
     case 'tags_unify':
+      return 'tags-and-groups'
     case 'domain_group_create':
     case 'domain_group_rename':
-      return 'tags-and-groups'
+      return 'domain-groups'
+    // Tagging or grouping questions in bulk (`catalog_bulk_edit`).
+    case 'catalog_bulk_edit': {
+      const op = (args?.['edit'] as { op?: unknown } | undefined)?.op
+      return op === 'tag' ? 'tags-and-groups' : op === 'group' ? 'domain-groups' : null
+    }
+    case 'recipe_bulk_edit':
+      return ((args?.['edits'] as readonly { op?: unknown }[] | undefined) ?? []).some((e) => e.op === 'set_folder') ? 'game-folders' : null
+    case 'workspace_group_create':
+    case 'workspace_set_group':
+      return 'workspace-groups'
+    case 'catalog_upsert_propagating':
+      return 'propagation'
     case 'recipe_new':
     case 'recipe_duplicate':
       return 'make-game'

@@ -89,7 +89,8 @@ export function TipCard({ tip, held, onRead, onGotIt, onDismiss, onMoreInHelp }:
         once(onDismiss)()
       }}
     >
-      <Panel className="relative flex flex-col gap-3 overflow-hidden shadow-[var(--overlay-shadow)]">
+      {/* The game cards' own hairline (beta.12): without it a tip melted into the page. */}
+      <Panel className="relative flex flex-col gap-3 overflow-hidden border border-[var(--border)] shadow-[var(--overlay-shadow)]">
         <div className="flex items-start gap-2.5">
           <span className="mt-0.5 shrink-0 text-[var(--accent)]">
             <Icon name="tip" size="sm" />

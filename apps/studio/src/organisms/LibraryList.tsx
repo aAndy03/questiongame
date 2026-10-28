@@ -202,7 +202,7 @@ export function LibraryList({
       />
     )
     return draggable ? (
-      <DraggableQuestion key={row.key} id={row.item.id}>
+      <DraggableQuestion key={row.key} id={row.item.id} instance={row.key}>
         {(ref, carried) => draw(ref, carried)}
       </DraggableQuestion>
     ) : (

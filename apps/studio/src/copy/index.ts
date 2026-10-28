@@ -207,6 +207,8 @@ export const MENU = {
   difficulty: 'Difficulty',
   gameTags: 'Game tags',
   toWorkspace: 'To another workspace',
+  /** beta.12: the bulk bar's *Copy or move…*, as a row's menu has it. */
+  toDomain: 'To a domain',
 } as const
 
 export const LIST = {
@@ -522,6 +524,9 @@ export const DRAG = {
   allThere: (n: number, domain: string) => (n === 1 ? `That question is already in ${domain}` : `All ${n.toLocaleString('en-US')} are already in ${domain}`),
   allOnlyThere: (n: number, domain: string) => (n === 1 ? `That question is already only in ${domain}` : `All ${n.toLocaleString('en-US')} are already only in ${domain}`),
   alreadyThere: (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'was' : 'were'} already there`,
+  /** beta.12: the chip, before the drop — some or all of what it carries is in that domain already. */
+  chipAllThere: (n: number) => (n === 1 ? 'already there' : `all ${n.toLocaleString('en-US')} already there`),
+  chipSomeThere: (n: number) => `${n.toLocaleString('en-US')} already there`,
   archivedLeft: (n: number) => `${n.toLocaleString('en-US')} archived ${n === 1 ? 'was' : 'were'} left out`,
   /** The row menu's way to the same two writes. */
   addToDomain: 'Add to domain…',

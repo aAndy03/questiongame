@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { AlertDialog, Dropdown } from '@heroui/react'
 import { Button, SelectField, SwitchField, Text } from '@/atoms'
 import { toast } from '@/chrome/toast'
-import { CONFIRM, MENU } from '@/copy'
+import { CONFIRM, DRAG, MENU } from '@/copy'
 import { TRANSFER } from '@/copy/workspaces'
 import { useHostCommand } from '@/host/commands'
 import { command, type HostError } from '@/host/host'
@@ -23,7 +23,12 @@ export interface TransferController {
    * The two verbs as one menu button, for a bulk bar. `move` narrows what Move
    * takes (beta.4: a playing game stays) and `leftOut` says so when it does.
    */
-  menu(selection: Selection, move?: { readonly selection: Selection; readonly leftOut: string | null }): ReactNode
+  menu(
+    selection: Selection,
+    move?: { readonly selection: Selection; readonly leftOut: string | null },
+    /** beta.12: *Add to domain…* / *Move to domain…* above the workspaces, as a question row's menu has them. */
+    domains?: { readonly add: () => void; readonly move: () => void },
+  ): ReactNode
   dialog: ReactNode
 }
 
@@ -224,7 +229,7 @@ export function useTransfer(): TransferController {
     </AlertDialog.Backdrop>
   )
 
-  const menu: TransferController['menu'] = (selection, move) => {
+  const menu: TransferController['menu'] = (selection, move, domains) => {
     const moving = move?.selection ?? selection
     const nothingToMove = Object.values(moving).every((ids) => (ids as readonly string[] | undefined)?.length === 0 || ids === undefined)
     return (
@@ -237,6 +242,8 @@ export function useTransfer(): TransferController {
           aria-label={TRANSFER.menu}
           disabledKeys={nothingToMove ? ['move'] : []}
           onAction={(key) => {
+            if (key === 'add_domain') return domains?.add()
+            if (key === 'move_domain') return domains?.move()
             if (key === 'move') {
               if (move?.leftOut) toast.info(move.leftOut)
               open('move', moving)
@@ -244,6 +251,18 @@ export function useTransfer(): TransferController {
           }}
         >
           {renderMenuSections([
+            ...(domains
+              ? [
+                  {
+                    id: 'domain',
+                    title: MENU.toDomain,
+                    items: [
+                      { id: 'add_domain', label: DRAG.addToDomain, icon: 'add' as const },
+                      { id: 'move_domain', label: DRAG.moveToDomain, icon: 'transfer' as const },
+                    ],
+                  },
+                ]
+              : []),
             {
               id: 'transfer',
               title: MENU.toWorkspace,
