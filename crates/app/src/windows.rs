@@ -64,14 +64,81 @@ pub fn open_studio(app: &AppHandle) -> AppResult<WebviewWindow> {
     if let Some(existing) = app.get_webview_window(MAIN) {
         return Ok(existing);
     }
-    Ok(debuggable(
-        WebviewWindowBuilder::new(app, MAIN, WebviewUrl::App(STUDIO_PATH.into()))
-            .title(studio_title(tauri::is_dev()))
-            .inner_size(1440.0, 920.0)
-            .min_inner_size(1100.0, 720.0),
-        app,
-    )
-    .build()?)
+    let native = native_title_bar(app);
+    let builder = WebviewWindowBuilder::new(app, MAIN, WebviewUrl::App(STUDIO_PATH.into()))
+        // Kept with Studio's own bar too: the taskbar, Alt-Tab, Mission
+        // Control and the e2e suite read it.
+        .title(studio_title(tauri::is_dev()))
+        .inner_size(1440.0, 920.0)
+        .min_inner_size(1100.0, 720.0);
+    Ok(debuggable(chrome(builder, native), app).build()?)
+}
+
+/// Whether the operator chose the OS's own title bar (beta.10,
+/// `window.native_title_bar`). Off — Studio's bar — when it cannot be read.
+fn native_title_bar(app: &AppHandle) -> bool {
+    app.try_state::<crate::state::AppState>()
+        .is_some_and(|state| state.lock().flags.globals().window.native_title_bar)
+}
+
+/// **Studio's own title bar** (beta.10): one bar, Studio's header, with the
+/// window's controls in it.
+///
+/// - **Windows**: no OS decorations; Studio draws minimize, maximize and close
+///   (`WindowControls`). `shadow` keeps the 1px edge, Windows 11's rounded
+///   corners and the resize borders an undecorated window would lose.
+/// - **macOS**: decorations kept, the title bar *overlaid* and its title
+///   hidden: the native traffic lights stay (close, minimize, zoom, full
+///   screen and their menus) over Studio's bar, which leaves them room.
+///
+/// `native` gives the OS's bar back, as it always was.
+fn chrome<'a>(
+    builder: WebviewWindowBuilder<'a, tauri::Wry, AppHandle>,
+    native: bool,
+) -> WebviewWindowBuilder<'a, tauri::Wry, AppHandle> {
+    #[cfg(target_os = "macos")]
+    {
+        // The title is hidden either way: switched live from the system bar to
+        // Studio's, a shown title would be drawn over Studio's header (there is
+        // no runtime call to hide it). The lights sit centred in the 48px bar.
+        let builder = builder
+            .hidden_title(true)
+            .traffic_light_position(tauri::LogicalPosition::new(18.0, 18.0));
+        return builder.title_bar_style(if native {
+            tauri::TitleBarStyle::Visible
+        } else {
+            tauri::TitleBarStyle::Overlay
+        });
+    }
+    #[allow(unreachable_code)]
+    builder.decorations(native).shadow(true)
+}
+
+/// The setting changed (beta.10): Studio's window follows at once, no restart.
+/// Windows toggles its decorations; a Mac swaps the overlaid title bar for the
+/// visible one. Studio redraws its own controls from the same setting.
+pub fn apply_title_bar(app: &AppHandle, native: bool) -> AppResult<()> {
+    crate::state::assert_unlocked("windows::apply_title_bar");
+    let Some(main) = app.get_webview_window(MAIN) else {
+        return Ok(());
+    };
+    #[cfg(target_os = "macos")]
+    {
+        main.set_title_bar_style(if native {
+            tauri::TitleBarStyle::Visible
+        } else {
+            tauri::TitleBarStyle::Overlay
+        })?;
+        return Ok(());
+    }
+    #[allow(unreachable_code)]
+    {
+        main.set_decorations(native)?;
+        if !native {
+            let _ = main.set_shadow(true);
+        }
+        Ok(())
+    }
 }
 
 /// A second launch of the app (P12.2): bring the running Studio to the front

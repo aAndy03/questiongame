@@ -92,6 +92,11 @@ pub fn settings_set_global(
         setting,
         GlobalSetting::StatsMonitorId(_) | GlobalSetting::StatsFullscreen(_)
     );
+    // beta.10: Studio's title bar, applied live once the lock is released.
+    let title_bar = match setting {
+        GlobalSetting::WindowNativeTitleBar(native) => Some(native),
+        _ => None,
+    };
     host.flags.settings_set_global(setting, ctx)?;
     let stats_target = places_stats.then(|| {
         let control = host.flags.control();
@@ -123,6 +128,9 @@ pub fn settings_set_global(
         && windows::stats_is_open(&app)
     {
         windows::open_stats(&app, key.as_ref(), fullscreen, &title)?;
+    }
+    if let Some(native) = title_bar {
+        windows::apply_title_bar(&app, native)?;
     }
     Ok(())
 }

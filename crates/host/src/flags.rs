@@ -453,6 +453,20 @@ pub struct GlobalSettings {
     /// written before the key existed checks.
     #[serde(default)]
     pub updates: UpdateSettings,
+    /// Studio's window (beta.10). `#[serde(default)]`: a document written
+    /// before the key existed gets Studio's own title bar.
+    #[serde(default)]
+    pub window: WindowSettings,
+}
+
+/// Studio's window chrome (beta.10).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WindowSettings {
+    /// `window.native_title_bar`: the OS's own title bar instead of Studio's
+    /// (Windows' caption buttons drawn by Studio; a Mac's traffic lights over
+    /// Studio's bar). Off by default; applied live.
+    #[serde(default)]
+    pub native_title_bar: bool,
 }
 
 /// What each workspace keeps for itself of the all-games document (Beta 2.0):
@@ -495,6 +509,7 @@ impl Default for GlobalSettings {
             shortcuts: ShortcutMap::default(),
             active_operator_id: None,
             updates: UpdateSettings::default(),
+            window: WindowSettings::default(),
         }
     }
 }
@@ -622,6 +637,8 @@ pub enum GlobalSetting {
     ActiveOperatorId(Option<OperatorId>),
     /// `updates.check_on_start` (P12.9).
     UpdatesCheckOnStart(bool),
+    /// `window.native_title_bar` (beta.10).
+    WindowNativeTitleBar(bool),
 }
 
 impl GlobalSetting {
@@ -646,6 +663,7 @@ impl GlobalSetting {
             GlobalSetting::Feature(root, _) => root.key(),
             GlobalSetting::ActiveOperatorId(_) => "operator.active",
             GlobalSetting::UpdatesCheckOnStart(_) => "updates.check_on_start",
+            GlobalSetting::WindowNativeTitleBar(_) => "window.native_title_bar",
         }
     }
 }
@@ -947,6 +965,7 @@ impl FlagService {
             GlobalSetting::Feature(root, on) => globals.features.set(root, on),
             GlobalSetting::ActiveOperatorId(v) => globals.active_operator_id = v,
             GlobalSetting::UpdatesCheckOnStart(v) => globals.updates.check_on_start = v,
+            GlobalSetting::WindowNativeTitleBar(v) => globals.window.native_title_bar = v,
         }
 
         validate_globals(&globals)?;

@@ -380,6 +380,8 @@ export interface GlobalSettings {
   readonly active_operator_id: string | null
   /** "Is there a newer release?" (P12.9). The app's only network call. */
   readonly updates: { readonly check_on_start: boolean }
+  /** beta.10: Studio's window chrome. Optional: an older host omits it. */
+  readonly window?: { readonly native_title_bar: boolean }
 }
 
 /** `update_check` (P12.9): the running version, GitHub's latest, and whether it is newer. */
@@ -431,6 +433,7 @@ export type GameSetting =
 export type GlobalSetting =
   | { readonly key: 'timer_enabled'; readonly value: boolean }
   | { readonly key: 'updates_check_on_start'; readonly value: boolean }
+  | { readonly key: 'window_native_title_bar'; readonly value: boolean }
   | { readonly key: 'timer_duration_ms'; readonly value: number }
   | { readonly key: 'game'; readonly value: GameSetting }
   | { readonly key: 'override_after_lock'; readonly value: OverrideAfterLock }

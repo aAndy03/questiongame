@@ -1,6 +1,15 @@
 {
   "identifier": "operator",
-  "description": "Studio. The operator surface: it drives everything, so it gets the default core permission set.",
+  "description": "Studio. The operator surface: it drives everything, so it gets the default core permission set — plus, since beta.10, what its own title bar needs: moving the window (the drag region and its double-click), minimize, maximize/restore and close (close goes through the quit guard), and reading whether it is maximized or full screen to draw the right buttons. Decorations and the title-bar style are the host's to change, never the page's.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-is-maximized",
+    "core:window:allow-is-fullscreen"
+  ]
 }

@@ -250,6 +250,19 @@ export function SettingsForm({ groups, compact }: SettingsFormProps) {
             </SettingRow>
           </SettingsGroup>
         )
+      case 'window':
+        return (
+          <SettingsGroup {...props}>
+            <SettingRow label={row('window.native_title_bar').label} description={row('window.native_title_bar').description}>
+              <SwitchField
+                label={row('window.native_title_bar').label}
+                hideLabel
+                isSelected={g.window?.native_title_bar ?? false}
+                onChange={(value) => setGlobal({ key: 'window_native_title_bar', value })}
+              />
+            </SettingRow>
+          </SettingsGroup>
+        )
       case 'audio':
         return <AudioGroup key={id} title={meta.title} description={compact ? undefined : meta.description} />
       case 'library':

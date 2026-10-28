@@ -141,3 +141,41 @@ fn identifiers_are_unique() {
     let duplicated: Vec<_> = seen.iter().filter(|(_, n)| **n > 1).collect();
     assert!(duplicated.is_empty(), "duplicated identifiers: {duplicated:?}");
 }
+
+/// beta.10: Studio's own title bar moves, minimizes, maximizes and closes its
+/// window, and reads whether it is maximized or full screen — and nothing
+/// more. Decorations and the title-bar style are the host's to change
+/// (`windows::apply_title_bar`), so no webview may.
+#[test]
+fn studio_may_drive_its_own_window_and_no_other_surface_may() {
+    let caps = capabilities();
+    let operator = caps
+        .iter()
+        .find(|c| c.identifier == "operator")
+        .expect("an operator capability");
+    for permission in [
+        "core:window:allow-start-dragging",
+        "core:window:allow-internal-toggle-maximize",
+        "core:window:allow-minimize",
+        "core:window:allow-toggle-maximize",
+        "core:window:allow-close",
+        "core:window:allow-is-maximized",
+        "core:window:allow-is-fullscreen",
+    ] {
+        assert!(operator.permissions.iter().any(|p| p == permission), "Studio lacks {permission}");
+    }
+    for cap in &caps {
+        assert!(
+            !cap.permissions.iter().any(|p| p.contains("set-decorations") || p.contains("set-title-bar-style")),
+            "{} may restyle a window; only the host does",
+            cap.identifier
+        );
+        if cap.identifier != "operator" {
+            assert!(
+                !cap.permissions.iter().any(|p| p.starts_with("core:window:")),
+                "{} drives a window",
+                cap.identifier
+            );
+        }
+    }
+}

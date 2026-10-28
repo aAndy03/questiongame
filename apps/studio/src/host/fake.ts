@@ -341,6 +341,8 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
   }
 
   /** The display picture, after anything that changes it (§9, P11.11). */
+  /** beta.10: `window.native_title_bar`. */
+  let nativeTitleBar = false
   const emitMonitors = () => {
     emit('monitors-changed', {
       monitors,
@@ -458,6 +460,7 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
       shortcuts,
       active_operator_id: activeOperatorId,
       updates: { check_on_start: fake.updatesOnStart },
+      window: { native_title_bar: nativeTitleBar },
     },
     currentGame: null,
     control,
@@ -1032,6 +1035,9 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
         }
         case 'updates_check_on_start':
           fake.updatesOnStart = setting.value
+          break
+        case 'window_native_title_bar':
+          nativeTitleBar = setting.value
           break
         case 'timer_enabled':
           globalsTimer = { ...globalsTimer, enabled: setting.value }

@@ -1232,6 +1232,7 @@ settings:
     - {game_affecting: true, key: turn.max_consecutive_correct, type: GameSetting, variant: "GameSetting::MaxConsecutiveCorrect(_)"}
     - {game_affecting: false, key: updates.check_on_start, type: GlobalSetting, variant: "GlobalSetting::UpdatesCheckOnStart(_)"}
     - {game_affecting: false, key: viewer.hit_targets, type: GlobalSetting, variant: "GlobalSetting::ViewerHitTargets(_)"}
+    - {game_affecting: false, key: window.native_title_bar, type: GlobalSetting, variant: "GlobalSetting::WindowNativeTitleBar(_)"}
   structs:
     GameSettings:
       fields:
@@ -1251,6 +1252,7 @@ settings:
         shortcuts: {type: ShortcutMap}
         timer: {type: TimerLevel}
         updates: {serde_default: true, type: UpdateSettings}
+        window: {serde_default: true, type: WindowSettings}
 storage:
   meta_keys:
     META_CURRENT_WORKSPACE: {file: crates/host/src/catalog/db.rs, value: workspace.current}
@@ -1795,9 +1797,9 @@ host_api:
     "flags::GameSetting::is_game_affecting": {doc: "True for the keys that freeze at `play_start` (§2.5).", kind: method, sig: "fn is_game_affecting(&self) -> bool"}
     "flags::GameSetting::key": {doc: "The §4.2 path.", kind: method, sig: "fn key(&self) -> &'static str"}
     "flags::GameSettings": {doc: "The recipe's B5 document — every key §4.2 marks *Game*, plus the reveal defaults, which are a Game default that Control may then change live.", kind: struct, sig: "struct GameSettings { scoring: ScoringSettings, judging: JudgingSettings, turn: TurnSettings, timer: TimerLevel, reveal: RevealSettings, language: Language, board: BoardSettings }"}
-    "flags::GlobalSetting": {doc: "One key of the all-games document.", kind: enum, sig: "enum GlobalSetting { TimerEnabled(bool) | TimerDurationMs(u32) | Game(GameSetting) | OverrideAfterLock(OverrideAfterLock) | Reveal(RevealChannel, RevealMode) | OverlayAnimationsEnabled(bool) | ViewerHitTargets(bool) | MosaicDensity(MosaicDensity) | StageMonitorId(Option<String>) | StageMirrorIds(Vec<String>) | StatsMonitorId(Option<String>) | StatsFullscreen(bool) | StageReattach(StageReattach) | AudioVolume(u8) | AudioMuted(bool) | AudioCue(CueKey, Option<String>) | Feature(FeatureRoot, bool) | ActiveOperatorId(Option<OperatorId>) | UpdatesCheckOnStart(bool) }"}
+    "flags::GlobalSetting": {doc: "One key of the all-games document.", kind: enum, sig: "enum GlobalSetting { TimerEnabled(bool) | TimerDurationMs(u32) | Game(GameSetting) | OverrideAfterLock(OverrideAfterLock) | Reveal(RevealChannel, RevealMode) | OverlayAnimationsEnabled(bool) | ViewerHitTargets(bool) | MosaicDensity(MosaicDensity) | StageMonitorId(Option<String>) | StageMirrorIds(Vec<String>) | StatsMonitorId(Option<String>) | StatsFullscreen(bool) | StageReattach(StageReattach) | AudioVolume(u8) | AudioMuted(bool) | AudioCue(CueKey, Option<String>) | Feature(FeatureRoot, bool) | ActiveOperatorId(Option<OperatorId>) | UpdatesCheckOnStart(bool) | WindowNativeTitleBar(bool) }"}
     "flags::GlobalSetting::key": {kind: method, sig: "fn key(&self) -> &'static str"}
-    "flags::GlobalSettings": {doc: "The all-games document (§11.L L1/L2): first run writes it, the Settings tab and Control Global edit it.", kind: struct, sig: "struct GlobalSettings { timer: TimerLevel, game_defaults: GameSettings, control: ControlSettings, features: FeatureRoots, shortcuts: ShortcutMap, active_operator_id: Option<OperatorId>, updates: UpdateSettings }"}
+    "flags::GlobalSettings": {doc: "The all-games document (§11.L L1/L2): first run writes it, the Settings tab and Control Global edit it.", kind: struct, sig: "struct GlobalSettings { timer: TimerLevel, game_defaults: GameSettings, control: ControlSettings, features: FeatureRoots, shortcuts: ShortcutMap, active_operator_id: Option<OperatorId>, updates: UpdateSettings, window: WindowSettings }"}
     "flags::MosaicDensity": {doc: "How dense the Control mosaic packs its panels (§4.2 `control.mosaic_density`).", kind: enum, sig: "enum MosaicDensity { Compact | Comfortable | Spacious }"}
     "flags::MosaicDensity::as_str": {kind: method, sig: "fn as_str(self) -> &'static str"}
     "flags::RuntimeContext": {doc: "What the host knows about the Play right now.", kind: struct, sig: "struct RuntimeContext { play_status: Option<PlayStatus>, session_issued: bool, session_locked: bool, session_resolved: bool, timer_running: bool, overlay_busy: bool }"}
@@ -1810,6 +1812,7 @@ host_api:
     "flags::ShortcutMap::is_empty": {kind: method, sig: "fn is_empty(&self) -> bool"}
     "flags::ShortcutMap::iter": {kind: method, sig: "fn iter(&self) -> impl Iterator<Item =(&str, &Chord)>"}
     "flags::UpdateSettings": {doc: "The update notice (P12.9).", kind: struct, sig: "struct UpdateSettings { check_on_start: bool }"}
+    "flags::WindowSettings": {doc: "Studio's window chrome (beta.10).", kind: struct, sig: "struct WindowSettings { native_title_bar: bool }"}
     "flags::WorkspaceDefaults": {doc: "What each workspace keeps for itself of the all-games document (Beta 2.0): the defaults a new game copies and the timer at the bottom of the §2.18 cascade.", kind: struct, sig: "struct WorkspaceDefaults { timer: TimerLevel, game_defaults: GameSettings }"}
     "flags::validate": {doc: "The §4.2 interlock table over one recipe document.", kind: fn, sig: "fn validate(game: &GameSettings) -> MatchResult<()>"}
   crates/host/src/health.rs:
@@ -2425,6 +2428,7 @@ app_crate:
       "whats_new::since": {doc: "`last_seen` is `META_LAST_SEEN`; `report` is what opening the library found (`None` for a library opened without one — memory, tests).", kind: fn, sig: "fn since(last_seen: Option<String>, report: Option<&OpenReport>) -> Since"}
     crates/app/src/windows.rs:
       "windows::apply": {doc: "Carry out a [`StageMove`].", kind: fn, sig: "fn apply(app: &AppHandle, state: &crate::state::AppState, mv: &StageMove) -> AppResult<()>"}
+      "windows::apply_title_bar": {doc: "The setting changed (beta.10): Studio's window follows at once, no restart.", kind: fn, sig: "fn apply_title_bar(app: &AppHandle, native: bool) -> AppResult<()>"}
       "windows::carry_out": {doc: "Carry out what a Stage window going away means (beta.10): the OS closed one, or the operator unticked a display.", kind: fn, sig: "fn carry_out(app: &AppHandle, state: &crate::state::AppState, closed: &questiongame_host::StageClosed) -> AppResult<()>"}
       "windows::close_stats": {doc: "Close the Statistics window if it is open.", kind: fn, sig: "fn close_stats(app: &AppHandle) -> AppResult<()>"}
       "windows::ensure_stage": {doc: "Stage, ready.", kind: fn, sig: "fn ensure_stage(app: &AppHandle, on: Option<&MonitorKey>) -> AppResult<WebviewWindow>"}
@@ -2984,7 +2988,15 @@ windows_and_permissions:
       windows: [stage, "stage-*"]
     operator:
       file: crates/app/capabilities/operator.json
-      permissions: ["core:default"]
+      permissions:
+        - "core:default"
+        - "core:window:allow-close"
+        - "core:window:allow-internal-toggle-maximize"
+        - "core:window:allow-is-fullscreen"
+        - "core:window:allow-is-maximized"
+        - "core:window:allow-minimize"
+        - "core:window:allow-start-dragging"
+        - "core:window:allow-toggle-maximize"
       windows: [main]
     statistics:
       file: crates/app/capabilities/statistics.json

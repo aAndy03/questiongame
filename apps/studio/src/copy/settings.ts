@@ -8,7 +8,7 @@
  * read it, and an atom may depend on nothing but other atoms.
  */
 
-export type SettingsGroupId = 'award' | 'turn' | 'judging' | 'timer' | 'reveal' | 'control' | 'audio' | 'library' | 'data'
+export type SettingsGroupId = 'award' | 'turn' | 'judging' | 'timer' | 'reveal' | 'control' | 'window' | 'audio' | 'library' | 'data'
 
 export interface SettingsGroupCopy {
   readonly id: SettingsGroupId
@@ -65,6 +65,13 @@ export const SETTINGS_GROUPS: readonly SettingsGroupCopy[] = [
     title: 'Control',
     description: 'How Control behaves. Live during a Play.',
     keys: ['override.after_lock', 'overlay_animations.enabled', 'viewer.hit_targets', 'control.mosaic_density', 'stage.reattach'],
+  },
+  // beta.10: Studio's own title bar, or the system's.
+  {
+    id: 'window',
+    title: 'Window',
+    description: 'Studio’s window. Applied at once.',
+    keys: ['window.native_title_bar'],
   },
   {
     id: 'audio',
@@ -155,6 +162,10 @@ export const SETTINGS = {
     'viewer.hit_targets': { label: 'Viewer hit targets', description: 'Click the Viewer to choose, select and lock.' },
     'control.mosaic_density': { label: 'Control density', description: 'How tight the Control panels sit.' },
     'stage.reattach': { label: 'Stage reattach', description: 'When the remembered display reappears mid-Play.' },
+    'window.native_title_bar': {
+      label: 'Use the system title bar',
+      description: 'The title bar Windows or macOS draws, above Studio’s own header. Off, Studio’s header is the title bar, with the window’s buttons in it.',
+    },
     'audio.volume': { label: 'Volume', description: 'Stage cue volume.' },
     'audio.muted': { label: 'Muted', description: 'Silences every cue on Stage.' },
     'audio.cues': { label: 'Cue map', description: 'Which file each cue plays, from the bundled pack.' },

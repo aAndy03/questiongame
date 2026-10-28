@@ -68,6 +68,13 @@ export const CHROME = {
   /** P21.3: the status bar's popovers. */
   clearAll: 'Clear all',
   openDisplays: 'Displays',
+  /** beta.10: Studio's own title bar on Windows. */
+  windowMinimize: 'Minimize',
+  windowMaximize: 'Maximize',
+  windowRestore: 'Restore down',
+  windowClose: 'Close window',
+  /** Windows' own tooltip on its close button. */
+  windowCloseTip: 'Close',
   displaysTitle: (n: number) => (n === 1 ? '1 display' : `${n} displays`),
   displaysSettings: 'Monitors settings',
   /** P21.4: what the status bar's displays say beside the small screens. */

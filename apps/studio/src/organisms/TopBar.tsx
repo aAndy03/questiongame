@@ -3,6 +3,8 @@ import { IconButton, Icon } from '@/atoms'
 import { OperatorBadge, PlayStatusPill } from '@/molecules'
 import { ControlTools } from './ControlTools'
 import { UnloadGame } from './UnloadGame'
+import { SIDEBAR_WIDTH } from './SidebarNav'
+import { TRAFFIC_LIGHTS, WindowControls, useTitleBar } from './WindowControls'
 import { useActivateOperator } from './useActivateOperator'
 import { useChromeStore, usePrefs, type ThemeChoice } from '@/chrome/chrome'
 import { useNavStore } from '@/chrome/nav'
@@ -24,7 +26,7 @@ export function TopBar() {
   const goForward = useNavStore((s) => s.goForward)
   const go = useNavStore((s) => s.go)
   const onControl = useNavStore((s) => s.route.tab === 'control')
-  const { theme } = usePrefs()
+  const { theme, sidebar } = usePrefs()
   const setTheme = useChromeStore((s) => s.setTheme)
   const { activate, prompt } = useActivateOperator()
 
@@ -38,16 +40,27 @@ export function TopBar() {
     if (target) activate(target)
   }
 
+  // beta.10: Studio's header **is** the title bar, unless the system's was
+  // chosen. Its empty parts move the window (double-click maximizes, as the
+  // OS's bar does); on Windows the caption buttons close it; on a Mac the
+  // traffic lights sit at the window's top-left, so the bar starts after them
+  // when the sidebar is narrower than they are.
+  const { custom, mac } = useTitleBar()
+  const inset = custom && mac ? Math.max(0, TRAFFIC_LIGHTS - SIDEBAR_WIDTH[sidebar]) : 0
+  const drag = custom ? { 'data-tauri-drag-region': true } : {}
+
   return (
     <header
       className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--chrome-line)] px-3"
-      style={{ background: 'var(--chrome)' }}
+      style={{ background: 'var(--chrome)', paddingLeft: inset > 0 ? inset + 12 : undefined }}
+      data-title-bar={custom ? (mac ? 'mac' : 'windows') : undefined}
+      {...drag}
     >
       <div className="flex items-center gap-1">
         <IconButton icon="back" label={CHROME.back} size="sm" isDisabled={back.length === 0} onPress={() => void goBack()} />
         <IconButton icon="forward" label={CHROME.forward} size="sm" isDisabled={forward.length === 0} onPress={() => void goForward()} />
       </div>
-      <div className="min-w-0 flex-1" />
+      <div className="min-w-0 flex-1 self-stretch" {...drag} />
       {/*
         The pill is centred on the **window** (beta.9), not on what is left of
         the header between the sidebar and the tools: Control's tools coming
@@ -129,6 +142,7 @@ export function TopBar() {
         </Dropdown>
         {prompt}
       </div>
+      {custom && !mac ? <WindowControls /> : null}
     </header>
   )
 }

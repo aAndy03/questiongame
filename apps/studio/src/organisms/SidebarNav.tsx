@@ -8,6 +8,7 @@ import { usePlayState } from '@/host/playState'
 import { useAppInfo } from '@/host/queries'
 import { BETA_CHIP } from '@/copy/beta'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher'
+import { TRAFFIC_LIGHTS, useTitleBar } from './WindowControls'
 
 export const SIDEBAR_WIDTH: Record<SidebarMode, number> = { expanded: 240, rail: 56, hidden: 0 }
 
@@ -65,6 +66,18 @@ export function SidebarNav() {
     />
   )
 
+  const { custom, mac } = useTitleBar()
+  const lights = custom && mac
+  const drag = custom ? { 'data-tauri-drag-region': true } : {}
+  const toggle = (
+    <IconButton
+      icon={sidebar === 'expanded' ? 'sidebarExpanded' : 'sidebarRail'}
+      label={sidebar === 'expanded' ? CHROME.sidebarCollapse : sidebar === 'rail' ? CHROME.sidebarHide : CHROME.sidebarShow}
+      size="sm"
+      onPress={cycle}
+    />
+  )
+
   return (
     <>
       {sidebar === 'hidden' ? (
@@ -91,7 +104,15 @@ export function SidebarNav() {
         aria-hidden={sidebar === 'hidden' ? true : undefined}
         style={{ background: 'var(--chrome)' }}
       >
-        <div className={['flex h-12 items-center', collapsed ? 'justify-center' : 'justify-between px-3'].join(' ')}>
+        {/* The left end of Studio's title bar (beta.10): it moves the window,
+          * and on a Mac it leaves the traffic lights their room — the
+          * brand after them, or, in a rail too narrow for both, the toggle
+          * on the row below. */}
+        <div
+          className={['flex h-12 items-center', collapsed ? 'justify-center' : 'justify-between px-3'].join(' ')}
+          style={lights && !collapsed ? { paddingLeft: TRAFFIC_LIGHTS } : undefined}
+          {...drag}
+        >
           {collapsed ? null : (
             <div className="flex min-w-0 items-center gap-1.5">
               <Text variant="studio-label" tone="default" className="px-1.5">
@@ -100,13 +121,9 @@ export function SidebarNav() {
               {betaChip}
             </div>
           )}
-          <IconButton
-            icon={sidebar === 'expanded' ? 'sidebarExpanded' : 'sidebarRail'}
-            label={sidebar === 'expanded' ? CHROME.sidebarCollapse : sidebar === 'rail' ? CHROME.sidebarHide : CHROME.sidebarShow}
-            size="sm"
-            onPress={cycle}
-          />
+          {lights && collapsed ? null : toggle}
         </div>
+        {lights && collapsed ? <div className="flex justify-center pb-2">{toggle}</div> : null}
         {collapsed && betaChip ? <div className="flex justify-center pb-2">{betaChip}</div> : null}
         <ChromeLine />
         {/* Above Library: every tab below it is this workspace's (Beta 2.0). */}
