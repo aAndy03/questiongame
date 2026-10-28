@@ -267,10 +267,19 @@ pub fn stage_set_monitor(
     // *creates* a webview, which pumps the message loop and lets the new
     // window invoke before this returns — with the lock held that is a wait
     // on ourselves.
-    let mv = {
+    {
         let mut host = state.lock();
         let key = monitor_id.clone().map(MonitorKey::new);
-        let mv = host.display.set_monitor(key)?;
+        let _ = host.display.set_monitor(key)?;
+        // A tick while Stage is closed starts Stage **there, alone** (beta.10
+        // review): one tick, one window — the mirrors remembered from before
+        // are let go rather than raised with it; ticking more adds them.
+        if !host.display.is_open() {
+            host.display.set_wanted_mirrors(Vec::new());
+            let ctx = host.runtime();
+            host.flags
+                .settings_set_global(questiongame_host::flags::GlobalSetting::StageMirrorIds(Vec::new()), ctx)?;
+        }
 
         let ctx = host.runtime();
         host.flags.settings_set_global(
@@ -279,14 +288,10 @@ pub fn stage_set_monitor(
         )?;
         let globals = host.flags.globals().clone();
         host.catalog.settings_store(&globals)?;
-        mv
     };
 
-    // Built where it belongs; `apply` then has nothing to do unless the window
-    // already existed somewhere else.
+    // Built where it belongs, or — already standing — moved there.
     windows::stage_up(&app, &state)?;
-    windows::apply(&app, &state, &mv)?;
-    windows::tell_studio(&app, &state);
     Ok(())
 }
 

@@ -186,7 +186,7 @@ function Shell() {
 
   // The workspace has no name yet — a fresh library, or one that just moved
   // into its first workspace. Asked before first run and before the shell;
-  // nothing suggests a name.
+  // a moved library is told what happened and offered *My library* (beta.10).
   const unnamed =
     !namedDone && workspaces.data !== undefined && workspaces.data.workspaces.find((w) => w.id === workspaces.data?.current)?.name === null
   if (unnamed) {

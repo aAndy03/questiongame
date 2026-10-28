@@ -32,7 +32,7 @@ export const WORKSPACE = {
   // beta.10: a 1.x library meeting 2.0 is told what happened, first.
   guidedTitle: 'questiongame 2.0 keeps your library in a workspace',
   guidedSafeTitle: 'Your library is safe',
-  guidedSafeBody: 'It was copied before anything changed, into the backups beside it.',
+  guidedSafeBody: 'Studio copies a library before it changes anything in it. Nothing was lost.',
   guidedShowFolder: 'Show in folder',
   guidedHereTitle: 'Everything is here',
   guidedHereBody: 'Your teams, domains, questions and games moved into this workspace as they were.',

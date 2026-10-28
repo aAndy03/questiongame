@@ -271,6 +271,9 @@ export const SETTINGS = {
     arrangement: (names: readonly string[]) => `Displays as arranged, left to right: ${names.join(', ')}`,
   } as const,
 
+  /** macOS only, after the title-bar row: the traffic lights move to their new place when Studio next starts (beta.10). */
+  titleBarMacNote: 'On a Mac, the window buttons settle in their new place the next time Studio starts.',
+
   shortcuts: {
     command: 'Command',
     chord: 'Chord',

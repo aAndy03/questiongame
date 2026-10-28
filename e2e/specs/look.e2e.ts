@@ -35,8 +35,10 @@ async function settle(): Promise<void> {
   await browser.waitUntil(
     async () => {
       const text = await $('body').getText()
-      if (text.includes('Name your workspace') || text.includes('Create your first workspace')) {
-        await (await $('aria/Workspace name')).setValue('Beta copy')
+      if (text.includes('keeps your library in a workspace') || text.includes('Create your first workspace')) {
+        const field = await $('aria/Workspace name')
+        await field.clearValue()
+        await field.setValue('Beta copy')
         await press('Continue')
         return false
       }

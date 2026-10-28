@@ -101,7 +101,7 @@ export const GESTURES: readonly Gesture[] = [
     keys: ['f1'],
     action: 'press',
     does: 'Opens Help',
-    where: 'Anywhere in Studio',
+    where: 'Anywhere in Studio, except while typing',
   },
 ]
 

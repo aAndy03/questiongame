@@ -202,6 +202,22 @@ describe('Settings ▸ Monitors, with several displays', () => {
     await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('stage'))
   })
 
+  it('a tick with Stage closed opens it there alone, in one command (beta.10 review)', async () => {
+    await openMonitors()
+    await act(async () => button(cardFor('primary'), 'Send Stage here')!.click())
+    await act(async () => button(cardFor('tv@1920x1080'), 'Send Stage here')!.click())
+    await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('mirror'))
+    await act(async () => screen.getByRole('button', { name: 'Close Stage' }).click())
+    await waitFor(() => expect(cardFor('primary').dataset['stage']).toBe('free'))
+    const before = fake.calls.length
+    await act(async () => button(cardFor('tv@1920x1080'), 'Send Stage here')!.click())
+    await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('stage'))
+    // One window: the old pacer and its mirror are not raised with it.
+    expect(cardFor('primary').dataset['stage']).toBe('free')
+    const sent = fake.calls.slice(before).map((c) => c.name).filter((n) => n.startsWith('stage_'))
+    expect(sent).toEqual(['stage_set_monitor'])
+  })
+
   /**
    * The settings document has no host event of its own, so a command that
    * writes it must invalidate the query. One missing from that list looks like

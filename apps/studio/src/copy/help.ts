@@ -90,7 +90,7 @@ export const HELP: readonly HelpSection[] = [
           {
             kind: 'list',
             items: [
-              '**Select** is a working choice. It can change, and the timer keeps running.',
+              '**Select** is a working choice. It can change, and a running timer keeps running.',
               '**Lock** freezes the choice and stops the timer ({{key:enter}}). Nothing is scored yet.',
               '**Reveal** shows whether it was right, scores it, and uses up the question for this Play ({{key:r}}).',
             ],
@@ -113,7 +113,7 @@ export const HELP: readonly HelpSection[] = [
           },
           { kind: 'p', text: 'With speed counting, an instant answer pays the most and a slow one pays less, down to the plain base at the end of the speed window.' },
           { kind: 'p', text: 'A wrong or empty answer scores 0. Points are written only at Reveal, never at Lock.' },
-          { kind: 'p', text: 'On a **multiple-answer** question, a team must pick every right answer and only those. The order it picks them in does not matter. **Partial credit** in Rules gives part of the points for a partial pick.' },
+          { kind: 'p', text: 'On a **multiple-answer** question, a team must pick every right answer and only those. The order it picks them in does not matter, unless {{ui:Option order matters}} is on in Rules. **Partial credit** in Rules gives part of the points for a partial pick.' },
         ],
       },
       {
@@ -121,7 +121,7 @@ export const HELP: readonly HelpSection[] = [
         title: 'Rounds, the timer, and the end',
         blocks: [
           { kind: 'p', text: '**The round rule:** no team gets a second token before every team has had its first, a third before every team has had its second, and so on. Studio only lets you give the token to teams not yet served this round.' },
-          { kind: 'p', text: '**The timer** counts down while a question is open. If it reaches zero with an answer selected, the answer locks by itself; with nothing selected, the team can still answer, and you reveal when ready.' },
+          { kind: 'p', text: '**The timer** starts when you press {{key:space}} or its button, and counts down until you lock or pause it. If it reaches zero with an answer selected, the answer locks by itself; with nothing selected, the team can still answer, and you reveal when ready.' },
           { kind: 'p', text: 'With the timer off, the game runs at **operator pace**: no countdown, no lock at zero, no speed bonus, and no clock on Stage. A game can use the all-games timer (Inherit), set its own Duration, or turn it off.' },
           { kind: 'p', text: '**The end:** the Play ends when every question on the board has been used. Reveal the final places from the lowest up to first.' },
           { kind: 'p', text: 'Ties are allowed at every place. Two teams level share it, and the next place is skipped: 1, 1, 3.' },
@@ -231,7 +231,7 @@ export const HELP: readonly HelpSection[] = [
               'In the Domains pane, {{gesture:mod-click-domains}} and {{gesture:shift-click-domains}} pick several domains and list their questions together.',
             ],
           },
-          { kind: 'p', text: '{{ui:Select all}} ticks what is in view, on every page; {{ui:Clear}} empties the selection.' },
+          { kind: 'p', text: 'The tick-box in a list’s header ticks every row that matches the search and filters, on every page; {{ui:Clear}} empties the selection.' },
         ],
       },
       {
@@ -264,13 +264,13 @@ export const HELP: readonly HelpSection[] = [
         id: 'import',
         title: 'Import questions',
         blocks: [
-          { kind: 'p', text: 'Bring many questions in at once from a JSON file with {{ui:Import questions…}}. Choose a file or paste its text, check the rows, then import.' },
+          { kind: 'p', text: 'Bring many questions in at once from a JSON file with {{ui:Import}}. Choose a file or paste its text, check the rows, then import.' },
           {
             kind: 'steps',
             items: [
               'Press {{ui:Copy template}} to copy an example file.',
               'Fill it in yourself, or paste it to an AI assistant and ask for questions. The template explains itself to whoever fills it in: how to spread difficulties, where the right answer can stand, and what makes a question incomplete.',
-              'Paste the result into {{ui:Import questions…}}. Duplicates and rejected rows are listed first; untick a row to leave it out, or open it to fix it.',
+              'Paste the result into {{ui:Import}}. Duplicates and rejected rows are listed first; untick a row to leave it out, or open it to fix it.',
               'Import. Domains that do not exist yet are created.',
             ],
           },
@@ -282,7 +282,7 @@ export const HELP: readonly HelpSection[] = [
         title: 'Share questions',
         blocks: [
           { kind: 'p', text: 'Tick questions and press {{ui:Share}} to copy them as text, complete: options, right answers, difficulty, domains, tags and explanation.' },
-          { kind: 'p', text: 'Paste it into {{ui:Import questions…}} in any library. A domain with the same name is joined, and a question already there is not added twice.' },
+          { kind: 'p', text: 'Paste it into {{ui:Import}} in any library. A domain with the same name is joined, and a question already there is not added twice.' },
         ],
       },
       {
@@ -309,12 +309,12 @@ export const HELP: readonly HelpSection[] = [
             items: [
               'Open a game on {{ui:Games}} and press {{ui:Load into Control}}. Stage opens with it.',
               'Press {{ui:Start Play}}.',
-              'Give the token, let the team choose a domain, then Select, Lock and Reveal.',
+              'Give the token, let the team choose a domain, start the timer, then Select, Lock and Reveal.',
               'When every question is used, show the final leaderboard and reveal the places.',
             ],
           },
           { kind: 'p', text: 'With nothing loaded, Control lists the games you played or edited last, each with {{ui:Load into Control}}.' },
-          { kind: 'p', text: '{{ui:Pause}} stops the clock; {{ui:Unload game}} takes the game out of Control and asks whether to keep the Play’s record.' },
+          { kind: 'p', text: '{{ui:Pause}} stops the clock. {{ui:Unload game}}, the ✕ in the top bar, takes the game out of Control: a Play that was started ends there, and you choose whether to keep its record. A game loaded and never started leaves nothing behind.' },
         ],
       },
       {
@@ -339,7 +339,7 @@ export const HELP: readonly HelpSection[] = [
         id: 'undo-and-redo',
         title: 'Undo and redo',
         blocks: [
-          { kind: 'p', text: '{{ui:Undo turn}} ({{key:mod+z}}) takes back the last step, a reveal included, scores and all. {{ui:Redo turn}} ({{key:mod+shift+z}}) puts it back.' },
+          { kind: 'p', text: '{{ui:Undo turn}} ({{key:mod+z}}) takes back the last answered question: its reveal and its points go, the question is back on the board, and the token goes back to the team that held it. {{ui:Redo turn}} ({{key:mod+shift+z}}) puts it back.' },
           { kind: 'p', text: 'Nothing is erased: the Timeline keeps the undo as a step of its own. To go back to the start, Restart is cleaner than undoing everything.' },
         ],
       },
@@ -378,17 +378,17 @@ export const HELP: readonly HelpSection[] = [
         id: 'choose-displays',
         title: 'Choosing displays',
         blocks: [
-          { kind: 'p', text: 'Press the displays in the status bar to open the {{ui:Displays}} popover. Tick a display to show Stage there, and tick its Statistics box to show Statistics.' },
+          { kind: 'p', text: 'Press the displays in the status bar to open the {{ui:Displays}} popover. Tick a display to show Stage there, and tick its Statistics box to show Statistics. With Stage closed, a tick opens it on that display alone.' },
           { kind: 'figure', figure: 'stage-displays', caption: 'The displays popover: a tick for each display Stage shows on, and one for Statistics.' },
           {
             kind: 'list',
             items: [
               'Tick more than one display and Stage **mirrors**: the same picture on each.',
-              'Use the move button beside a display to send Stage there alone.',
+              'Use the move button beside a display without Stage to move the main Stage window there; mirrors stay where they are.',
               'Untick a display to take Stage off it. Untick the last one and Stage closes.',
             ],
           },
-          { kind: 'p', text: '{{ui:Monitors settings}} opens Settings ▸ Monitors, the same picture with a map of where your displays stand.' },
+          { kind: 'p', text: '{{ui:Monitors settings}} opens Settings ▸ Monitors: the same choices, and with several displays a map of where they stand.' },
         ],
       },
       {

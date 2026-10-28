@@ -6,6 +6,7 @@ import { FIELD } from '@/copy'
 import { SETTINGS, SETTINGS_GROUPS, type SettingsGroupId } from '@/copy/settings'
 import { useHostCommand } from '@/host/commands'
 import { useSettings } from '@/host/queries'
+import { isMac } from '@/chrome/platform'
 import type {
   Disabled,
   GameSetting,
@@ -253,7 +254,10 @@ export function SettingsForm({ groups, compact }: SettingsFormProps) {
       case 'window':
         return (
           <SettingsGroup {...props}>
-            <SettingRow label={row('window.native_title_bar').label} description={row('window.native_title_bar').description}>
+            <SettingRow
+              label={row('window.native_title_bar').label}
+              description={isMac() ? `${row('window.native_title_bar').description} ${SETTINGS.titleBarMacNote}` : row('window.native_title_bar').description}
+            >
               <SwitchField
                 label={row('window.native_title_bar').label}
                 hideLabel

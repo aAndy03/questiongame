@@ -43,7 +43,7 @@ import { useQuitStore } from '@/chrome/quit'
 import { useWindowsStore } from '@/chrome/windows'
 import { command, hasHost, on } from './host'
 import { receivePlayState, receivePlayTick } from './playState'
-import { invalidateForCatalogChange, invalidateForRecipeChange, keys, receiveWorkspaces } from './queries'
+import { invalidateForCatalogChange, invalidateForRecipeChange, invalidateSettings, keys, receiveWorkspaces } from './queries'
 import type { Workspaces } from './types'
 
 export function HostBridge() {
@@ -76,7 +76,14 @@ export function HostBridge() {
 
     // `null` is a value here: it is what the host emits when the recipe
     // leaves Control (`play_unload`), and Control reads it as "no Play".
-    add(on<PlayStateForMain | null>('play-state', receivePlayState))
+    add(
+      on<PlayStateForMain | null>('play-state', (next) => {
+        // Unloaded: the Play just closed is history now, and Control's recent
+        // games order by it (beta.10 review).
+        if (next === null) void client.invalidateQueries({ queryKey: ['plays', 'list'] })
+        receivePlayState(next)
+      }),
+    )
     // The show loop's own channel (P11.9): two numbers, ten times a second,
     // merged into the clock the countdown leaves subscribe to.
     add(on<PlayTick>('play-tick', receivePlayTick))
@@ -99,6 +106,10 @@ export function HostBridge() {
         // (§9, P11.11). Dropped until now, which is how Settings ▸ Monitors
         // came to show a Stage on a display it had never been on.
         setStagePlacement(m.stageOn, m.stageMirrors)
+        // A display adopted by the host (a hand move, a placement that landed
+        // elsewhere, a pacer handed over) is remembered there too: Settings ▸
+        // Monitors' *Remembered* line reads it (beta.10 review).
+        invalidateSettings(client)
         // Window state, not settings state: whether Statistics is on screen
         // comes from the host's window list, and only from here (§13.3).
         setStatsOpen(m.statsOpen)

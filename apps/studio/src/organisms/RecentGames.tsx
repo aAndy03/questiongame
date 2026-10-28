@@ -41,7 +41,7 @@ export function recentGames(recipes: readonly Recipe[], plays: readonly PlayReco
 
 /** *2 days ago*, *yesterday*, *just now* — said the operator's way. */
 export function ago(at: number, now = Date.now()): string {
-  const seconds = Math.round((at - now) / 1000)
+  const seconds = Math.min(0, Math.round((at - now) / 1000))
   const units: readonly [Intl.RelativeTimeFormatUnit, number][] = [
     ['year', 31_536_000],
     ['month', 2_592_000],

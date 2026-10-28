@@ -50,6 +50,20 @@ describe('Help (beta.10)', () => {
     await waitFor(() => expect(useNavStore.getState().route.tab).toBe('help'))
   })
 
+  it('leaves F1 to a Control command recorded onto it (review)', async () => {
+    await fake.invoke('settings_set_shortcut', { command: 'give_token', chord: 'f1' })
+    render(<App />)
+    await screen.findByRole('navigation', { name: /./ })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50))
+    })
+    fireEvent.keyDown(document.body, { key: 'F1', code: 'F1' })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50))
+    })
+    expect(useNavStore.getState().route.tab).not.toBe('help')
+  })
+
   it('shows every section, each in On this page', async () => {
     await openHelp()
     for (const s of HELP) expect(screen.getByRole('heading', { level: 2, name: s.title })).toBeTruthy()

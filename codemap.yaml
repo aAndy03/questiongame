@@ -1865,6 +1865,7 @@ host_api:
     "monitor::StageDisplay": {doc: "The connected displays and where the Stage window actually is.", kind: struct, sig: "struct StageDisplay {  }"}
     "monitor::StageDisplay::add_mirror": {doc: "Ask for another mirror.", kind: method, sig: "fn add_mirror(&mut self, key: MonitorKey) -> Result<Vec<MonitorKey>, MonitorError>"}
     "monitor::StageDisplay::adopt": {doc: "**The pacer is on `key`, whatever was asked** (beta.10): moved there by hand, or a placement that landed elsewhere.", kind: method, sig: "fn adopt(&mut self, key: MonitorKey)"}
+    "monitor::StageDisplay::canonical": {doc: "**The key a display goes by now** (beta.10 review): a remembered key in an older spelling (`Monitor #N@WxH` on a Mac, a logical-size key from before P11.6) becomes the connected display's own key, ...", kind: method, sig: "fn canonical(&self, key: &MonitorKey) -> MonitorKey"}
     "monitor::StageDisplay::current": {doc: "Where the window is now, as opposed to where the pick says it belongs.", kind: method, sig: "fn current(&self) -> Option<&MonitorKey>"}
     "monitor::StageDisplay::is_open": {doc: "Is Stage up?", kind: method, sig: "fn is_open(&self) -> bool"}
     "monitor::StageDisplay::is_single_display": {doc: "One display total is a valid configuration (§9): Stage fullscreens on it, Studio is an Alt-Tab away.", kind: method, sig: "fn is_single_display(&self) -> bool"}
@@ -1876,6 +1877,7 @@ host_api:
     "monitor::StageDisplay::primary": {kind: method, sig: "fn primary(&self) -> Option<&MonitorInfo>"}
     "monitor::StageDisplay::remove_display": {doc: "**Untick Stage on a display** (beta.10, the displays popover and Settings ▸ Monitors): a mirror stops; the pacer hands over to the first mirror; the last one closes Stage.", kind: method, sig: "fn remove_display(&mut self, key: &MonitorKey) -> StageClosed"}
     "monitor::StageDisplay::remove_mirror": {doc: "Stop mirroring on a display.", kind: method, sig: "fn remove_mirror(&mut self, key: &MonitorKey) -> Vec<MonitorKey>"}
+    "monitor::StageDisplay::same_display": {doc: "Do two keys name one display — the same key, or one display answering to both?", kind: method, sig: "fn same_display(&self, a: &MonitorKey, b: &MonitorKey) -> bool"}
     "monitor::StageDisplay::set_monitor": {doc: "`stage_set_monitor` — the manual send.", kind: method, sig: "fn set_monitor(&mut self, key: Option<MonitorKey>) -> Result<StageMove, MonitorError>"}
     "monitor::StageDisplay::set_open": {doc: "Stage was opened (Control Load, *Open Stage*) or closed (*Close Stage*).", kind: method, sig: "fn set_open(&mut self, open: bool)"}
     "monitor::StageDisplay::set_wanted_mirrors": {doc: "Replace the wanted list — what a settings load does.", kind: method, sig: "fn set_wanted_mirrors(&mut self, wanted: Vec<MonitorKey>)"}
@@ -3073,7 +3075,7 @@ build:
       dependencies:
         "[cfg(target_os = \"macos\")] core-graphics": "0.25"
         "[cfg(target_os = \"macos\")] objc2": "0.6"
-        "[cfg(target_os = \"macos\")] objc2-app-kit": "0.3; features [NSScreen, NSGraphics]"
+        "[cfg(target_os = \"macos\")] objc2-app-kit": "0.3; features [NSScreen, NSGraphics, objc2-core-foundation]"
         "[cfg(target_os = \"macos\")] objc2-foundation": "0.3; features [NSString, NSValue, NSDictionary, NSArray, NSEnumerator]"
         "[cfg(windows)] windows": "0.61; features [Win32_Foundation, Win32_Devices_Display, Win32_Graphics_Gdi]"
         fs4: "workspace = 1.1; features [sync]; no default features"

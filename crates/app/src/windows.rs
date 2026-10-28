@@ -100,10 +100,17 @@ fn chrome<'a>(
     {
         // The title is hidden either way: switched live from the system bar to
         // Studio's, a shown title would be drawn over Studio's header (there is
-        // no runtime call to hide it). The lights sit centred in the 48px bar.
-        let builder = builder
-            .hidden_title(true)
-            .traffic_light_position(tauri::LogicalPosition::new(18.0, 18.0));
+        // no runtime call to hide it). The lights sit centred in the 48px bar —
+        // only over Studio's bar: tao re-applies an inset on every resize, and
+        // in the system's 28px bar 18,18 puts them half out of it (review).
+        // Tauri 2.12 has no public call to change the inset afterwards, so a
+        // live switch shows fully after a restart (said in Settings).
+        let builder = builder.hidden_title(true);
+        let builder = if native {
+            builder
+        } else {
+            builder.traffic_light_position(tauri::LogicalPosition::new(18.0, 18.0))
+        };
         return builder.title_bar_style(if native {
             tauri::TitleBarStyle::Visible
         } else {
@@ -241,8 +248,19 @@ pub fn ensure_stage(app: &AppHandle, on: Option<&MonitorKey>) -> AppResult<Webvi
 pub fn stage_up(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()> {
     crate::state::assert_unlocked("windows::stage_up");
     let on = state.lock().display.current().cloned();
-    let pacer = ensure_stage(app, on.as_ref())?;
-    settle_pacer(app, state, on.as_ref(), landed(app, &pacer));
+    // A pacer already standing is **moved** where `on` says (beta.10 review):
+    // `ensure_stage` places only the window it builds, and settling an old
+    // window against a new pick adopted the old display, saved it, and
+    // warned that a move nobody had made yet had failed.
+    let standing = app.get_webview_window(STAGE);
+    let at = match standing {
+        Some(pacer) => move_to(app, &pacer, on.as_ref())?,
+        None => {
+            let pacer = ensure_stage(app, on.as_ref())?;
+            landed(app, &pacer)
+        }
+    };
+    settle_pacer(app, state, on.as_ref(), at);
     let mirrors = {
         let mut host = state.lock();
         host.display.set_open(true);
@@ -288,6 +306,10 @@ pub fn carry_out(
     use questiongame_host::StageClosed;
     crate::state::assert_unlocked("windows::carry_out");
     if *closed == StageClosed::Ignored {
+        // Already accounted for — but `close()` only posts to the event loop,
+        // so whoever closed it told Studio while the window still stood.
+        // Studio hears it again now that it is gone (beta.10 review).
+        tell_studio(app, state);
         return Ok(());
     }
     let mirrors = {
@@ -309,6 +331,8 @@ pub fn carry_out(
                     settle_pacer(app, state, Some(next), landed(app, &pacer));
                 }
             }
+            // Read again: settling may have adopted a display a mirror was on.
+            let mirrors = state.lock().display.live_mirrors();
             reconcile_mirrors(app, &mirrors)?;
         }
         StageClosed::Closed => {
@@ -639,7 +663,9 @@ pub fn refresh(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()>
 
     apply(app, state, &mv)?;
     // After `apply`, so a mirror is never opened on the display the pacer is
-    // about to be moved onto.
+    // about to be moved onto — and read again only if `apply` moved the
+    // pacer, since landing elsewhere is adopted and stands a mirror down.
+    let mirrors = if mv.to.is_some() { state.lock().display.live_mirrors() } else { mirrors };
     reconcile_mirrors(app, &mirrors)?;
     if let Some(notice) = &mv.notice {
         crate::emit::notice(app, notice);
@@ -721,20 +747,28 @@ pub fn report(app: &AppHandle, state: &crate::state::AppState) -> String {
     if let Some(separate) = topology.separate_spaces {
         let _ = writeln!(out, "macOS separate Spaces: {}", if separate { "on" } else { "OFF" });
     }
+    // What the host believes, copied out under the lock; where the windows
+    // are, asked with no lock held — `landed` is a window call (review).
+    let (stage_pick, believed, mirrors, stats_pick) = {
+        let host = state.lock();
+        let control = host.flags.control();
+        (
+            control.stage_monitor_id.clone().unwrap_or_else(|| "primary".to_owned()),
+            host.display.current().map_or_else(|| "primary".to_owned(), ToString::to_string),
+            host.display.live_mirrors(),
+            control.stats_monitor_id.clone().unwrap_or_else(|| "primary".to_owned()),
+        )
+    };
     let where_is = |label: &str| -> String {
         app.get_webview_window(label)
             .and_then(|w| landed(app, &w))
             .map_or_else(|| "closed".to_owned(), |k| k.to_string())
     };
-    let host = state.lock();
-    let control = host.flags.control();
-    let _ = writeln!(out, "stage: {} (remembered {}; host believes {})", where_is(STAGE),
-        control.stage_monitor_id.as_deref().unwrap_or("primary"),
-        host.display.current().map_or_else(|| "primary".to_owned(), ToString::to_string));
-    for (i, key) in host.display.live_mirrors().iter().enumerate() {
+    let _ = writeln!(out, "stage: {} (remembered {stage_pick}; host believes {believed})", where_is(STAGE));
+    for (i, key) in mirrors.iter().enumerate() {
         let _ = writeln!(out, "mirror {}: asked {}, window on {}", i + 1, key, where_is(&mirror_label(i)));
     }
-    let _ = writeln!(out, "statistics: {} (remembered {})", where_is(STATS), control.stats_monitor_id.as_deref().unwrap_or("primary"));
+    let _ = writeln!(out, "statistics: {} (remembered {stats_pick})", where_is(STATS));
     out
 }
 
@@ -780,8 +814,12 @@ fn move_to(app: &AppHandle, window: &WebviewWindow, target: Option<&MonitorKey>)
         None => app.primary_monitor()?.map(|m| *m.position()),
     };
     let Some(origin) = origin else {
+        // Unresolved, not "landed elsewhere": answering where the window
+        // stands made the caller adopt the laptop and forget the TV when a
+        // display list read came back short (beta.10 review). The monitor
+        // watch says what happened to a display that is really gone.
         tracing::warn!(?target, "a window was sent to a display that is no longer listed");
-        return Ok(landed(app, window));
+        return Ok(None);
     };
     PLACING.fetch_add(1, Ordering::SeqCst);
     let result = (|| -> AppResult<()> {
@@ -834,10 +872,15 @@ fn wait_until(done: impl Fn() -> bool, limit_ms: u64) {
 /// lie the old code told).
 fn settle_pacer(app: &AppHandle, state: &crate::state::AppState, wanted: Option<&MonitorKey>, landed: Option<MonitorKey>) {
     let Some(landed) = landed else { return };
-    let wanted_key = wanted.cloned().or_else(|| state.lock().display.primary().map(|m| m.key.clone()));
-    if wanted_key.as_ref() == Some(&landed) {
-        return;
-    }
+    let wanted_key = {
+        let host = state.lock();
+        let wanted_key = wanted.cloned().or_else(|| host.display.primary().map(|m| m.key.clone()));
+        // One display under two spellings is not a failed move (review).
+        if wanted_key.as_ref().is_some_and(|w| host.display.same_display(w, &landed)) {
+            return;
+        }
+        wanted_key
+    };
     {
         let mut host = state.lock();
         host.display.adopt(landed.clone());
@@ -853,7 +896,7 @@ fn settle_pacer(app: &AppHandle, state: &crate::state::AppState, wanted: Option<
             &["pick_monitor", "dismiss"],
         )
         .at("stage.monitor_id")
-        .with("monitor", wanted_key.map(|k| k.to_string()).unwrap_or_default())
+        .with("monitor", wanted_key.map_or_else(|| "the main display".to_owned(), |k| k.to_string()))
         .with("landed", landed.to_string()),
     );
 }
@@ -872,44 +915,92 @@ pub fn window_moved(app: &AppHandle, label: &str) {
     if PLACING.load(Ordering::SeqCst) > 0 {
         return;
     }
+    // One look per drag, not one thread per `Moved` (review): each event
+    // bumps the label's generation, and only the last one's thread acts.
+    let generation = if label == STAGE { &MOVED_STAGE } else { &MOVED_STATS };
+    let mine = generation.fetch_add(1, Ordering::SeqCst) + 1;
     let app = app.clone();
     let label = label.to_owned();
     tauri::async_runtime::spawn_blocking(move || {
         // A drag raises a stream of `Moved`; wait for it to come to rest.
         std::thread::sleep(std::time::Duration::from_millis(400));
-        if PLACING.load(Ordering::SeqCst) > 0 {
+        let generation = if label == STAGE { &MOVED_STAGE } else { &MOVED_STATS };
+        if PLACING.load(Ordering::SeqCst) > 0 || generation.load(Ordering::SeqCst) != mine {
             return;
         }
         let Some(window) = app.get_webview_window(&label) else { return };
         let Some(state) = app.try_state::<crate::state::AppState>() else { return };
         let Some(key) = landed(&app, &window) else { return };
-        let changed = {
+        // The OS moves a window off a display that went away — a cable, an
+        // AirPlay session ending — and that is no hand. Read the list fresh
+        // (the watch polls once a second): if the display it was on is gone,
+        // the monitor watch pulls it back and says so; adopting here would
+        // remember the laptop and never reattach (beta.10 review).
+        let listed = monitors::list(&app);
+        let gone = |was: Option<&MonitorKey>| was.is_some_and(|k| !listed.iter().any(|m| m.matches(k)));
+        let (changed, mirrors) = {
             let mut host = state.lock();
             if label == STAGE {
                 let now = host.display.current().cloned().or_else(|| host.display.primary().map(|m| m.key.clone()));
-                if now.as_ref() == Some(&key) {
-                    false
+                if gone(now.as_ref()) || now.as_ref().is_some_and(|n| host.display.same_display(n, &key)) {
+                    (false, None)
                 } else {
                     host.display.adopt(key.clone());
-                    remember_stage(&mut host).is_ok()
+                    let saved = remember_stage(&mut host).is_ok();
+                    // §13.6: Statistics never shares Stage's display. Stage is
+                    // the audience's, so Statistics' pick gives way.
+                    if host.flags.control().stats_monitor_id.as_deref() == Some(key.as_str()) {
+                        let ctx = host.runtime();
+                        let _ = host.flags.settings_set_global(questiongame_host::flags::GlobalSetting::StatsMonitorId(None), ctx);
+                        let globals = host.flags.globals().clone();
+                        let _ = host.catalog.settings_store(&globals);
+                    }
+                    (saved, Some(host.display.live_mirrors()))
                 }
             } else {
-                remember_stats(&mut host, &key).unwrap_or(false)
+                let was = host.flags.control().stats_monitor_id.clone().map(MonitorKey::new);
+                if gone(was.as_ref()) {
+                    (false, None)
+                } else {
+                    (remember_stats(&mut host, &key).unwrap_or(false), None)
+                }
             }
         };
         if changed {
             if label == STAGE && !window.is_fullscreen().unwrap_or(true) {
                 let _ = window.set_fullscreen(true);
             }
+            // Adopting stood down a mirror on that display: the windows follow.
+            if let Some(mirrors) = mirrors
+                && let Err(error) = reconcile_mirrors(&app, &mirrors)
+            {
+                tracing::warn!(?error, "mirrors could not follow a hand-moved Stage");
+            }
             tell_studio(&app, &state);
         }
     });
 }
 
-/// Statistics was moved by hand: its display becomes the remembered one.
+/// How many `Moved` events each window has raised (see [`window_moved`]).
+static MOVED_STAGE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static MOVED_STATS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Statistics was moved by hand: its display becomes the remembered one —
+/// unless that is Stage's display, which §13.6 keeps for Stage alone (the
+/// same refusal `settings_set_global` makes for a pick).
 fn remember_stats(host: &mut crate::state::Host, key: &MonitorKey) -> AppResult<bool> {
     use questiongame_host::flags::GlobalSetting;
     if host.flags.control().stats_monitor_id.as_deref() == Some(key.as_str()) {
+        return Ok(false);
+    }
+    let stage_here = host.display.is_open()
+        && host
+            .display
+            .current()
+            .cloned()
+            .or_else(|| host.display.primary().map(|m| m.key.clone()))
+            .is_some_and(|on| host.display.same_display(&on, key));
+    if stage_here {
         return Ok(false);
     }
     let ctx = host.runtime();

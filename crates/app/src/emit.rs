@@ -199,6 +199,9 @@ struct MonitorsChanged<'a> {
 /// it, and asking the window map for it while the host lock is held is the one
 /// habit `windows::refresh` exists to avoid.
 pub fn monitors_changed(app: &AppHandle, host: &Host, stats_open: bool, stage_open: bool) {
+    // A window being closed still stands in the window map until the event
+    // loop gets to it; the host's word that Stage is down wins (beta.10).
+    let stage_open = stage_open && host.display.is_open();
     let _ = app.emit_to(
         MAIN,
         "monitors-changed",

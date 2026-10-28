@@ -44,7 +44,7 @@ semver = { workspace = true }
 # already in the lockfile through tao.
 core-graphics = "0.25"
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", features = ["NSScreen", "NSGraphics"] }
+objc2-app-kit = { version = "0.3", features = ["NSScreen", "NSGraphics", "objc2-core-foundation"] }
 objc2-foundation = { version = "0.3", features = ["NSString", "NSValue", "NSDictionary", "NSArray", "NSEnumerator"] }
 
 [target.'cfg(windows)'.dependencies]

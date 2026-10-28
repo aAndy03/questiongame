@@ -6,7 +6,7 @@ import { DEFAULT_PREFS, useChromeStore, usePrefs, type SidebarMode } from '@/chr
 import { useNavStore, useRoute, type Tab } from '@/chrome/nav'
 import { APP, CHROME, SHELL, TABS } from '@/copy'
 import { usePlayState } from '@/host/playState'
-import { useAppInfo } from '@/host/queries'
+import { useAppInfo, useSettings } from '@/host/queries'
 import { BETA_CHIP } from '@/copy/beta'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 import { TRAFFIC_LIGHTS, useTitleBar } from './WindowControls'
@@ -50,7 +50,9 @@ export function SidebarNav() {
   ) : null
 
   // gesture: f1-help — Help from anywhere in Studio (beta.10).
-  useHotkeys([{ hotkey: 'F1', callback: () => void go({ tab: 'help' }) }], { ignoreInputs: true, preventDefault: true })
+  // A Control command recorded onto F1 keeps it: one key, one action.
+  const f1Taken = Object.values(useSettings().data?.globals.shortcuts ?? {}).some((c) => c.toLowerCase() === 'f1')
+  useHotkeys([{ hotkey: 'F1', callback: () => void go({ tab: 'help' }) }], { enabled: !f1Taken, ignoreInputs: true, preventDefault: true })
 
   const collapsed = sidebar === 'rail'
   const width = SIDEBAR_WIDTH[sidebar]

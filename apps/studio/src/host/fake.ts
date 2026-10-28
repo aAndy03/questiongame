@@ -1089,7 +1089,9 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
         stage_monitor_id: id,
         // One pane per display: the operator asked for the pacer here, so the
         // mirror that was on this display stands down (§9, P11.11).
-        stage_mirror_ids: control.stage_mirror_ids.filter((k) => k !== id),
+        // With Stage closed a send starts it there alone, as the host does
+        // (beta.10 review): the mirrors remembered from before are let go.
+        stage_mirror_ids: fake.stageOpen ? control.stage_mirror_ids.filter((k) => k !== id) : [],
       }
       // A send brings Stage up, as the host's `stage_up` (beta.10).
       fake.stageOpen = true

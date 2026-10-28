@@ -110,10 +110,21 @@ mod os {
         ids[..count as usize].to_vec()
     }
 
-    /// The screens' names and the Spaces setting, read on the main thread
-    /// (AppKit's rule), with a short wait so a busy loop never stalls a
-    /// refresh: no answer is no names, not a hang.
-    fn appkit(app: &tauri::AppHandle) -> (Vec<(u32, String)>, Option<bool>) {
+    /// Each screen as AppKit has it: `NSScreenNumber`, its localized name and
+    /// its backing scale — the factor tao multiplies a display's points by
+    /// (`CGDisplayPixelsWide` is in points on a HiDPI mode, so a ratio taken
+    /// from it is 1 on a Retina display; beta.10 review).
+    type Screens = Vec<(u32, String, f64)>;
+
+    /// The last answer AppKit gave in time. A main thread busy past the wait
+    /// (a webview being built, a fullscreen animation) answers with this
+    /// rather than with no names — no names flips every key back to tao's,
+    /// and a Stage display then reads as unplugged mid-show (review).
+    static LAST: std::sync::Mutex<Option<(Screens, Option<bool>)>> = std::sync::Mutex::new(None);
+
+    /// The screens and the Spaces setting, read on the main thread (AppKit's
+    /// rule), with a short wait so a busy loop never stalls a refresh.
+    fn appkit(app: &tauri::AppHandle) -> (Screens, Option<bool>) {
         let (tx, rx) = mpsc::channel();
         let sent = app.run_on_main_thread(move || {
             let Some(mtm) = objc2::MainThreadMarker::new() else {
@@ -128,16 +139,21 @@ mod os {
                     .and_then(|value| value.downcast::<objc2_foundation::NSNumber>().ok())
                     .map(|n| n.unsignedIntValue());
                 if let Some(id) = id {
-                    names.push((id, screen.localizedName().to_string()));
+                    names.push((id, screen.localizedName().to_string(), screen.backingScaleFactor()));
                 }
             }
             let separate = objc2_app_kit::NSScreen::screensHaveSeparateSpaces(mtm);
             let _ = tx.send((names, Some(separate)));
         });
-        if sent.is_err() {
-            return (Vec::new(), None);
+        let fresh = if sent.is_ok() { rx.recv_timeout(Duration::from_millis(500)).ok() } else { None };
+        let mut last = LAST.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        match fresh {
+            Some(answer) => {
+                *last = Some(answer.clone());
+                answer
+            }
+            None => last.clone().unwrap_or((Vec::new(), None)),
         }
-        rx.recv_timeout(Duration::from_millis(500)).unwrap_or((Vec::new(), None))
     }
 
     pub fn read(app: &tauri::AppHandle) -> (Vec<MacScreen>, Option<bool>) {
@@ -148,17 +164,16 @@ mod os {
                 let display = CGDisplay::new(id);
                 let bounds = display.bounds();
                 let mirrors = display.mirrors_display();
-                let scale = {
-                    let wide = display.pixels_wide() as f64;
-                    if bounds.size.width > 0.0 { wide / bounds.size.width } else { 1.0 }
-                };
+                let screen = names.iter().find(|(n, _, _)| *n == id);
+                // A mirror has no screen; its origin is never a join key.
+                let scale = screen.map_or(1.0, |(_, _, scale)| *scale);
                 MacScreen {
                     id,
                     origin_points: (bounds.origin.x, bounds.origin.y),
                     scale,
                     mirrors: (mirrors != 0).then_some(mirrors),
                     builtin: display.is_builtin(),
-                    name: names.iter().find(|(n, _)| *n == id).map(|(_, name)| name.clone()),
+                    name: screen.map(|(_, name, _)| name.clone()),
                 }
             })
             .collect();
@@ -191,6 +206,20 @@ mod tests {
         ]);
         assert_eq!(t.get(&(0, 0)).and_then(|d| d.name.as_deref()), Some("Built-in Retina Display"));
         assert_eq!(t.get(&(1512, 0)).and_then(|d| d.name.as_deref()), Some("Living Room"));
+    }
+
+    /// A HiDPI display away from the origin (review): tao puts it at its
+    /// points × its own backing scale — a 2× display at 1512 points is at
+    /// physical 3024, and a laptop left of the main display at −3024.
+    #[test]
+    fn a_hidpi_display_away_from_the_origin_is_joined_at_points_times_its_scale() {
+        let t = fold(&[
+            screen(1, (-1512.0, 0.0), 2.0, None, Some("Built-in Retina Display")),
+            screen(2, (0.0, 0.0), 1.0, None, Some("Studio Display")),
+            screen(3, (1512.0, 0.0), 2.0, None, Some("LG UltraFine")),
+        ]);
+        assert_eq!(t.get(&(-3024, 0)).and_then(|d| d.name.as_deref()), Some("Built-in Retina Display"));
+        assert_eq!(t.get(&(3024, 0)).and_then(|d| d.name.as_deref()), Some("LG UltraFine"));
     }
 
     /// AirPlay *Mirror* to an Apple TV: the TV mirrors the laptop, is in no

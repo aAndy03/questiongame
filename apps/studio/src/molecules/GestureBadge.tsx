@@ -1,5 +1,6 @@
 import { Kbd, Text } from '@/atoms'
-import { ACTION_WORD, GESTURES, type Gesture } from '@/copy/gestures'
+import { isMac } from '@/chrome/platform'
+import { ACTION_WORD, GESTURES, keyLabel, type Gesture } from '@/copy/gestures'
 
 export interface GestureBadgeProps {
   /** An id in `GESTURES`; an unknown id paints nothing. */
@@ -16,7 +17,7 @@ export function GestureBadge({ id }: GestureBadgeProps) {
   if (!gesture) return null
   const word = gesture.action ? ACTION_WORD[gesture.action] : ''
   return (
-    <span className="inline-flex items-center gap-1 align-middle" data-gesture={id}>
+    <span aria-hidden className="inline-flex items-center gap-1 align-middle" data-gesture={id}>
       {gesture.keys.length > 0 ? <Kbd chord={gesture.keys.join('+')} variant="light" /> : null}
       {gesture.keys.length > 0 && word ? (
         <Text variant="studio-caption" tone="muted">
@@ -32,10 +33,10 @@ export function GestureBadge({ id }: GestureBadgeProps) {
   )
 }
 
-/** A gesture in words, for search and for a screen reader: *Shift + click*. */
-export function gestureWords(gesture: Gesture): string {
+/** A gesture in words, as this platform writes its keys: *Ctrl + click*, *⌘ + click*. */
+export function gestureWords(gesture: Gesture, mac = isMac()): string {
   const word = gesture.action ? ACTION_WORD[gesture.action] : ''
-  return [...gesture.keys, word].filter(Boolean).join(' + ')
+  return [...gesture.keys.map((k) => keyLabel(k, mac)), word].filter(Boolean).join(' + ')
 }
 
 /** Every fixed gesture: how it is done, what it does, where (Settings ▸ Keyboard shortcuts draws the same list). */
@@ -44,8 +45,9 @@ export function GestureList({ query }: { query?: string | undefined }) {
     <dl className="flex flex-col gap-3" data-help-gestures>
       {GESTURES.map((g) => (
         <div key={g.id} className="grid grid-cols-1 gap-1 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-4">
-          <dt className="flex items-start" aria-label={gestureWords(g)}>
+          <dt className="flex items-start">
             <GestureBadge id={g.id} />
+            <span className="sr-only">{gestureWords(g)}</span>
           </dt>
           <dd className="flex flex-col">
             <Text variant="studio-body" highlight={query}>

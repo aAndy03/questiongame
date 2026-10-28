@@ -78,7 +78,8 @@ export function useDisplays() {
    * to mirror.
    */
   const sendStage = (key: string) => {
-    void run('stage_open')
+    // No Stage standing: `stage_set_monitor` raises it there, alone — one
+    // command, not an Open racing a Send (beta.10 review).
     if (placement.on === null && mirrors.length === 0) {
       void run('stage_set_monitor', { monitorId: key })
       return

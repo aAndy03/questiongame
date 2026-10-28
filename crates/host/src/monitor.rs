@@ -304,6 +304,25 @@ impl StageDisplay {
         self.monitors.len() <= 1
     }
 
+    /// **The key a display goes by now** (beta.10 review): a remembered key in
+    /// an older spelling (`Monitor #N@WxH` on a Mac, a logical-size key from
+    /// before P11.6) becomes the connected display's own key, so everything
+    /// downstream can compare with `==`. A key nothing — or more than one
+    /// display — answers to is kept as it is.
+    pub fn canonical(&self, key: &MonitorKey) -> MonitorKey {
+        let mut found = self.monitors.iter().filter(|m| m.matches(key));
+        match (found.next(), found.next()) {
+            (Some(m), None) => m.key.clone(),
+            _ => key.clone(),
+        }
+    }
+
+    /// Do two keys name one display — the same key, or one display answering
+    /// to both?
+    pub fn same_display(&self, a: &MonitorKey, b: &MonitorKey) -> bool {
+        a == b || self.monitors.iter().any(|m| m.matches(a) && m.matches(b))
+    }
+
     /// The mirrors the operator has asked for, connected or not.
     pub fn wanted_mirrors(&self) -> &[MonitorKey] {
         &self.wanted_mirrors
@@ -415,11 +434,12 @@ impl StageDisplay {
         if !self.open {
             return StageClosed::Ignored;
         }
+        let key = &self.canonical(key);
         if self.wanted_mirrors.contains(key) {
             self.remove_mirror(key);
             return StageClosed::MirrorDropped(key.clone());
         }
-        if self.pacer_key().as_ref() == Some(key) {
+        if self.pacer_key().is_some_and(|pacer| self.same_display(&pacer, key)) {
             return self.pacer_gone();
         }
         StageClosed::Ignored
@@ -433,6 +453,7 @@ impl StageDisplay {
             1 => {}
             _ => return Err(MonitorError::Ambiguous(key)),
         }
+        let key = self.canonical(&key);
         if self.on.as_ref() == Some(&key) || self.wanted_mirrors.contains(&key) {
             // One pane per display: two Stage windows on one screen is two
             // windows fighting over it, and the audience sees whichever won.
@@ -456,7 +477,7 @@ impl StageDisplay {
         };
         match self.monitors.iter().filter(|m| m.matches(key)).count() {
             0 => StagePlacement::WaitingFor(key.clone()),
-            1 => StagePlacement::On(key.clone()),
+            1 => StagePlacement::On(self.canonical(key)),
             _ => StagePlacement::Ambiguous(key.clone()),
         }
     }
@@ -475,6 +496,7 @@ impl StageDisplay {
                 _ => return Err(MonitorError::Ambiguous(key.clone())),
             },
         }
+        let key = key.map(|k| self.canonical(&k));
         // One pane per display. The operator asked for the pacer here, so the
         // mirror that was on this display stands down rather than fighting it.
         if let Some(key) = &key {
@@ -503,6 +525,17 @@ impl StageDisplay {
         play_is_open: bool,
     ) -> StageMove {
         self.monitors = monitors;
+        // Remembered keys in an older spelling become the displays' own, so the
+        // pacer, the mirrors and Studio's ticks all compare one key (beta.10).
+        self.on = self.on.take().map(|k| self.canonical(&k));
+        let mut mirrors: Vec<MonitorKey> = Vec::new();
+        for key in std::mem::take(&mut self.wanted_mirrors) {
+            let key = self.canonical(&key);
+            if !mirrors.contains(&key) {
+                mirrors.push(key);
+            }
+        }
+        self.wanted_mirrors = mirrors;
         let placement = self.placement(wanted);
 
         // 1. Stage is standing on a display that is no longer there.
@@ -663,11 +696,32 @@ mod tests {
             StageReattach::default(),
             false,
         );
+        // Resolved to the display's own key (beta.10 review): from here on the
+        // pacer, the mirrors and Studio's ticks compare one spelling.
+        let current = scaled_tv().key.clone();
         assert_eq!(
             display.placement(Some(&remembered)),
-            StagePlacement::On(remembered.clone())
+            StagePlacement::On(current.clone())
         );
-        assert_eq!(mv.to, Some(Some(remembered)));
+        assert_eq!(mv.to, Some(Some(current.clone())));
+        assert_eq!(display.current(), Some(&current));
+        assert!(display.same_display(&remembered, &current));
+    }
+
+    /// beta.10 review: a mirror remembered under an old spelling is the
+    /// display's own key once the list is read, so it can be unticked.
+    #[test]
+    fn a_mirror_remembered_under_an_old_key_can_be_unticked() {
+        let mut display = StageDisplay::new();
+        display.set_wanted_mirrors(vec![MonitorKey::new("tv@1280x720")]);
+        display.monitors_changed(vec![laptop(), scaled_tv()], None, StageReattach::default(), false);
+        display.set_open(true);
+        assert_eq!(display.live_mirrors(), vec![scaled_tv().key.clone()]);
+        assert_eq!(
+            display.remove_display(&scaled_tv().key),
+            StageClosed::MirrorDropped(scaled_tv().key.clone())
+        );
+        assert!(display.wanted_mirrors().is_empty());
     }
 
     #[test]

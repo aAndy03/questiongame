@@ -68,6 +68,9 @@ function writesSettings(name: Command): boolean {
     name === 'stage_set_monitor' ||
     name === 'stage_add_mirror' ||
     name === 'stage_remove_mirror' ||
+    // beta.10: unticking hands the pacer over, and both remember it.
+    name === 'stage_remove_display' ||
+    name === 'stage_close' ||
     // A copied library brings its own operators and settings (P13.1).
     name === 'beta_copy_stable_library'
   )
