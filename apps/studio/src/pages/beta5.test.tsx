@@ -124,11 +124,13 @@ describe('every group says whose (beta.5)', () => {
 })
 
 describe('the disabled switcher (beta.5)', () => {
-  it('can be reached by keyboard and says why', async () => {
+  // beta.12 (C4): the switcher stays open; why switching is held is said inside it.
+  it('says why, inside the switcher, and stays reachable', async () => {
     await at({ tab: 'teams' } as Route)
     act(() => receivePlayState({ ...EMPTY_PLAY_STATE, playId: 'p1', status: 'loaded', operator: { recipeId: 'recipe-demo', legalTokenTargets: [], defaultNextTeamId: null, consecutiveCorrect: 0, isRehearsal: false, canUndo: false, canRedo: false, eventCount: 0, showGiveToken: false, overrideAfterLock: 'refuse_until_reveal', disabled: [] } } as never))
-    const reason = await screen.findByLabelText(new RegExp(WORKSPACE.loaded), {}, { timeout: 5000 })
-    expect(reason.getAttribute('tabindex')).toBe('0')
+    const trigger = document.querySelector<HTMLElement>('[data-workspace-switcher] button')!
+    fireEvent.click(trigger)
+    expect(await screen.findByText(WORKSPACE.loaded, {}, { timeout: 5000 })).toBeTruthy()
   })
 })
 

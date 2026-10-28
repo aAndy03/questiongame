@@ -46,6 +46,8 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
   const [selected, setSelected] = useState<string | null>(null)
   const [draft, setDraft] = useState<StageLayout | null>(null)
   const [saving, setSaving] = useState(false)
+  // A save the host refused (beta.12, B8): said, not shown as Saved.
+  const [failed, setFailed] = useState(false)
   const [resetting, setResetting] = useState<'screen' | 'all' | null>(null)
   const dirty = useRef(false)
 
@@ -59,7 +61,10 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
     async (layout: StageLayout) => {
       setSaving(true)
       const ok = await run('recipe_set_layout', { id: recipeId, layout })
-      if (ok !== null) dirty.current = false
+      // Clean only if nothing was edited while this save was in flight: an
+      // edit made meanwhile is still to save (beta.12, B8).
+      if (ok !== null && latest.current === layout) dirty.current = false
+      setFailed(ok === null)
       setSaving(false)
     },
     [recipeId, run],
@@ -147,9 +152,9 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
   )
   const status = (
     <span className="flex shrink-0 items-center gap-2" data-save-state>
-      <StatusDot tone={saving ? 'warning' : 'success'} pulse={saving} />
-      <Text variant="studio-caption" tone="muted">
-        {saving ? SCREENS_TAB.saving : SCREENS_TAB.saved(recipe.data?.rev ?? 0)}
+      <StatusDot tone={saving ? 'warning' : failed ? 'danger' : 'success'} pulse={saving} />
+      <Text variant="studio-caption" tone={failed && !saving ? 'danger' : 'muted'}>
+        {saving ? SCREENS_TAB.saving : failed ? SCREENS_TAB.notSaved : SCREENS_TAB.saved(recipe.data?.rev ?? 0)}
       </Text>
     </span>
   )

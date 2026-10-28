@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button, ComboField, MeaningChip, Panel, Skeleton, StatusDot, Text, TextField } from '@/atoms'
 import { ActionMenu, EmptyState, InlineNotice, NavCrumbs, PageHeader, TagField } from '@/molecules'
-import { BoardSection, PlaysSection, RosterSection, RulesPreviewPanel, RulesSection, useArchive, useGameLabels, useTransfer } from '@/organisms'
+import { BoardSection, PlaysSection, RosterSection, RulesPreviewPanel, RulesSection, loadBlocked, useArchive, useGameLabels, useTransfer } from '@/organisms'
 import { TRANSFER } from '@/copy/workspaces'
 import type { Recipe, RecipeEdit } from '@/host/types'
 import { RecordPageLayout } from '@/templates'
@@ -160,8 +160,8 @@ export function GamePage({ id, section = 'roster' }: GamePageProps) {
               icon="control"
               onPress={() => void load()}
               isPending={loading}
-              isDisabled={archived || r.teams.length === 0 || r.board.length === 0}
-              disabledReason={archived ? LIST.archived : r.teams.length === 0 ? GAME.rosterEmpty : r.board.length === 0 ? GAME.boardEmpty : null}
+              isDisabled={loadBlocked(r) !== null}
+              disabledReason={loadBlocked(r)}
             >
               {GAME.loadIntoControl}
             </Button>

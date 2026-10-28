@@ -177,8 +177,8 @@ export function ActionPanel({ density }: ActionPanelProps) {
                       optionIds: session.answerMode === 'multiple' ? (selected ? session.selectedOptionIds.filter((id) => id !== o.id) : [...session.selectedOptionIds, o.id]) : [o.id],
                     })
                   }
-                  isDisabled={locked}
-                  disabledReason={locked ? SESSION.lockHint : null}
+                  isDisabled={locked || !open}
+                  disabledReason={notOpen ?? (locked ? SESSION.lockHint : null)}
                   className={isCorrect === true ? 'ring-2 ring-[var(--success)]' : isCorrect === false && selected ? 'ring-2 ring-[var(--danger)]' : ''}
                 >
                   {`${String.fromCharCode(65 + i)}${compact ? '' : ` · ${o.text}`}`}

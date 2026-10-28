@@ -42,6 +42,10 @@ export function DomainPane({ selectedId, onSelect, pickedIds = [], onPickMany }:
   const [scope, setScope] = useState<Exclude<ArchiveScope, 'all'>>('active')
   const domains = useCatalogList('domain', scope)
   const questions = useCatalogList('question', 'active')
+  // What a domain holds, as its list shows it (beta.12, C8): the active
+  // questions — the pane said 12 over a list of 10.
+  const live = useMemo(() => (questions.data ? new Set(questions.data.map((q) => q.id)) : null), [questions.data])
+  const countOf = (d: Domain) => (live ? d.questions.filter((m) => live.has(m.questionId)).length : d.questions.length)
   const transfer = useTransfer()
   const run = useHostCommand()
   const propagating = usePropagatingSave()
@@ -174,7 +178,7 @@ export function DomainPane({ selectedId, onSelect, pickedIds = [], onPickMany }:
                   <DomainRow
                     name={d.name}
                     code={d.code}
-                    count={d.questions.length}
+                    count={countOf(d)}
                     incomplete={scope === 'active' ? incomplete.of(d) : undefined}
                     isSelected={lit.includes(d.id)}
                     isArchived={d.archivedAt !== null}

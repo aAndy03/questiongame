@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, MeaningChip, Text } from '@/atoms'
 import { ActionMenu, DifficultyChip, IncompleteMark, PageHeader } from '@/molecules'
 import { DomainPane, ImportQuestionsDialog, LibraryList, ListToolbar, QuestionDetail, useArchive, useTransfer, useBulkEdit, DomainGroupsManager, QuestionTagsManager, useGroupEditing, useShareQuestions, QuestionDragProvider, dropSummary, grabbed, type RecordView } from '@/organisms'
@@ -15,7 +15,7 @@ import { activeMemberIds, questionGaps } from '@/host/question'
 import { questionsSpec, type QuestionItem } from '@/host/listSpecs'
 import type { ListItem } from '@/host/listView'
 import { useCatalogList, useListHits, useTags } from '@/host/queries'
-import { answerMode, isArchived, type BulkReport } from '@/host/types'
+import { answerMode, isArchived, type BulkEdit, type BulkReport } from '@/host/types'
 import { useListView } from '@/host/useListView'
 import { useHostCommand } from '@/host/commands'
 
@@ -51,7 +51,10 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
   const duplicate = async (ids: readonly string[]) => {
     if (await run.ok('catalog_duplicate', { kind: 'question', ids })) toast.success(SHELL.duplicated(ids.length, QUESTION.one, QUESTION.many))
   }
-  const bulkEdit = useBulkEdit()
+  // Rows a bulk edit takes out of this domain leave the selection too (beta.12,
+  // C2): kept, *Archive 5* would act on rows nobody can see.
+  const afterBulk = useRef<(edit: BulkEdit) => void>(() => {})
+  const bulkEdit = useBulkEdit({ onApplied: (edit) => afterBulk.current(edit) })
   const [groupsOpen, setGroupsOpen] = useState(false)
   const [tagsOpen, setTagsOpen] = useState(false)
   const run = useHostCommand()
@@ -61,6 +64,16 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
   const tagList = useTags()
   const domains = useCatalogList('domain', 'all')
   const domain = domains.data?.find((d) => d.id === domainId) ?? null
+  // The domain the route names has gone — moved to another workspace (C1) —
+  // or was archived while open (C9): back to All questions, said as such,
+  // rather than every question under a heading and a pane that light nothing.
+  const wasActive = useRef(domain?.archivedAt === null)
+  useEffect(() => {
+    if (domainId === null || domains.data === undefined) return
+    const archivedNow = domain !== null && domain.archivedAt !== null
+    if (domain === null || (archivedNow && wasActive.current)) replace({ tab: 'library' })
+    wasActive.current = domain !== null && domain.archivedAt === null
+  }, [domainId, domain, domains.data, replace])
   const groupEditing = useGroupEditing(domain && domain.archivedAt === null ? domain : null)
   const memberIds = useMemo(() => (domain ? new Set(domain.questions.map((m) => m.questionId)) : null), [domain])
   const inActiveDomain = useMemo(() => activeMemberIds(domains.data ?? []), [domains.data])
@@ -195,6 +208,10 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
     return said.changed
   }
   // A grab carries the selection when the grabbed row is in it, else that row alone.
+  afterBulk.current = (edit) => {
+    const leaves = edit.op === 'remove_from_domain' || (edit.op === 'move_to_domain' && edit.domainId !== domainId)
+    if (domainId !== null && leaves) lv.selection.clear()
+  }
   const idsFor = (id: string) => grabbed(id, lv.selection.ids, inViewOrder)
   // Every domain they are in, archived too: what the chip counts, and what a Move leaves —
   // of the questions the drop writes, so archived ones, left out, count for nothing.
@@ -335,6 +352,26 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
                         ...(questions.data?.find((q) => q.id === row.id)?.familyId != null ? [{ id: 'unfollow', label: TRANSFER.unfollow, icon: 'unlink' as const }] : []),
                       ],
                     },
+                    // beta.12 (C11): the strip's *Edit…* edits, for one question without ticking it.
+                    ...(row.isArchived
+                      ? []
+                      : [
+                          {
+                            id: 'edit-set',
+                            title: MENU.organise,
+                            items: [
+                              { id: 'tag', label: GROUPS_TAGS.bulkTag, icon: 'tag' as const },
+                              { id: 'untag', label: GROUPS_TAGS.bulkUntag, icon: 'tag' as const },
+                              ...(domain && domain.archivedAt === null
+                                ? [
+                                    { id: 'group', label: GROUPS_TAGS.bulkGroup, icon: 'folder' as const },
+                                    { id: 'remove_from_domain', label: GROUPS_TAGS.bulkRemove, icon: 'remove' as const },
+                                  ]
+                                : []),
+                              { id: 'set_difficulty', label: GROUPS_TAGS.bulkDifficulty, icon: 'sliders' as const },
+                            ],
+                          },
+                        ]),
                     {
                       id: 'status',
                       title: MENU.status,
@@ -349,6 +386,9 @@ export function LibraryPage({ domainId, currentId = null }: LibraryPageProps) {
                     const one = (questions.data ?? []).filter((q) => q.id === row.id)
                     if (a === 'add_domain') bulkEdit.start('add_to_domain', [row.id], { domain: domain && domain.archivedAt === null ? domain : null, questions: one })
                     if (a === 'move_domain') bulkEdit.start('move_to_domain', [row.id], { domain: domain && domain.archivedAt === null ? domain : null, questions: one })
+                    if (a === 'tag' || a === 'untag' || a === 'group' || a === 'remove_from_domain' || a === 'set_difficulty') {
+                      bulkEdit.start(a, [row.id], { domain: domain && domain.archivedAt === null ? domain : null, questions: one })
+                    }
                     if (a === 'unfollow') void run.ok('catalog_unfollow', { kind: 'question', id: row.id })
                     const at = domainId ? { domainId } : {}
                     if (a === 'open') void go({ tab: 'library', questionId: row.id, mode: 'view', ...at })

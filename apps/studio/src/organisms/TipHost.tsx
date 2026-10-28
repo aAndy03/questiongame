@@ -6,6 +6,7 @@ import { TIPS, TIPS_COPY, type Tip } from '@/copy/tips'
 import { onCommandDone } from '@/host/host'
 import { usePlayState, usePlayStateKnown } from '@/host/playState'
 import { useSettings } from '@/host/queries'
+import { HotkeyChords } from '@/molecules'
 import { MOMENTS, dismiss, learn, mayShow, pick, shown, touchDay, type Moment } from '@/tips/engine'
 import { onTipMoment, tipLearned, tipMoment, tipsClock } from '@/tips/signals'
 import { momentOf, skillOf } from '@/tips/skills'
@@ -62,7 +63,8 @@ export function TipHost() {
   const playOpen = usePlayState((p) => p?.status === 'playing' || p?.status === 'paused')
   const rehearsal = usePlayState((p) => p?.operator.isRehearsal ?? false)
   const dialogUp = useDialogUp()
-  const settled = useSettings().data !== undefined
+  const settings = useSettings()
+  const settled = settings.data !== undefined
   const [current, setCurrent] = useState<Tip | null>(null)
   // The tip being shown, set the moment it is chosen: React state would let a
   // second moment in the same commit pick (and record) a tip nobody sees.
@@ -174,6 +176,7 @@ export function TipHost() {
             exit={{ opacity: 0, y: still ? 0 : 8 }}
             transition={{ duration: 0.16, ease: [0.2, 0, 0, 1] }}
           >
+            <HotkeyChords.Provider value={settings.data?.globals.shortcuts ?? {}}>
             <TipCard
               tip={current}
               held={dialogUp}
@@ -187,6 +190,7 @@ export function TipHost() {
                 })
               }
             />
+            </HotkeyChords.Provider>
           </motion.div>
         ) : null}
       </AnimatePresence>

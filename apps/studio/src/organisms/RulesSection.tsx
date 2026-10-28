@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { DifficultyMapField, SettingRow, SettingsGroup, SpeedWindowField, disabledReasonText } from '@/molecules'
 import { DurationField, NumberField, OptionalNumberField, SegmentedField, SliderField, SwitchField, Text } from '@/atoms'
 import { GAME, RULES } from '@/copy'
@@ -46,13 +47,21 @@ export function RulesSection({ recipe, frozenReason }: RulesSectionProps) {
   const reason = (key: string) => frozenReason ?? disabledReasonText(disabledFor(key))
   const resolvedDuration = preview.data?.timer.durationMs ?? null
 
-  const write = (next: GameSettings) => void run('recipe_set_settings', { id: recipe.id, settings: next })
-  const scoring = (patch: Partial<GameSettings['scoring']>) => write({ ...s, scoring: { ...s.scoring, ...patch } })
-  const judging = (patch: Partial<GameSettings['judging']>) => write({ ...s, judging: { ...s.judging, ...patch } })
-  const turn = (patch: Partial<GameSettings['turn']>) => write({ ...s, turn: { ...s.turn, ...patch } })
-  const timer = (patch: Partial<GameSettings['timer']>) => write({ ...s, timer: { ...s.timer, ...patch } })
-  const reveal = (channel: RevealChannel, mode: RevealMode) => write({ ...s, reveal: { ...s.reveal, [channel]: mode } })
-  const language = (value: StageLanguage) => write({ ...s, language: value })
+  // The document a write builds on: the last one sent, until the recipe's rev
+  // moves past it (beta.12, B18). Two quick edits to different fields each
+  // built on the rendered document, and the second undid the first.
+  const sent = useRef<{ readonly rev: number; readonly doc: GameSettings } | null>(null)
+  const base = (): GameSettings => (sent.current && sent.current.rev >= recipe.rev ? sent.current.doc : s)
+  const write = (next: GameSettings) => {
+    sent.current = { rev: recipe.rev, doc: next }
+    void run('recipe_set_settings', { id: recipe.id, settings: next })
+  }
+  const scoring = (patch: Partial<GameSettings['scoring']>) => write({ ...base(), scoring: { ...base().scoring, ...patch } })
+  const judging = (patch: Partial<GameSettings['judging']>) => write({ ...base(), judging: { ...base().judging, ...patch } })
+  const turn = (patch: Partial<GameSettings['turn']>) => write({ ...base(), turn: { ...base().turn, ...patch } })
+  const timer = (patch: Partial<GameSettings['timer']>) => write({ ...base(), timer: { ...base().timer, ...patch } })
+  const reveal = (channel: RevealChannel, mode: RevealMode) => write({ ...base(), reveal: { ...base().reveal, [channel]: mode } })
+  const language = (value: StageLanguage) => write({ ...base(), language: value })
 
   const exclusiveLockSpeed = s.scoring.mode === 'lock_speed'
   const globalsTimer = settings.data?.globals.timer

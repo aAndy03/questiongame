@@ -5,7 +5,7 @@ import { GameLabelsManager, LibraryList, ListToolbar, useArchive, useGameLabels,
 import { LibraryTabLayout } from '@/templates'
 import { useArchiveScope, useChromeStore, useListState, usePrefs } from '@/chrome/chrome'
 import { useNavStore } from '@/chrome/nav'
-import { CHROME, fmt, GAME, GAME_LABELS, LIST, MENU, TABS, VIEWS } from '@/copy'
+import { CHROME, fmt, GAME, GAME_LABELS, LIST, MENU, SHELL, TABS, VIEWS } from '@/copy'
 import { TRANSFER } from '@/copy/workspaces'
 import type { SeedResult } from '@/host/types'
 import { useHostCommand } from '@/host/commands'
@@ -76,14 +76,24 @@ export function GamesPage() {
     const recipe = await run<Recipe>('recipe_new', { id, name: 'New game' })
     if (recipe) void go({ tab: 'games', id: recipe.id })
   }
-  const duplicate = async (id: string) => {
-    const source = list.data?.find((r) => r.id === id)
-    const recipe = await run<Recipe>('recipe_duplicate', {
-      id,
-      newId: `recipe-${crypto.randomUUID().slice(0, 8)}`,
-      newName: `${source?.name ?? 'Game'} (copy)`,
-    })
-    if (recipe) void go({ tab: 'games', id: recipe.id })
+  // *Duplicate* from the list stays on the list and says so, as Teams and
+  // Questions do (C10); the Game page's own *Duplicate* opens the copy.
+  // One `recipe_duplicate` per game, in the order picked.
+  const [duplicating, setDuplicating] = useState(false)
+  const duplicate = async (ids: readonly string[]) => {
+    setDuplicating(true)
+    let done = 0
+    for (const id of ids) {
+      const source = list.data?.find((r) => r.id === id)
+      const recipe = await run<Recipe>('recipe_duplicate', {
+        id,
+        newId: `recipe-${crypto.randomUUID().slice(0, 8)}`,
+        newName: GAME.copyName(source?.name ?? 'Game'),
+      })
+      if (recipe) done += 1
+    }
+    setDuplicating(false)
+    if (done > 0) toast.success(SHELL.duplicated(done, GAME.one, GAME.many))
   }
 
   const archivedView = scope === 'archived'
@@ -175,6 +185,10 @@ export function GamesPage() {
             // Labels are not the show: the game in Control is relabelled with the rest (P20).
             return (
               <>
+                {/* Duplicate first, as on Teams and Questions (C10); a playing game copies like any other. */}
+                <Button size="sm" variant="secondary" icon="duplicate" isDisabled={duplicating} onPress={() => void duplicate(ids)}>
+                  {LIST.duplicate}
+                </Button>
                 {scope === 'archived' ? null : labels.menu(ids)}
                 {transfer.menu({ recipes: ids }, { selection: { recipes: keep }, leftOut: keep.length < ids.length ? GAME.leftOutPlaying(nameOf(playingId)) : null })}
               </>
@@ -218,7 +232,7 @@ export function GamesPage() {
               if (a === 'open') void go({ tab: 'games', id: row.id })
               if (a === 'folder') labels.open('set_folder', [row.id])
               if (a === 'tags') labels.open('tags', [row.id])
-              if (a === 'duplicate') void duplicate(row.id)
+              if (a === 'duplicate') void duplicate([row.id])
               if (a === 'copy' || a === 'move') transfer.open(a, { recipes: [row.id] })
               if (a === 'archive') archive.archive({ kind: 'recipe', ids: [row.id], what: GAME.one })
               if (a === 'restore') void archive.restore({ kind: 'recipe', ids: [row.id], what: GAME.one })

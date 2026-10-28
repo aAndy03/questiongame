@@ -47,7 +47,12 @@ const TITLE: Record<Op, string> = {
  * many it changes and how many are already so — before the
  * one-transaction write. Copies in other workspaces are not touched.
  */
-export function useBulkEdit(): BulkEditController {
+export interface BulkEditOptions {
+  /** Told after a write lands — the page drops a selection the edit took out of view (beta.12, C2). */
+  onApplied?: ((edit: BulkEdit, ids: readonly string[]) => void) | undefined
+}
+
+export function useBulkEdit(options: BulkEditOptions = {}): BulkEditController {
   const run = useHostCommand()
   const domains = useCatalogList('domain', 'active')
   const tags = useTags()
@@ -130,6 +135,7 @@ export function useBulkEdit(): BulkEditController {
     setPending(false)
     if (done === null) return
     toast.success(GROUPS_TAGS.done(done.changed.length))
+    options.onApplied?.(edit, open.ids)
     close()
   }
 

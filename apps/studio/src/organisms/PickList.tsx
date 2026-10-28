@@ -1,4 +1,5 @@
 import { useMemo, useRef, type MouseEvent, type ReactNode } from 'react'
+import { matchesSearch, searchTerms } from '@questiongame/text'
 import { CheckboxField, Text } from '@/atoms'
 import { EmptyState, GroupHeader, PageFooter, StickyBand } from '@/molecules'
 import { LIST, PICKER } from '@/copy'
@@ -40,7 +41,12 @@ export interface PickListProps<T> {
   above?: ReactNode
 }
 
-const fold = (s: string) => s.trim().toLowerCase()
+/**
+ * Every word of the search starts a word of the text, case and accents
+ * folded, as the library's own search reads it (C6): *pamant* finds *Pământ*,
+ * and the highlight marks what matched.
+ */
+const matchesAll = (text: string, terms: readonly string[]) => terms.every((t) => matchesSearch(text, t))
 
 /**
  * A choice of rows on the list-view model (beta.4, extracted P20): the library
@@ -58,10 +64,10 @@ export function PickList<T>({ spec, items, chosen, onChosen, disabledReason, cou
   // Search here is the row's own words, folded — the catalog's index is not
   // asked about a list the dialog already holds.
   const hits = useMemo(() => {
-    const needle = fold(session.search)
-    if (!needle) return null
+    const terms = searchTerms(session.search)
+    if (terms.length === 0) return null
     const words = searchText ?? ((i: ListItem<T, PickerRow>) => `${i.view.title} ${i.view.subtitle ?? ''}`)
-    return new Map(items.filter((i) => fold(words(i)).includes(needle)).map((i) => [i.id, 1]))
+    return new Map(items.filter((i) => matchesAll(words(i), terms)).map((i) => [i.id, 1]))
   }, [items, session.search, searchText])
   const view = useListView(spec, items, hits)
   const { page } = view

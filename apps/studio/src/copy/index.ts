@@ -512,6 +512,8 @@ export const PICKER = {
   chosenTitle: 'Chosen',
   noneChosen: 'Nothing chosen yet. Tick a row on the left.',
   unchoose: (what: string) => `Take off ${what}`,
+  /** beta.12 (C5): a chosen row the list no longer has — never its raw id. */
+  unknownRow: 'A row that is no longer in the library',
   moreChosen: (n: number) => `and ${n} more`,
 } as const
 

@@ -105,11 +105,11 @@ export function PickerDialog<T>({ isOpen, onClose, title, spec, items, initial, 
                               {i + 1}
                             </Text>
                             {/* Two lines, not one cut short: the pane is 22rem and a stem is a sentence (P20). */}
-                            <Text variant="studio-body" className="line-clamp-2 min-w-0 flex-1 break-words" title={row?.title ?? id}>
-                              {row?.title ?? id}
+                            <Text variant="studio-body" className="line-clamp-2 min-w-0 flex-1 break-words" title={row?.title ?? PICKER.unknownRow}>
+                              {row?.title ?? PICKER.unknownRow}
                             </Text>
                             {row?.chips}
-                            <IconButton icon="close" size="sm" label={PICKER.unchoose(row?.title ?? id)} onPress={() => setChosen((now) => now.filter((x) => x !== id))} />
+                            <IconButton icon="close" size="sm" label={PICKER.unchoose(row?.title ?? PICKER.unknownRow)} onPress={() => setChosen((now) => now.filter((x) => x !== id))} />
                           </li>
                         )
                       })}

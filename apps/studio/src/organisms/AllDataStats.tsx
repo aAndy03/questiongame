@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { SelectField, Skeleton } from '@/atoms'
 import {
   EmptyState,
@@ -60,16 +60,22 @@ export function AllDataStats({ view }: AllDataStatsProps) {
   // The column the chart draws; the first one until the operator picks another.
   const [charted, setCharted] = useState<StatsMetric | null>(null)
 
+  // Every game, archived ones too, as teams and domains are (B17): an
+  // archived game's Plays are still in the history this page counts.
   const teams = useCatalogList('team', 'all')
   const domains = useCatalogList('domain', 'all')
-  const games = useRecipeList('active')
+  const games = useRecipeList('all')
 
-  // The window is resolved once per filter change, not on every render: a
-  // `Date.now()` in the query document would make every render a new key.
+  // The window is resolved from the minute, not from every render: a
+  // `Date.now()` in the query document would make every render a new key. The
+  // minute moves on while a window is chosen (B17), so "last 7 days" left open
+  // is still the last seven days — one query a minute at most, and the answer
+  // before it stays on screen while it loads.
+  const minute = useMinute(time !== 'all')
   const query = useMemo(() => {
-    const bounds = windowBounds(time, Date.now())
+    const bounds = windowBounds(time, minute)
     return { filter: { ...filter, ...bounds }, groupBy, metrics: askedFor(groupBy, metrics) }
-  }, [filter, time, groupBy, metrics])
+  }, [filter, time, groupBy, metrics, minute])
 
   const stats = useStats(query)
   const isDirty = time !== 'all' || metrics !== DEFAULT_METRICS || Object.values(filter).some((v) => (Array.isArray(v) ? v.length > 0 : Boolean(v)))
@@ -116,6 +122,24 @@ export function AllDataStats({ view }: AllDataStatsProps) {
       ) : null}
     </div>
   )
+}
+
+const MINUTE = 60_000
+
+/**
+ * The current time, to the minute: the same value for every render inside a
+ * minute, so a query keyed by it changes once a minute and never once a
+ * render. While `isOn`, the page renders again each minute, so a window left
+ * open moves on by itself; a window chosen later starts from that moment.
+ */
+function useMinute(isOn: boolean): number {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!isOn) return
+    const timer = setInterval(() => setTick((n) => n + 1), MINUTE)
+    return () => clearInterval(timer)
+  }, [isOn])
+  return Math.floor(Date.now() / MINUTE) * MINUTE
 }
 
 /**

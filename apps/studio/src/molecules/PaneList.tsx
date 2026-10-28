@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { matchesSearch, searchTerms } from '@questiongame/text'
 import { Text } from '@/atoms'
 import { SearchField } from './SearchField'
 
@@ -21,7 +22,6 @@ export interface PaneListProps {
 }
 
 const SEARCH_FROM = 8
-const fold = (s: string) => s.trim().toLowerCase()
 
 /**
  * A manager's entries (P20): a listbox of names with their counts, the chosen
@@ -30,7 +30,10 @@ const fold = (s: string) => s.trim().toLowerCase()
  */
 export function PaneList({ entries, selectedId, onSelect, what, top }: PaneListProps) {
   const [search, setSearch] = useState('')
-  const shown = search.trim() ? entries.filter((e) => fold(e.label).includes(fold(search))) : entries
+  // Every word starts a word of the name, case and accents folded, as the
+  // library searches (C6): *pamant* finds *Pământ*, and the mark agrees.
+  const terms = searchTerms(search)
+  const shown = terms.length > 0 ? entries.filter((e) => terms.every((t) => matchesSearch(e.label, t))) : entries
   return (
     <div className="flex min-h-0 flex-col gap-2">
       {entries.length > SEARCH_FROM ? <SearchField what={what} onSearch={setSearch} initial="" className="w-full" /> : null}
@@ -56,7 +59,7 @@ export function PaneList({ entries, selectedId, onSelect, what, top }: PaneListP
                 on ? 'bg-[var(--accent)]/12 text-[var(--accent)]' : 'hover:bg-[var(--surface-secondary)]',
               ].join(' ')}
             >
-              <Text variant="studio-body" tone={e.muted && !on ? 'muted' : 'inherit'} truncate className="min-w-0 flex-1">
+              <Text variant="studio-body" tone={e.muted && !on ? 'muted' : 'inherit'} truncate className="min-w-0 flex-1" highlight={terms.length > 0 ? search : undefined}>
                 {e.label}
               </Text>
               <Text variant="studio-mono" tone="muted" tabular>

@@ -3,10 +3,22 @@ import { Button, Panel, Skeleton, Text } from '@/atoms'
 import { EmptyState } from '@/molecules'
 import { useNavStore } from '@/chrome/nav'
 import { toast } from '@/chrome/toast'
-import { CONTROL, SHELL } from '@/copy'
+import { CONTROL, GAME, LIST, SHELL } from '@/copy'
 import { useHostCommand } from '@/host/commands'
 import { usePlayList, useRecipeList } from '@/host/queries'
 import type { PlayRecord, Recipe } from '@/host/types'
+
+/**
+ * Why a game cannot be loaded into Control, or `null` (beta.12, B12): one
+ * answer for the Game page and Control's recent games, which loaded first and
+ * let the host refuse.
+ */
+export function loadBlocked(recipe: Recipe): string | null {
+  if (recipe.archivedAt !== null) return LIST.archived
+  if (recipe.teams.length === 0) return GAME.rosterEmpty
+  if (recipe.board.length === 0) return GAME.boardEmpty
+  return null
+}
 
 /** How many games Control's empty state offers (beta.10). */
 export const RECENT_GAMES = 6
@@ -124,7 +136,15 @@ export function RecentGames({ empty }: { empty: React.ReactNode }) {
                   <Text variant="studio-caption" tone="muted">
                     {why === 'played' ? CONTROL.recentPlayed(ago(at)) : CONTROL.recentEdited(ago(at))}
                   </Text>
-                  <Button size="sm" variant="primary" icon="control" isPending={loading === recipe.id} isDisabled={loading !== null} onPress={() => void load(recipe)}>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    icon="control"
+                    isPending={loading === recipe.id}
+                    isDisabled={loading !== null || loadBlocked(recipe) !== null}
+                    disabledReason={loadBlocked(recipe)}
+                    onPress={() => void load(recipe)}
+                  >
                     {CONTROL.recentLoad}
                   </Button>
                 </div>

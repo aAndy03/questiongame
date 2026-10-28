@@ -98,7 +98,7 @@ describe('the Games tab (T-11–T-16)', () => {
   const g = (over: Partial<ListViewState>) => run(spec, items, over, (x) => x.recipe.id)
 
   it('offers the folders and tags the games have, and knows which is playing', () => {
-    expect(spec.filters.find((f) => f.id === 'folder')?.options).toEqual([{ value: 'Season 1', label: 'Season 1' }])
+    expect(spec.filters.find((f) => f.id === 'folder')?.options).toEqual([{ value: 'season 1', label: 'Season 1' }])
     expect(spec.filters.find((f) => f.id === 'tag')?.options).toEqual([{ value: 'live', label: 'live' }])
     expect(g({ filters: { playing: true } })).toEqual(['Quiz'])
     expect(g({ filters: { folder: ['Season 1'], tag: ['live'] } })).toEqual(['Quiz'])
@@ -107,9 +107,27 @@ describe('the Games tab (T-11–T-16)', () => {
   it('keeps 1.0.2\x27s order — most recently changed first — and groups by folder and status (T-19)', () => {
     expect(spec.defaults.sort).toEqual({ id: 'changed', desc: true })
     expect(g({})).toEqual(['Draft', 'Old', 'Quiz'])
-    expect(g({ group: 'folder' })).toEqual(['#Season 1', 'f:Season 1:Old', 'f:Season 1:Quiz', '#No folder', '~none:Draft'])
+    expect(g({ group: 'folder' })).toEqual(['#Season 1', 'f:season 1:Old', 'f:season 1:Quiz', '#No folder', '~none:Draft'])
     expect(g({ group: 'status' })).toEqual(['#Playing', 'playing:Quiz', '#Ready', 'ready:Draft', '#Archived', 'archived:Old'])
     expect(g({ sort: { id: 'questions', desc: true } })[0]).toBe('Quiz')
+  })
+
+  // C12: a folder or game tag spelled two ways is one, as Folders and game tags counts it.
+  it('folds case in the folder and tag filters and the folder groups', () => {
+    const mixed = [recipe('A', { folder: 'History', tags: ['Live'], updatedAt: 2 }), recipe('B', { folder: 'history', tags: ['live'], updatedAt: 1 }), recipe('C', { folder: 'Science' })]
+    const its: GameItem[] = mixed.map((r) => ({ recipe: r, playing: false, questions: 0 }))
+    const s = gamesSpec(mixed)
+    const m = (over: Partial<ListViewState>) => run(s, its, over, (x) => x.recipe.id)
+    expect(s.filters.find((f) => f.id === 'folder')?.options).toEqual([
+      { value: 'history', label: 'History' },
+      { value: 'science', label: 'Science' },
+    ])
+    expect(s.filters.find((f) => f.id === 'tag')?.options).toEqual([{ value: 'live', label: 'Live' }])
+    expect(m({ filters: { folder: ['history'] } })).toEqual(['A', 'B'])
+    // A filter set before C12 holds a spelling; it still finds both.
+    expect(m({ filters: { folder: ['History'] } })).toEqual(['A', 'B'])
+    expect(m({ filters: { tag: ['LIVE'] } })).toEqual(['A', 'B'])
+    expect(m({ group: 'folder' })).toEqual(['#History', 'f:history:A', 'f:history:B', '#Science', 'f:science:C'])
   })
 })
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { matchesSearch } from '@questiongame/text'
 import { Icon, Kbd, Text } from '@/atoms'
-import { GestureList, HelpFigure, HelpText, PageHeader, SearchField, SectionIndex, SettingsGroup, helpPlain } from '@/molecules'
+import { GestureList, HelpFigure, HelpText, HotkeyChords, PageHeader, SearchField, SectionIndex, SettingsGroup, helpPlain } from '@/molecules'
 import { SettingsLayout } from '@/templates'
 import { HOTKEYS, TABS } from '@/copy'
 import { GESTURES } from '@/copy/gestures'
@@ -46,6 +46,7 @@ export function HelpPage({ section, topic }: HelpPageProps = {}) {
   }, [query])
 
   return (
+    <HotkeyChords.Provider value={overrides ?? {}}>
     <SettingsLayout
       header={<PageHeader title={TABS.help.label} toolbar={<SearchField what="help" onSearch={setQuery} className="w-64 min-w-28" />} />}
       aside={sections.length > 0 ? <SectionIndex entries={sections.map((s) => ({ id: `help-${s.id}`, title: s.title }))} /> : undefined}
@@ -72,6 +73,7 @@ export function HelpPage({ section, topic }: HelpPageProps = {}) {
         ))
       )}
     </SettingsLayout>
+    </HotkeyChords.Provider>
   )
 }
 

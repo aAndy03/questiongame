@@ -250,7 +250,18 @@ export interface GameItem {
   readonly questions: number
 }
 
-const distinct = (values: readonly string[]) => [...new Set(values)].sort(compareText)
+/**
+ * A folder or game tag as the filter offers it (C12): case folded, as a
+ * question tag is — *History* and *history* are one option, the value folded,
+ * the label its first spelling — so the list agrees with Folders and game tags.
+ */
+const distinctFolded = (values: readonly string[]) => {
+  const out = new Map<string, string>()
+  for (const v of values) if (!out.has(foldTag(v))) out.set(foldTag(v), v)
+  return [...out].map(([value, label]) => ({ value, label })).sort((a, b) => compareText(a.label, b.label))
+}
+/** Does a folded filter value hold this folder or tag? Folds the value too: a filter set before C12 holds a spelling. */
+const holds = (v: unknown, s: string) => multi(v).some((x) => foldTag(x) === foldTag(s))
 
 export function gamesSpec(recipes: readonly Recipe[]): ListSpec<GameItem> {
   return {
@@ -261,15 +272,15 @@ export function gamesSpec(recipes: readonly Recipe[]): ListSpec<GameItem> {
         id: 'folder',
         label: VIEWS.folder,
         kind: 'multi',
-        options: distinct(recipes.flatMap((r) => (r.folder ? [r.folder] : []))).map((f) => ({ value: f, label: f })),
-        test: (g, v) => g.recipe.folder !== null && multi(v).includes(g.recipe.folder),
+        options: distinctFolded(recipes.flatMap((r) => (r.folder ? [r.folder] : []))),
+        test: (g, v) => g.recipe.folder !== null && holds(v, g.recipe.folder),
       },
       {
         id: 'tag',
         label: VIEWS.tag,
         kind: 'multi',
-        options: distinct(recipes.flatMap((r) => r.tags)).map((t) => ({ value: t, label: t })),
-        test: (g, v) => g.recipe.tags.some((t) => multi(v).includes(t)),
+        options: distinctFolded(recipes.flatMap((r) => r.tags)),
+        test: (g, v) => g.recipe.tags.some((t) => holds(v, t)),
       },
       { id: 'playing', label: VIEWS.playingNow, kind: 'toggle', test: (g) => g.playing },
     ],
@@ -284,7 +295,9 @@ export function gamesSpec(recipes: readonly Recipe[]): ListSpec<GameItem> {
       {
         id: 'folder',
         label: VIEWS.folder,
-        groupsOf: (g) => (g.recipe.folder ? [{ key: `f:${g.recipe.folder}`, label: g.recipe.folder, order: g.recipe.folder }] : [{ key: '~none', label: VIEWS.noFolder, order: 0, last: true }]),
+        // One group per folder whatever its case (C12), as the filter has one option.
+        groupsOf: (g) =>
+          g.recipe.folder ? [{ key: `f:${foldTag(g.recipe.folder)}`, label: g.recipe.folder, order: foldTag(g.recipe.folder) }] : [{ key: '~none', label: VIEWS.noFolder, order: 0, last: true }],
       },
       {
         id: 'status',

@@ -12,7 +12,7 @@ import { isArchived, type BulkReport, type Recipe, type RecipeEdit } from '@/hos
 export interface GameLabelsManagerProps {
   isOpen: boolean
   onClose: () => void
-  /** Filter the Games list (`folder` or `tag`, the value as the filter holds it) and close. */
+  /** Filter the Games list (`folder` or `tag`, the value as the filter holds it: case folded) and close. */
   onShowInList: (filter: 'folder' | 'tag', value: string) => void
 }
 
@@ -41,9 +41,18 @@ export function GameLabelsManager({ isOpen, onClose, onShowInList }: GameLabelsM
   const folders = useMemo(() => countBy(all.flatMap((g) => (g.folder ? [g.folder] : []))), [all])
   const tags = useMemo(() => countBy(all.flatMap((g) => g.tags)), [all])
   const first: Entry | null = folders[0] ? { kind: 'folder', name: folders[0].name } : tags[0] ? { kind: 'tag', name: tags[0].name } : null
-  const valid = (e: Entry | null) => e !== null && (e.kind === 'folder' ? folders : tags).some((x) => x.name === e.name)
-  const current = valid(picked) ? picked : first
-  const holders: Recipe[] = current ? all.filter((g) => (current.kind === 'folder' ? g.folder === current.name : g.tags.some((t) => key(t) === key(current.name)))) : []
+  // A folder is one whatever its case, as a tag is and as the counts are (C12):
+  // the pick resolves to the entry's own spelling, and the holders, Rename,
+  // Empty folder and Show in list take every spelling.
+  const resolve = (e: Entry | null): Entry | null => {
+    if (e === null) return null
+    const hit = (e.kind === 'folder' ? folders : tags).find((x) => key(x.name) === key(e.name))
+    return hit ? { kind: e.kind, name: hit.name } : null
+  }
+  const current = resolve(picked) ?? first
+  const holders: Recipe[] = current
+    ? all.filter((g) => (current.kind === 'folder' ? g.folder !== null && key(g.folder) === key(current.name) : g.tags.some((t) => key(t) === key(current.name))))
+    : []
   const ids = holders.map((g) => g.id)
 
   const write = async (edits: readonly RecipeEdit[], over = ids) => {
@@ -76,7 +85,7 @@ export function GameLabelsManager({ isOpen, onClose, onShowInList }: GameLabelsM
             {GROUPS_TAGS.mergeInto}
           </Button>
         ) : null}
-        <Button size="sm" variant="secondary" icon="filter" onPress={() => onShowInList(current.kind, current.name)}>
+        <Button size="sm" variant="secondary" icon="filter" onPress={() => onShowInList(current.kind, key(current.name))}>
           {GROUPS_TAGS.showInList}
         </Button>
         <Button size="sm" variant="tertiary" icon="trash" onPress={() => setRemoving(true)}>

@@ -216,12 +216,13 @@ function nodesToTargets(play: PlayStateForMain, nodes: readonly ViewerNodeRect[]
       if (!option) continue
       const selected = session.selectedOptionIds.includes(option.id)
       const next = session.answerMode === 'multiple' ? (selected ? session.selectedOptionIds.filter((id) => id !== option.id) : [...session.selectedOptionIds, option.id]) : [option.id]
-      const legal = session.lockedOptionIds === null
-      out.push({ ...geom, label: option.text, legal, reason: legal ? null : TIMER.locked, selected, command: 'set_selection', args: { optionIds: next } })
+      // Live only while the Play is (beta.12, B13): a closed or unstarted Play is refused.
+      const legal = playOpen && session.lockedOptionIds === null
+      out.push({ ...geom, label: option.text, legal, reason: !playOpen ? null : legal ? null : TIMER.locked, selected, command: 'set_selection', args: { optionIds: next } })
     } else if (slot === 'question.stem' && session) {
-      out.push({ ...geom, label: SESSION.revealStem, legal: !session.reveals.stem, reason: null, selected: session.reveals.stem, command: 'reveal_stem', args: undefined })
+      out.push({ ...geom, label: SESSION.revealStem, legal: playOpen && !session.reveals.stem, reason: null, selected: session.reveals.stem, command: 'reveal_stem', args: undefined })
     } else if (slot === 'question.result' && session) {
-      out.push({ ...geom, label: SESSION.revealOutcome, legal: session.outcome === null, reason: null, selected: session.outcome !== null, command: 'reveal_outcome', args: undefined })
+      out.push({ ...geom, label: SESSION.revealOutcome, legal: playOpen && session.outcome === null, reason: null, selected: session.outcome !== null, command: 'reveal_outcome', args: undefined })
     } else if ((slot === 'teamOrder.row' || slot === 'scoreboard.row') && parsed.key) {
       const team = play.teams.find((t) => t.id === parsed.key)
       if (!team) continue

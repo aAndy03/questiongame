@@ -38,9 +38,23 @@ export function RosterSection({ recipe, frozenReason }: RosterSectionProps) {
   const items = useMemo(
     () =>
       (teams.data ?? [])
-        .filter((t) => !isArchived(t))
-        .map((t) => ({ id: t.id, data: t, view: { title: t.name, chips: <TeamMark mark={{ color: t.color, shortCode: t.shortCode, name: t.name }} /> } satisfies PickerRow })),
-    [teams.data],
+        // Archived ones only if this roster still holds them (beta.12, C5):
+        // the picker's Chosen pane showed their raw id, with no row to untick.
+        .filter((t) => !isArchived(t) || recipe.teams.includes(t.id))
+        .map((t) => ({
+          id: t.id,
+          data: t,
+          view: {
+            title: t.name,
+            chips: (
+              <>
+                {isArchived(t) ? <MeaningChip meaning="archived">{LIST.archived}</MeaningChip> : null}
+                <TeamMark mark={{ color: t.color, shortCode: t.shortCode, name: t.name }} />
+              </>
+            ),
+          } satisfies PickerRow,
+        })),
+    [teams.data, recipe.teams],
   )
 
   const write = async (next: readonly string[]): Promise<boolean> => {

@@ -5,6 +5,7 @@ import { LibraryList, ListToolbar, OperatorDetail, useActivateOperator, useArchi
 import { LibraryTabLayout } from '@/templates'
 import { useArchiveScope, useChromeStore, useListState, usePrefs } from '@/chrome/chrome'
 import { useNavStore } from '@/chrome/nav'
+import { toast } from '@/chrome/toast'
 import { fmt, LIST, MENU, OPERATOR, TABS, VIEWS } from '@/copy'
 import { operatorsSpec, type OperatorItem } from '@/host/listSpecs'
 import type { ListItem } from '@/host/listView'
@@ -109,6 +110,19 @@ export function OperatorsPage({ currentId = null }: OperatorsPageProps) {
         currentId={currentId}
         onOpen={(id) => (id === currentId ? replace({ tab: 'operators' }) : void go({ tab: 'operators', id, mode: 'view' }))}
         onDismiss={currentId ? () => replace({ tab: 'operators' }) : undefined}
+        // The selection strip every library tab has (C10): Archive and Restore.
+        // The active operator stays out of Archive, as its row menu refuses it,
+        // and the strip says why when it was picked.
+        bulk={{
+          onArchive: (ids) => {
+            const picked = ids.filter((id) => id !== activeId)
+            if (picked.length < ids.length) toast.info(OPERATOR.activeNotArchived)
+            if (picked.length > 0) archive.archive({ kind: 'operator', ids: picked, what: picked.length === 1 ? OPERATOR.one : OPERATOR.many })
+          },
+          onRestore: (ids) => void archive.restore({ kind: 'operator', ids, what: ids.length === 1 ? OPERATOR.one : OPERATOR.many }),
+          keep: activeId ? [activeId] : [],
+          isPending: archive.isPending,
+        }}
         actions={(row) => (
           <ActionMenu
             sections={[

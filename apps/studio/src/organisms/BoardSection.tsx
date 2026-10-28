@@ -1,7 +1,7 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import { Button, DisabledReason, IconButton, MeaningChip, Panel, SwitchField, Text } from '@/atoms'
 import { BoardBalance, BoardDomainRow, DifficultyChip, DifficultyDialog, difficultyLabel, EmptyState, IncompleteMark, InlineNotice, SettingRow, SortableList } from '@/molecules'
-import { DOMAIN, GAME, PICKER, QUESTION } from '@/copy'
+import { DOMAIN, GAME, LIST, PICKER, QUESTION } from '@/copy'
 import { noticesAt, useNoticeStore } from '@/chrome/notices'
 import { blockedMembers, everyQuestion, oneQuestionPerDifficulty } from '@/host/board'
 import { useHostCommand } from '@/host/commands'
@@ -42,8 +42,12 @@ export interface BoardSectionProps {
  */
 export function BoardSection({ recipe, frozenReason }: BoardSectionProps) {
   const preview = useRulesPreview(recipe.id, recipe.rev)
-  const domains = useCatalogList('domain', 'active')
-  const questions = useCatalogList('question', 'active')
+  // Every row, archived too (beta.12, C5): an archived domain or question on
+  // the board read as "missing", and its Choose questions was disabled.
+  const domains = useCatalogList('domain', 'all')
+  const questions = useCatalogList('question', 'all')
+  const onBoard = new Set(recipe.board.map((b) => b.domainId))
+  const chosenQuestions = new Set(recipe.board.flatMap((b) => b.questionIds))
   const tags = useTags()
   const run = useHostCommand()
   const propagating = usePropagatingSave()
@@ -123,12 +127,19 @@ export function BoardSection({ recipe, frozenReason }: BoardSectionProps) {
 
   const domainItems = useMemo(
     () =>
-      (domains.data ?? []).map((d) => ({
-        id: d.id,
-        data: d,
-        view: { title: d.name, subtitle: `${d.code} · ${DOMAIN.questionCount(d.questions.length)}` } satisfies PickerRow,
-      })),
-    [domains.data],
+      (domains.data ?? [])
+        .filter((d) => d.archivedAt === null || onBoard.has(d.id))
+        .map((d) => ({
+          id: d.id,
+          data: d,
+          view: {
+            title: d.name,
+            subtitle: `${d.code} · ${DOMAIN.questionCount(d.questions.length)}`,
+            chips: d.archivedAt !== null ? <MeaningChip meaning="archived">{LIST.archived}</MeaningChip> : undefined,
+          } satisfies PickerRow,
+        })),
+    // `onBoard` is rebuilt each render from the recipe.
+    [domains.data, recipe.board],
   )
 
   const choosing: Domain | undefined = choosingIn ? domainById.get(choosingIn) : undefined
@@ -137,7 +148,7 @@ export function BoardSection({ recipe, frozenReason }: BoardSectionProps) {
     if (!choosing) return []
     return choosing.questions.flatMap((m) => {
       const q = questionById.get(m.questionId)
-      if (!q) return []
+      if (!q || (q.archivedAt !== null && !chosenQuestions.has(q.id))) return []
       const body = effectiveBody(q, recipe.overlays.questions[q.id])
       const group = m.groupId ? (choosing.groups ?? []).find((g) => g.id === m.groupId) : undefined
       const item: QuestionItem = { question: { ...q, ...body }, gaps: bodyGaps(body), domains: [], group: group ? { id: group.id, name: group.name } : null }
@@ -145,6 +156,7 @@ export function BoardSection({ recipe, frozenReason }: BoardSectionProps) {
         title: body.stem || QUESTION.noStem,
         chips: (
           <>
+            {q.archivedAt !== null ? <MeaningChip meaning="archived">{LIST.archived}</MeaningChip> : null}
             <IncompleteMark gaps={item.gaps} />
             <DifficultyChip difficulty={body.difficulty} />
           </>
@@ -153,7 +165,7 @@ export function BoardSection({ recipe, frozenReason }: BoardSectionProps) {
       return [{ id: q.id, data: item, view }]
     })
     // `questionById` is rebuilt each render from the same query data.
-  }, [choosing, questions.data, recipe.overlays.questions])
+  }, [choosing, questions.data, recipe.overlays.questions, recipe.board])
   const questionSpec = useMemo(
     () => pickQuestionsSpec({ groups: (choosing?.groups ?? []).map((g) => ({ id: g.id, name: g.name })), tags: (tags.data ?? []).map((t) => t.tag) }),
     [choosing, tags.data],

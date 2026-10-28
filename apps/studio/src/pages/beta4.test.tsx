@@ -63,6 +63,20 @@ describe('Add teams… (beta.4)', () => {
     expect((memberships()[0]?.args as { teams: string[] }).teams).toEqual(['team-alpha', 'team-bravo', 'team-charlie', 'team-delta', 'team-echo'])
   })
 
+  // C6: the picker's search folds accents and reads words by prefix, as the library's does.
+  it('finds Pământ from "pamant", marked, and not from the middle of a word', async () => {
+    fake.seed([team('team-pamant', 'Pământ')])
+    await at({ tab: 'games', id: 'recipe-demo', section: 'roster' } as Route)
+    fireEvent.click(await enabled(PICKER.addTeams))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.change(within(dialog).getByRole('searchbox'), { target: { value: 'pamant' } })
+    await waitFor(() => expect(within(dialog).queryByRole('checkbox', { name: 'Alpha' })).toBeNull(), { timeout: 2000 })
+    expect(within(dialog).getByRole('checkbox', { name: 'Pământ' })).toBeTruthy()
+    expect([...dialog.querySelectorAll('mark[data-hit]')].map((m) => m.textContent)).toContain('Pământ')
+    fireEvent.change(within(dialog).getByRole('searchbox'), { target: { value: 'mant' } })
+    await waitFor(() => expect(within(dialog).queryByRole('checkbox', { name: 'Pământ' })).toBeNull(), { timeout: 2000 })
+  })
+
   it('Cancel writes nothing, and the next opening starts from the game', async () => {
     fake.seed([team('team-echo', 'Echo')])
     await at({ tab: 'games', id: 'recipe-demo', section: 'roster' } as Route)
@@ -175,6 +189,34 @@ describe('the Games bulk bar (beta.4)', () => {
     const confirm = await screen.findByRole('alertdialog')
     expect(within(confirm).getByText(/Archive this game/)).toBeTruthy()
     expect(screen.getByText(/Season opener is playing/)).toBeTruthy()
+  })
+
+  // C10: Duplicate in bulk, as Teams and Questions have; the list stays put and says so.
+  it('duplicates a selection, stays on the list and toasts', async () => {
+    const second = demoRecipe()
+    fake.seed([], [{ ...second, id: 'recipe-two', name: 'Second show' }])
+    await at({ tab: 'games' } as Route)
+    for (const name of ['Season opener', 'Second show']) fireEvent.click(await screen.findByRole('checkbox', { name: `Select ${name}` }, { timeout: 5000 }))
+    const strip = await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[data-bulk-strip]:not([data-bulk-idle])')
+      if (!el) throw new Error('no strip')
+      return el
+    })
+    fireEvent.click(within(strip).getByRole('button', { name: LIST.duplicate }))
+    await waitFor(() => expect(fake.calls.filter((c) => c.name === 'recipe_duplicate')).toHaveLength(2))
+    expect(fake.calls.filter((c) => c.name === 'recipe_duplicate').map((c) => c.args?.['newName'])).toEqual(['Season opener (copy)', 'Second show (copy)'])
+    expect(await screen.findByText('Duplicated 2 games')).toBeTruthy()
+    expect((useNavStore.getState().route as { id?: string }).id).toBeUndefined()
+  })
+
+  it('a row’s Duplicate stays on the list and toasts', async () => {
+    await at({ tab: 'games' } as Route)
+    const menus = await screen.findAllByRole('button', { name: LIST.open }, { timeout: 5000 })
+    fireEvent.click(menus[0] as HTMLElement)
+    fireEvent.click(await screen.findByRole('menuitem', { name: LIST.duplicate }))
+    await waitFor(() => expect(fake.calls.some((c) => c.name === 'recipe_duplicate')).toBe(true))
+    expect(await screen.findByText('Duplicated 1 game')).toBeTruthy()
+    expect((useNavStore.getState().route as { id?: string }).id).toBeUndefined()
   })
 })
 

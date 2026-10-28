@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { matchesSearch, searchTerms } from '@questiongame/text'
 import { Button, MeaningChip, SelectField, Text } from '@/atoms'
 import { ActionMenu, ConfirmDialog, NameDialog, PageHeader, type ActionSection, type ConfirmFrame } from '@/molecules'
 import { MENU, VIEWS, fmt } from '@/copy'
@@ -97,9 +98,11 @@ export function WorkspacesPage() {
     [data, scope, counts.data],
   )
   const search = useChromeStore((s) => s.listState.workspaces?.search ?? '')
+  // Every word starts a word of the name, case and accents folded, as the
+  // library searches (C6): *pamant* finds *Pământ*.
   const hits = useMemo(() => {
-    const needle = search.trim().toLowerCase()
-    return needle ? new Map((items ?? []).filter((i) => i.view.title.toLowerCase().includes(needle)).map((i) => [i.id, 1])) : null
+    const terms = searchTerms(search)
+    return terms.length > 0 ? new Map((items ?? []).filter((i) => terms.every((t) => matchesSearch(i.view.title, t))).map((i) => [i.id, 1])) : null
   }, [items, search])
   const lv = useListView(spec, items, hits)
   const pinPath = activeId ? `operator.${activeId}.pin` : ''

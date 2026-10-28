@@ -202,7 +202,7 @@ export const TIPS: readonly Tip[] = [
     moments: { 'control:loaded': 1, 'control:rehearsal': 1 },
     skill: 'control-keys',
     title: 'Run it from the keyboard',
-    body: '{{key:t}} gives the token, {{key:space}} starts the timer, {{key:enter}} locks, {{key:r}} reveals, {{key:1}}–{{key:9}} choose a domain or an answer.',
+    body: '{{hotkey:give_token}} gives the token, {{hotkey:start_timer}} starts the timer, {{hotkey:lock_selection}} locks, {{hotkey:reveal_outcome}} reveals, {{key:1}}–{{key:9}} choose a domain or an answer.',
     help: { section: 'run-a-show', topic: 'keyboard' },
   },
   {
@@ -211,7 +211,7 @@ export const TIPS: readonly Tip[] = [
     skill: 'undo-turn',
     requires: 'control-keys',
     title: 'A wrong click is not the end',
-    body: '{{ui:Undo turn}} ({{key:mod+z}}) takes back the last answered question, points and all; {{ui:Redo turn}} puts it back.',
+    body: '{{ui:Undo turn}} ({{hotkey:undo_turn}}) takes back the last answered question, points and all; {{ui:Redo turn}} puts it back.',
     help: { section: 'run-a-show', topic: 'undo-and-redo' },
   },
   {

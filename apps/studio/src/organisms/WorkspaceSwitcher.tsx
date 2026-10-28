@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Dropdown, Header, Label, Separator as MenuSeparator } from '@heroui/react'
-import { Button, Icon, InitialsAvatar, Text, Tooltip } from '@/atoms'
+import { Button, Icon, InitialsAvatar, Text } from '@/atoms'
 import { NameDialog } from '@/molecules'
 import { useNavStore } from '@/chrome/nav'
 import { WORKSPACE } from '@/copy/workspaces'
@@ -34,8 +34,8 @@ export function groupedWorkspaces(workspaces: readonly Workspace[], groups: read
 /**
  * The switcher at the top of the sidebar (Beta 2.0): which workspace Studio
  * works in, the others by group, *New workspace…* and *Manage workspaces…*.
- * Disabled, saying why, while a game is loaded in Control — its Play lives in
- * this workspace.
+ * While a game is loaded in Control the other workspaces are disabled, saying
+ * why — its Play lives in this one — and New and Manage stay (beta.12).
  */
 export function WorkspaceSwitcher({ collapsed }: WorkspaceSwitcherProps) {
   const workspaces = useWorkspaces()
@@ -66,22 +66,11 @@ export function WorkspaceSwitcher({ collapsed }: WorkspaceSwitcherProps) {
     </span>
   )
 
-  if (loaded) {
-    return (
-      <div className={collapsed ? 'flex justify-center' : ''} data-workspace-switcher>
-        <Tooltip content={WORKSPACE.loaded} placement="right" delay={200}>
-          {/* Focusable and named by the reason, as every disabled control is (beta.5: hover only before). */}
-          <span className="block w-full cursor-not-allowed" role="group" tabIndex={0} aria-label={WORKSPACE.disabledName(name, WORKSPACE.loaded)}>
-            <Button variant="ghost" fullWidth={!collapsed} isDisabled className="justify-start">
-              {face}
-            </Button>
-          </span>
-        </Tooltip>
-      </div>
-    )
-  }
-
+  // A game in Control holds the workspace: switching is refused, but making
+  // and managing workspaces is not (beta.12, C4 — the whole switcher was
+  // disabled, and Manage workspaces with it). The others are disabled, said why.
   const sections = groupedWorkspaces(data.workspaces, data.groups)
+  const held = loaded ? sections.flatMap((s) => s.workspaces.filter((w) => w.id !== data.current).map((w) => `ws:${w.id}`)) : []
   return (
     <div className={collapsed ? 'flex justify-center' : ''} data-workspace-switcher>
       <Dropdown>
@@ -92,6 +81,7 @@ export function WorkspaceSwitcher({ collapsed }: WorkspaceSwitcherProps) {
         <Dropdown.Popover placement={collapsed ? 'right top' : 'bottom start'} className="min-w-[240px]">
           <Dropdown.Menu
             aria-label={WORKSPACE.switcher}
+            disabledKeys={held}
             onAction={(key) => {
               const id = String(key)
               if (id === 'new') setCreating(true)
@@ -99,6 +89,11 @@ export function WorkspaceSwitcher({ collapsed }: WorkspaceSwitcherProps) {
               else void switchTo(id.replace(/^ws:/, ''))
             }}
           >
+            {loaded ? (
+              <Dropdown.Section>
+                <Header>{WORKSPACE.loaded}</Header>
+              </Dropdown.Section>
+            ) : null}
             {sections.map((section) => (
               <Dropdown.Section key={section.group?.id ?? 'ungrouped'}>
                 {sections.length > 1 || section.group ? <Header>{section.group?.name ?? WORKSPACE.ungrouped}</Header> : null}

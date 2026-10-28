@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { EMPTY_PLAY_STATE, type PlayStateForMain } from '@questiongame/contract'
 import { App } from '@/App'
+import { useChromeStore } from '@/chrome/chrome'
 import { HOME, useNavStore } from '@/chrome/nav'
 import { useNoticeStore } from '@/chrome/notices'
 import { createFakeHost, type FakeHost } from '@/host/fake'
@@ -11,6 +12,7 @@ import { resetUpdateCheck } from '@/host/updates'
 import { resetWhatsNew } from '@/host/whatsNew'
 import { BETA_WELCOME } from '@/copy/beta'
 import { FIRST_RUN } from '@/copy/firstRun'
+import { OPERATOR } from '@/copy'
 import { TRANSFER, WORKSPACE } from '@/copy/workspaces'
 import type { CatalogItem } from '@/host/types'
 
@@ -31,6 +33,8 @@ async function withOperator() {
 
 beforeEach(() => {
   useNavStore.setState({ route: HOME, back: [], forward: [], guard: null })
+  // A search one test typed is not the next test's list.
+  useChromeStore.setState({ listState: {} })
   useNoticeStore.setState({ notices: [], collectorOpen: false })
   receivePlayState(null)
   resetUpdateCheck()
@@ -118,7 +122,7 @@ describe('the switcher', () => {
     expect(await screen.findByRole('button', { name: /Club/ })).toBeTruthy()
   })
 
-  it('is disabled while a game is loaded', async () => {
+  it('keeps New and Manage while a game is loaded, and disables switching away (beta.12, C4)', async () => {
     await withOperator()
     const loaded = {
       ...EMPTY_PLAY_STATE,
@@ -132,7 +136,10 @@ describe('the switcher', () => {
     render(<App />)
     await screen.findAllByRole('button', { name: /My library/ })
     const trigger = document.querySelector('[data-workspace-switcher] button') as HTMLElement
-    expect(trigger.hasAttribute('disabled') || trigger.getAttribute('aria-disabled') === 'true' || trigger.hasAttribute('data-disabled')).toBe(true)
+    expect(trigger.hasAttribute('disabled')).toBe(false)
+    fireEvent.click(trigger)
+    expect(await screen.findByRole('menuitem', { name: WORKSPACE.manage })).toBeTruthy()
+    expect(screen.getByText(WORKSPACE.loaded)).toBeTruthy()
   })
 })
 
@@ -182,6 +189,21 @@ describe('Manage workspaces', () => {
     expect(await screen.findByText(WORKSPACE.archivedMany(2))).toBeTruthy()
   })
 
+  // C6: by word prefix, accents and case folded, as the library searches.
+  it('finds Pământ from "pamant"', async () => {
+    await withOperator()
+    await fake.invoke('workspace_create', { name: 'Pământ' })
+    useNavStore.setState({ route: { tab: 'workspaces' } })
+    render(<App />)
+    await screen.findByLabelText(`${WORKSPACE.actions}: Pământ`)
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'pamant' } })
+    await waitFor(() => expect(screen.queryByLabelText(`${WORKSPACE.actions}: My library`)).toBeNull())
+    expect(screen.getByLabelText(`${WORKSPACE.actions}: Pământ`)).toBeTruthy()
+    // A hit inside a word is not a hit.
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'mant' } })
+    await waitFor(() => expect(screen.queryByLabelText(`${WORKSPACE.actions}: Pământ`)).toBeNull())
+  })
+
   it('moves a selection to a workspace group, and offers grid as well as table', async () => {
     await withOperator()
     await fake.invoke('workspace_create', { name: 'Club' })
@@ -195,6 +217,31 @@ describe('Manage workspaces', () => {
     expect(await screen.findByText(WORKSPACE.moveManyTitle(2))).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: WORKSPACE.save }))
     await waitFor(() => expect(calls('workspace_set_group')).toHaveLength(2))
+  })
+})
+
+// C10: Operators has the selection strip every library tab has.
+describe('Operators in bulk', () => {
+  it('archives a selection and keeps the active operator out of it', async () => {
+    await withOperator()
+    fake.seed([{ kind: 'operator', item: { ...operator.item, id: 'op-2', displayName: 'Bogdan' } } as CatalogItem])
+    fake.calls.length = 0
+    useNavStore.setState({ route: { tab: 'operators' } })
+    render(<App />)
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select all' }))
+    const strip = await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[data-bulk-strip]:not([data-bulk-idle])')
+      if (!el) throw new Error('no strip')
+      return el
+    })
+    expect(within(strip).getByText('2 selected')).toBeTruthy()
+    // Archive counts what it takes: the active operator stays.
+    fireEvent.click(await within(strip).findByRole('button', { name: 'Archive 1' }))
+    expect(await screen.findByText(OPERATOR.activeNotArchived)).toBeTruthy()
+    const confirm = await screen.findByRole('alertdialog')
+    fireEvent.click(within(confirm).getByRole('button', { name: /^Archive/ }))
+    await waitFor(() => expect(calls('catalog_archive')).toHaveLength(1))
+    expect(calls('catalog_archive')[0]?.args).toMatchObject({ kind: 'operator', id: 'op-2' })
   })
 })
 

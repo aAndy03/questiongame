@@ -298,6 +298,36 @@ describe('game tags and folders (P20)', () => {
     await waitFor(() => expect(labelWrites().at(-1)).toEqual({ ids: ['recipe-demo'], edits: [{ op: 'set_folder', folder: 'Season 4' }], preview: false }))
   })
 
+  // C12: a folder spelled two ways is one folder — counted, held, renamed and shown as one.
+  it('a folder differing only by case is one folder in the manager and in the list', async () => {
+    second({ folder: 'season 3' })
+    await at({ tab: 'games' })
+    fireEvent.click(await screen.findByRole('button', { name: 'Folders and game tags…' }))
+    const dialog = await screen.findByRole('dialog')
+    const folder = within(dialog).getByRole('option', { name: /Season 3/i })
+    expect(folder.textContent).toContain('2')
+    fireEvent.click(folder)
+    expect(within(dialog).getByText('Finals night')).toBeTruthy()
+    expect(within(dialog).getByText('Season opener')).toBeTruthy()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Rename' }))
+    const field = await screen.findByRole('textbox', { name: /New name/ })
+    fireEvent.change(field, { target: { value: 'Season 4' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(labelWrites().at(-1)).toEqual({ ids: ['recipe-demo', 'recipe-two'], edits: [{ op: 'set_folder', folder: 'Season 4' }], preview: false }))
+  })
+
+  it('Show in list on a folder spelled two ways lists both games', async () => {
+    second({ folder: 'season 3' })
+    await at({ tab: 'games' })
+    fireEvent.click(await screen.findByRole('button', { name: 'Folders and game tags…' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('option', { name: /Season 3/i }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Show in list' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(await screen.findByRole('checkbox', { name: 'Select Season opener' })).toBeTruthy()
+    expect(screen.getByRole('checkbox', { name: 'Select Finals night' })).toBeTruthy()
+  })
+
   it('the fake refuses a 21st game tag whole, as the host does', async () => {
     second({ tags: Array.from({ length: 20 }, (_, i) => `t${i}`) })
     await expect(fake.invoke('recipe_bulk_edit', { ids: ['recipe-demo', 'recipe-two'], edits: [{ op: 'tag', tag: 'new' }], preview: false })).rejects.toBeTruthy()
@@ -771,6 +801,36 @@ describe('Statistics ▸ All data is a picture first (P20)', () => {
     expect(await screen.findByText(STATS.empty.body)).toBeTruthy()
     expect(screen.queryByRole('img', { name: STATS.chart.label })).toBeNull()
     expect(screen.queryByRole('group', { name: 'Plays' })).toBeNull()
+  })
+
+  // B17: an archived game's Plays are history too, as archived teams' and domains' are.
+  it('the Game filter offers archived games as well', async () => {
+    fake.seed([], [{ ...demoRecipe(), id: 'recipe-old', name: 'Old show', archivedAt: 5 }])
+    await allData()
+    await waitFor(() => expect([...selectOf(STATS.filters.game).options].map((o) => o.value)).toContain('recipe-old'))
+    expect([...selectOf(STATS.filters.game).options].map((o) => o.value)).toContain('recipe-demo')
+  })
+
+  // B17: "last 7 days" left open moves on with the clock, a minute at a time, without a query per render.
+  it('a time window moves on with the minute', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    try {
+      const start = Date.UTC(2026, 9, 28, 12, 0, 30)
+      vi.setSystemTime(start)
+      await allData()
+      choose(STATS.filters.time, 'last7')
+      const minute = Math.floor(start / 60_000) * 60_000
+      const week = 7 * 86_400_000
+      await waitFor(() => expect(statsQueries().at(-1)?.filter?.fromMs).toBe(minute - week))
+      const asked = calls('stats_query').length
+      // Inside the same minute, a render asks nothing new.
+      await act(async () => {})
+      expect(calls('stats_query')).toHaveLength(asked)
+      act(() => vi.advanceTimersByTime(60_000))
+      await waitFor(() => expect(statsQueries().at(-1)?.filter?.fromMs).toBe(minute + 60_000 - week))
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

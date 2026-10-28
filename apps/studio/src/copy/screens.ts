@@ -12,6 +12,8 @@ export const SCREENS_TAB = {
   stopTitle: 'Stop the Play?',
   stopBody: 'The Play ends as abandoned so the Screens canvas can open. Its events stay on record.',
   saving: 'Saving…',
+  /** beta.12 (B8): the host refused the last save; the next edit tries again. */
+  notSaved: 'Not saved — the next change tries again',
   saved: (rev: number) => `Saved · rev ${rev}`,
   inspector: 'Inspector',
   noSelection: 'Click a node on the canvas to edit it.',

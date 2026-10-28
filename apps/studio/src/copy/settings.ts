@@ -311,6 +311,7 @@ export const SETTINGS = {
     fixed: 'fixed',
     positional: 'Pick domain / answer by position',
     positionalRange: '1–9',
+    positionalTaken: (key: string) => `${key} picks a domain or an answer by position, so it cannot also run a command.`,
     hint: 'Esc cancels. Backspace clears.',
     gesturesTitle: 'Mouse and keyboard gestures',
     gesturesHint: 'These work wherever they apply and cannot be changed. Help (F1) explains each one.',

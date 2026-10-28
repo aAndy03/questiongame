@@ -5,6 +5,7 @@ import { HOTKEYS } from '@/copy'
 import { SETTINGS } from '@/copy/settings'
 import { useHostCommand } from '@/host/commands'
 import { useSettings } from '@/host/queries'
+import { toast } from '@/chrome/toast'
 
 interface Conflict {
   readonly command: string
@@ -33,6 +34,11 @@ export function ShortcutsEditor() {
 
   const bind = async (command: string, chord: string | null) => {
     setConflict(null)
+    // 1–9 pick a domain or an answer by position; a command there would fire with every pick (beta.12, B15).
+    if (chord !== null && /^[1-9]$/.test(chord)) {
+      toast.warn(SETTINGS.shortcuts.positionalTaken(chord))
+      return
+    }
     if (chord !== null) {
       const other = commands.find((c) => c !== command && effective(c) === chord)
       if (other) {

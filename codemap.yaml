@@ -2316,6 +2316,7 @@ studio_calls:
     workspace_restore: [apps/studio/src/pages/WorkspacesPage.tsx]
     workspace_set_group: [apps/studio/src/pages/WorkspacesPage.tsx]
     workspace_switch: [apps/studio/src/organisms/useSwitchWorkspace.ts]
+    "—": [apps/studio/src/molecules/HelpText.tsx]
   dynamic_call_files:
     - apps/studio/src/chrome/diagnostics.ts
     - apps/studio/src/host/commands.ts
@@ -3236,4 +3237,4 @@ fixtures:
   - scoreboard
   - scoreboard-tie
   - team-order
-mismatches: []
+mismatches: ["studio call —: no such command in Rust (apps/studio/src/molecules/HelpText.tsx)"]
