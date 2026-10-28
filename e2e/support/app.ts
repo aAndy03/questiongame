@@ -70,8 +70,9 @@ export async function stageScreen(): Promise<string | null> {
 /**
  * Name the workspace Studio asks about (Beta 2.0): *Name your workspace* on a
  * library that moved into one, *Create your first workspace* on an empty one.
- * The field starts empty and nothing suggests a name — that is asserted here,
- * on every spec that passes through it.
+ * beta.10: a moved library's field starts at *My library*; the name typed
+ * replaces it the way a person does it — select all, type — because WebDriver's
+ * `clearValue` never reaches React's state and the name was appended.
  */
 export async function nameWorkspace(name = 'E2E library'): Promise<void> {
   await browser.waitUntil(
@@ -82,10 +83,12 @@ export async function nameWorkspace(name = 'E2E library'): Promise<void> {
     },
     { timeout: 30_000, timeoutMsg: 'Studio never asked for the workspace name' },
   )
-  const field = await named('Workspace name')
+  // The page's one input: the card beside it also says the name.
+  const field = await $('form input')
   expect(await field.getAttribute('placeholder')).toBeNull()
-  await field.clearValue()
-  await field.setValue(name)
+  await field.click()
+  await browser.keys(['Control', 'a'])
+  await field.addValue(name)
   await press('Continue')
 }
 

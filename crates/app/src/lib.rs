@@ -183,8 +183,11 @@ fn start(handle: &tauri::AppHandle, data_dir: Option<std::path::PathBuf>) -> err
     let library = catalog_path(handle)?;
     let options = open_options(library.parent().unwrap_or(std::path::Path::new(".")));
     let host = Host::open_installed(&library, &options)?;
+    // Read while the host is still ours: `setup` is the event loop, and the
+    // lock may not be taken here once it is managed.
+    let native_title_bar = host.flags.globals().window.native_title_bar;
     handle.manage(AppState::new(host));
-    windows::open_studio(handle)?;
+    windows::open_studio(handle, native_title_bar)?;
     // The first health report is the watch's own first tick: computing it
     // here would take the host lock on the event-loop thread.
     tick::spawn(handle.clone());

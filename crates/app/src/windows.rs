@@ -59,12 +59,16 @@ pub fn studio_title(is_dev: bool) -> &'static str {
     }
 }
 
-pub fn open_studio(app: &AppHandle) -> AppResult<WebviewWindow> {
+/// Studio's window, built once.
+///
+/// `native` is `window.native_title_bar`, read by the caller from the host
+/// **before** it is managed: this runs in `setup`, on the event loop, where
+/// the host lock may not be taken (beta.10 — the e2e app panicked at launch).
+pub fn open_studio(app: &AppHandle, native: bool) -> AppResult<WebviewWindow> {
     crate::state::assert_unlocked("windows::open_studio");
     if let Some(existing) = app.get_webview_window(MAIN) {
         return Ok(existing);
     }
-    let native = native_title_bar(app);
     let builder = WebviewWindowBuilder::new(app, MAIN, WebviewUrl::App(STUDIO_PATH.into()))
         // Kept with Studio's own bar too: the taskbar, Alt-Tab, Mission
         // Control and the e2e suite read it.
@@ -72,13 +76,6 @@ pub fn open_studio(app: &AppHandle) -> AppResult<WebviewWindow> {
         .inner_size(1440.0, 920.0)
         .min_inner_size(1100.0, 720.0);
     Ok(debuggable(chrome(builder, native), app).build()?)
-}
-
-/// Whether the operator chose the OS's own title bar (beta.10,
-/// `window.native_title_bar`). Off — Studio's bar — when it cannot be read.
-fn native_title_bar(app: &AppHandle) -> bool {
-    app.try_state::<crate::state::AppState>()
-        .is_some_and(|state| state.lock().flags.globals().window.native_title_bar)
 }
 
 /// **Studio's own title bar** (beta.10): one bar, Studio's header, with the

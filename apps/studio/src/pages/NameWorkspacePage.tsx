@@ -107,20 +107,24 @@ export function NameWorkspacePage({ mode, onDone }: NameWorkspacePageProps) {
             <Point icon="workspaces" title={WORKSPACE.guidedWhyTitle} body={WORKSPACE.guidedWhyBody} />
           </ul>
         )}
-        {/* The workspace itself, as it will look: the name as it is typed, what it holds. */}
-        <div data-workspace-card>
-          <Panel variant="secondary" density="compact" className="flex items-center gap-3">
-            <Icon name="workspaces" />
-            <div className="flex min-w-0 flex-col">
-              <Text variant="studio-label" truncate>
-                {name.trim() || WORKSPACE.nameLabel}
-              </Text>
-              <Text variant="studio-caption" tone="muted" tabular>
-                {held && held.teams + held.domains + held.questions + held.games > 0 ? WORKSPACE.counts(held) : WORKSPACE.emptyCounts}
-              </Text>
-            </div>
-          </Panel>
-        </div>
+        {/* The workspace itself, as it will look: the name as it is typed (never
+          * the field's label — that read as a second field), what it holds.
+          * Only for a library that moved: a new one holds nothing to show. */}
+        {mode === 'name' ? (
+          <div data-workspace-card>
+            <Panel variant="secondary" density="compact" className="flex items-center gap-3">
+              <Icon name="workspaces" />
+              <div className="flex min-w-0 flex-col">
+                <Text variant="studio-label" truncate>
+                  {name.trim() || WORKSPACE.guidedDefaultName}
+                </Text>
+                <Text variant="studio-caption" tone="muted" tabular>
+                  {held && held.teams + held.domains + held.questions + held.games > 0 ? WORKSPACE.counts(held) : WORKSPACE.emptyCounts}
+                </Text>
+              </div>
+            </Panel>
+          </div>
+        ) : null}
         {field}
       </Panel>
     </WizardLayout>
