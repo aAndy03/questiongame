@@ -66,6 +66,8 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
   },
   {
     version: '2.0.0-beta.10',
+    // Built, never published on its own: it went out inside 2.0.0-beta.11.
+    unreleased: true,
     notes: {
       en: [
         {
