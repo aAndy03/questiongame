@@ -31,6 +31,14 @@ pub struct Topology {
     pub also_on: BTreeMap<String, Vec<String>>,
     /// Panels that are connected and that no active path draws on. Names.
     pub unused: Vec<String>,
+    /// macOS (beta.10): what each listed display is called and what mirrors
+    /// it, by its **physical origin** — tao calls every Mac display
+    /// `Monitor #<model>`, so the name is no join key there.
+    pub by_origin: BTreeMap<(i32, i32), crate::topology_mac::MacDisplay>,
+    /// macOS: "Displays have separate Spaces". Off, a full-screen window on a
+    /// second display blanks the others, so Stage cannot sit on the TV while
+    /// Studio stays on the laptop. `None` off macOS.
+    pub separate_spaces: Option<bool>,
 }
 
 /// Fold a list of paths into a [`Topology`]. Pure, so the Windows-specific
@@ -103,9 +111,14 @@ impl Path {
     }
 }
 
-/// The topology now. Empty off Windows.
-pub fn read() -> Topology {
-    fold(&os::paths())
+/// The topology now: Windows' paths, macOS' displays (beta.10); empty
+/// elsewhere.
+pub fn read(app: &tauri::AppHandle) -> Topology {
+    let mut topology = fold(&os::paths());
+    let (screens, separate_spaces) = crate::topology_mac::read(app);
+    topology.by_origin = crate::topology_mac::fold(&screens);
+    topology.separate_spaces = separate_spaces;
+    topology
 }
 
 #[cfg(windows)]

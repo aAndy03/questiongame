@@ -344,6 +344,8 @@ pub enum PathKind {
     /// Not a folder: the OS's own display settings, where a display the OS
     /// is duplicating or not using gets extended (`health.display_unused`).
     DisplaySettings,
+    /// macOS' Desktop & Dock, where "Displays have separate Spaces" is (beta.10).
+    SpacesSettings,
 }
 
 fn cue_pack_dir(app: &AppHandle) -> AppResult<std::path::PathBuf> {
@@ -393,6 +395,11 @@ pub fn paths_reveal(window: WebviewWindow, app: AppHandle, which: PathKind) -> A
             };
             std::path::PathBuf::from(target)
         }
+        PathKind::SpacesSettings => std::path::PathBuf::from(if cfg!(target_os = "macos") {
+            "x-apple.systempreferences:com.apple.Desktop-Settings.extension"
+        } else {
+            "ms-settings:display"
+        }),
     };
     os_open(dir.as_os_str())
 }

@@ -4,6 +4,7 @@ import { SettingRow, SettingsGroup } from '@/molecules'
 import { SETTINGS } from '@/copy/settings'
 import { STATS } from '@/copy/stats'
 import { useHostCommand } from '@/host/commands'
+import { toast } from '@/chrome/toast'
 import { useMonitors, useSettings } from '@/host/queries'
 import { useStagePlacement } from '@/chrome/windows'
 import { DisplayWindowButtons } from './DisplayWindowButtons'
@@ -35,6 +36,16 @@ export function MonitorsSettings() {
   // the window; closing it means closed — a display coming back never re-opens
   // it.
   const { statsFullscreen, setStatsFullscreen } = useDisplays()
+  const copyReport = async () => {
+    const report = await run<string>('monitors_report')
+    if (report === null) return
+    try {
+      await navigator.clipboard.writeText(report)
+      toast.success(SETTINGS.monitors.reportCopied)
+    } catch {
+      toast.warn(SETTINGS.monitors.copyReport, report)
+    }
+  }
 
   // **Where Stage actually is**, not where it was asked to go (§9, P11.11).
   //
@@ -52,7 +63,15 @@ export function MonitorsSettings() {
     <div className="flex flex-col gap-6" data-monitors-settings>
       <SettingsGroup
         title={SETTINGS.monitors.title(list.length)}
-        action={<DisplayWindowButtons />}
+        action={
+          <span className="flex items-center gap-1.5">
+            {/* beta.10: what the app sees, as text for a bug report. */}
+            <Button size="sm" variant="ghost" icon="copy" onPress={() => void copyReport()}>
+              {SETTINGS.monitors.copyReport}
+            </Button>
+            <DisplayWindowButtons />
+          </span>
+        }
       >
         <div className="py-3">
           <DisplaysPanel />

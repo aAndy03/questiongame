@@ -56,3 +56,14 @@ describe('noticeTitle', () => {
     expect(noticeTitle('unknown.code', {})).toBe('unknown.code')
   })
 })
+
+describe('the display notices (beta.10)', () => {
+  it('name the displays by name, not by key', async () => {
+    const { noticeTitle } = await import('./index')
+    expect(noticeTitle('stage.move_failed', { monitor: 'Living Room@1920x1080', landed: 'Built-in Retina Display@3024x1964' })).toBe(
+      'Stage could not go to Living Room; it is on Built-in Retina Display. If the display mirrors another, set it to extend the desktop.',
+    )
+    expect(noticeTitle('stage.monitor_lost', { monitor: 'Sidecar Display (iPad)@2360x1640' })).toMatch(/^Sidecar Display \(iPad\) is not connected/)
+    expect(noticeTitle('stage.separate_spaces_off', {})).toMatch(/Displays have separate Spaces/)
+  })
+})

@@ -153,16 +153,15 @@ pub fn ensure_stage(app: &AppHandle, on: Option<&MonitorKey>) -> AppResult<Webvi
         WebviewWindowBuilder::new(app, STAGE, WebviewUrl::App(STAGE_PATH.into()))
             .title("questiongame Stage")
             .decorations(false)
-            .fullscreen(true)
+            // Built windowed and made fullscreen **on its display** by
+            // `move_to` (beta.10): built fullscreen, a Mac put it on the
+            // laptop and lost the move behind the fullscreen animation.
+            .fullscreen(false)
             // Nobody clicks Stage; a focus steal mid-question is a lost lock.
             .focused(false),
         app,
     )
     .build()?;
-    // Built fullscreen on primary and then moved, rather than positioned at
-    // build time: a fullscreen window keeps its monitor, so going anywhere else
-    // is leave-fullscreen, move, re-enter — which is exactly what `move_to`
-    // does.
     move_to(app, &window, on)?;
     Ok(window)
 }
@@ -175,7 +174,8 @@ pub fn ensure_stage(app: &AppHandle, on: Option<&MonitorKey>) -> AppResult<Webvi
 pub fn stage_up(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()> {
     crate::state::assert_unlocked("windows::stage_up");
     let on = state.lock().display.current().cloned();
-    ensure_stage(app, on.as_ref())?;
+    let pacer = ensure_stage(app, on.as_ref())?;
+    settle_pacer(app, state, on.as_ref(), landed(app, &pacer));
     let mirrors = {
         let mut host = state.lock();
         host.display.set_open(true);
@@ -233,9 +233,13 @@ pub fn carry_out(
             // The pacer may still be standing (the operator unticked it) or be
             // gone (the OS closed it): moved, or built, where the mirror was.
             match app.get_webview_window(STAGE) {
-                Some(pacer) => move_to(app, &pacer, Some(next))?,
+                Some(pacer) => {
+                    let at = move_to(app, &pacer, Some(next))?;
+                    settle_pacer(app, state, Some(next), at);
+                }
                 None => {
-                    ensure_stage(app, Some(next))?;
+                    let pacer = ensure_stage(app, Some(next))?;
+                    settle_pacer(app, state, Some(next), landed(app, &pacer));
                 }
             }
             reconcile_mirrors(app, &mirrors)?;
@@ -311,7 +315,8 @@ pub fn reconcile_mirrors(app: &AppHandle, wanted: &[MonitorKey]) -> AppResult<()
                 WebviewWindowBuilder::new(app, &label, WebviewUrl::App(MIRROR_PATH.into()))
                     .title("questiongame Stage")
                     .decorations(false)
-                    .fullscreen(true)
+                    // Windowed, then fullscreen on its display (`move_to`).
+                    .fullscreen(false)
                     // Nobody clicks a mirror either, and a focus steal
                     // mid-question is a lost lock.
                     .focused(false),
@@ -368,38 +373,28 @@ pub fn retitle_stats(app: &AppHandle, title: &str) {
 /// when it was built inside `monitors_list`.
 pub fn open_stats(app: &AppHandle, key: Option<&MonitorKey>, fullscreen: bool, title: &str) -> AppResult<()> {
     crate::state::assert_unlocked("windows::open_stats");
-    let origin = match key {
-        Some(k) => monitors::physical_origin(app, k),
-        None => app.primary_monitor()?.map(|m| *m.position()),
-    };
-
     if let Some(window) = app.get_webview_window(STATS) {
         // Already there: place it again, because the operator may have picked
         // another display since, and raise it — pressing Show on a window
         // hiding behind Studio should bring it forward.
-        place(&window, origin, fullscreen)?;
+        place(app, &window, key, fullscreen)?;
         window.set_title(title)?;
         window.set_focus()?;
         return Ok(());
     }
 
-    // Built at its destination rather than moved there afterwards: a window
-    // that is created centred and then thrown across the desktop flashes on
-    // the wrong display first.
-    let mut builder = debuggable(
+    // Built, then placed (beta.10): the builder's position is *logical*, and
+    // it was handed the display's physical corner — the wrong place at any
+    // scaling but 100%.
+    let window = debuggable(
         WebviewWindowBuilder::new(app, STATS, WebviewUrl::App(STATS_PATH.into()))
             .title(title)
             .inner_size(1280.0, 800.0)
             .focused(false),
         app,
-    );
-    if let Some(origin) = origin {
-        builder = builder.position(f64::from(origin.x), f64::from(origin.y));
-    }
-    let window = builder.build()?;
-    if fullscreen {
-        window.set_fullscreen(true)?;
-    }
+    )
+    .build()?;
+    place(app, &window, key, fullscreen)?;
     Ok(())
 }
 
@@ -445,7 +440,7 @@ fn follow_stats(
     };
     let key = MonitorKey::new(id.clone());
     if list.iter().any(|m| m.matches(&key)) {
-        place(&window, monitors::physical_origin(app, &key), fullscreen)?;
+        place(app, &window, Some(&key), fullscreen)?;
         return Ok(());
     }
 
@@ -463,23 +458,45 @@ fn follow_stats(
     Ok(())
 }
 
-/// Put a window on a display. A fullscreen window belongs to its monitor, so
-/// it leaves fullscreen, moves, and goes back — the same dance Stage does.
-fn place(
-    window: &WebviewWindow,
-    origin: Option<tauri::PhysicalPosition<i32>>,
-    fullscreen: bool,
-) -> AppResult<()> {
-    let Some(origin) = origin else {
+/// Put Statistics on a display (`None`: primary). Fullscreen goes through
+/// [`move_to`], as Stage does (beta.10); windowed, it is moved to the
+/// display's corner in the coordinates the OS places windows in — logical on
+/// a Mac (where a physical position was converted back with the wrong scale),
+/// physical on Windows.
+fn place(app: &AppHandle, window: &WebviewWindow, key: Option<&MonitorKey>, fullscreen: bool) -> AppResult<()> {
+    if fullscreen {
+        move_to(app, window, key)?;
+        return Ok(());
+    }
+    let monitor = match key {
+        Some(key) => monitors::monitor_of(app, key),
+        None => app.primary_monitor()?,
+    };
+    let Some(monitor) = monitor else {
         tracing::warn!("statistics was sent to a display that is no longer listed");
         return Ok(());
     };
-    window.set_fullscreen(false)?;
-    window.set_position(origin)?;
-    if fullscreen {
-        window.set_fullscreen(true)?;
-    }
-    Ok(())
+    use std::sync::atomic::Ordering;
+    PLACING.fetch_add(1, Ordering::SeqCst);
+    let result = (|| -> AppResult<()> {
+        if window.is_fullscreen().unwrap_or(false) {
+            window.set_fullscreen(false)?;
+            wait_until(|| !window.is_fullscreen().unwrap_or(true), 2_000);
+        }
+        let inset = 40.0;
+        if cfg!(target_os = "macos") {
+            let at = monitor.position().to_logical::<f64>(monitor.scale_factor());
+            window.set_position(tauri::LogicalPosition::new(at.x + inset, at.y + inset))?;
+        } else {
+            let at = *monitor.position();
+            let px = (inset * monitor.scale_factor()).round() as i32;
+            window.set_position(tauri::PhysicalPosition::new(at.x + px, at.y + px))?;
+        }
+        Ok(())
+    })();
+    std::thread::sleep(std::time::Duration::from_millis(150));
+    PLACING.fetch_sub(1, Ordering::SeqCst);
+    result
 }
 
 /// Re-read the OS display list, run the §9 policy over it, and **act on the
@@ -526,6 +543,7 @@ pub fn refresh(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()>
         unused = ?topology.unused,
         "displays"
     );
+    warn_separate_spaces(app, &topology, list.len());
     let stats_open = stats_is_open(app);
     let stage_open = stage_is_open(app);
 
@@ -552,7 +570,7 @@ pub fn refresh(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()>
         (mv, mirrors, stats_monitor_id, stats_fullscreen)
     };
 
-    apply(app, &mv)?;
+    apply(app, state, &mv)?;
     // After `apply`, so a mirror is never opened on the display the pacer is
     // about to be moved onto.
     reconcile_mirrors(app, &mirrors)?;
@@ -574,10 +592,90 @@ pub fn refresh(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()>
     Ok(())
 }
 
+/// Said once while it lasts: the Spaces setting is off.
+static SPACES_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// macOS (beta.10): with "Displays have separate Spaces" off, a full-screen
+/// window on a second display blanks every other one — Stage on the TV takes
+/// Studio's laptop screen with it. Said once (and again after it was turned
+/// on and off), only with more than one display, never on Windows.
+fn warn_separate_spaces(app: &AppHandle, topology: &crate::topology::Topology, displays: usize) {
+    use std::sync::atomic::Ordering;
+    match topology.separate_spaces {
+        Some(false) if displays > 1 => {
+            if !SPACES_WARNED.swap(true, Ordering::SeqCst) {
+                crate::emit::notice(
+                    app,
+                    &questiongame_host::notice::Notice::new(
+                        "stage.separate_spaces_off",
+                        questiongame_host::notice::Severity::Warn,
+                        &["open_spaces_settings", "dismiss"],
+                    ),
+                );
+            }
+        }
+        Some(true) => SPACES_WARNED.store(false, Ordering::SeqCst),
+        _ => {}
+    }
+}
+
+/// **The display report** (beta.10, Settings ▸ Monitors ▸ *Copy display
+/// report*): what the app sees, as plain text an operator can paste into a
+/// bug report — each display as the OS lists it and as the app names it,
+/// what mirrors what, the Spaces setting, and where Stage and Statistics
+/// **really** are (their windows' displays, not what was asked). Nobody here
+/// owns every setup; this is how the one that misbehaves is described.
+pub fn report(app: &AppHandle, state: &crate::state::AppState) -> String {
+    use std::fmt::Write as _;
+    let (list, topology) = monitors::list_with_topology(app);
+    let mut out = String::new();
+    let _ = writeln!(out, "questiongame {} on {} ({})", app.package_info().version, std::env::consts::OS, std::env::consts::ARCH);
+    let _ = writeln!(out, "displays: {}", list.len());
+    for m in &list {
+        let _ = writeln!(
+            out,
+            "- {} | key {} | {}x{} physical, {}x{} logical @{} | at {},{} logical{}{}",
+            m.label(),
+            m.key,
+            m.physical_size.0,
+            m.physical_size.1,
+            m.size.0,
+            m.size.1,
+            m.scale_factor,
+            m.position.0,
+            m.position.1,
+            if m.primary { " | primary" } else { "" },
+            if m.also_on.is_empty() { String::new() } else { format!(" | also shown on {}", m.also_on.join(", ")) },
+        );
+    }
+    if !topology.unused.is_empty() {
+        let _ = writeln!(out, "connected, not drawn on: {}", topology.unused.join(", "));
+    }
+    if let Some(separate) = topology.separate_spaces {
+        let _ = writeln!(out, "macOS separate Spaces: {}", if separate { "on" } else { "OFF" });
+    }
+    let where_is = |label: &str| -> String {
+        app.get_webview_window(label)
+            .and_then(|w| landed(app, &w))
+            .map_or_else(|| "closed".to_owned(), |k| k.to_string())
+    };
+    let host = state.lock();
+    let control = host.flags.control();
+    let _ = writeln!(out, "stage: {} (remembered {}; host believes {})", where_is(STAGE),
+        control.stage_monitor_id.as_deref().unwrap_or("primary"),
+        host.display.current().map_or_else(|| "primary".to_owned(), ToString::to_string));
+    for (i, key) in host.display.live_mirrors().iter().enumerate() {
+        let _ = writeln!(out, "mirror {}: asked {}, window on {}", i + 1, key, where_is(&mirror_label(i)));
+    }
+    let _ = writeln!(out, "statistics: {} (remembered {})", where_is(STATS), control.stats_monitor_id.as_deref().unwrap_or("primary"));
+    out
+}
+
 /// Carry out a [`StageMove`]. Does nothing if Stage has not been created yet —
 /// the pick is remembered either way, and [`ensure_stage`] plus the next
-/// monitor event will land it.
-pub fn apply(app: &AppHandle, mv: &StageMove) -> AppResult<()> {
+/// monitor event will land it. Where the window really lands is settled
+/// (beta.10): remembered, and said when it is not where it was sent.
+pub fn apply(app: &AppHandle, state: &crate::state::AppState, mv: &StageMove) -> AppResult<()> {
     crate::state::assert_unlocked("windows::apply");
     let Some(target) = mv.to.as_ref() else {
         return Ok(());
@@ -585,26 +683,174 @@ pub fn apply(app: &AppHandle, mv: &StageMove) -> AppResult<()> {
     let Some(window) = app.get_webview_window(STAGE) else {
         return Ok(());
     };
-    move_to(app, &window, target.as_ref())
+    let at = move_to(app, &window, target.as_ref())?;
+    settle_pacer(app, state, target.as_ref(), at);
+    Ok(())
 }
 
-/// `None` is the primary display.
-fn move_to(app: &AppHandle, window: &WebviewWindow, target: Option<&MonitorKey>) -> AppResult<()> {
+/// Set while the app itself is placing a Stage or Statistics window, so the
+/// `Moved` events its own move raises are not taken for the operator's hand
+/// (beta.10, [`window_moved`]).
+static PLACING: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Fullscreen on a display, and **check it took** (beta.10). `None` is the
+/// primary display. Returns the display the window really stands on.
+///
+/// What it replaced did `set_fullscreen(false)`, `set_position(physical)`,
+/// `set_fullscreen(true)` back to back, and on a Mac that put Stage on the
+/// laptop: tao converts a physical position back with the *window's* scale
+/// (a Retina laptop's 2 against a 1× TV's), and macOS fullscreen is an
+/// animation tao queues requests behind, so the move in the middle was lost.
+/// Now: leave fullscreen and **wait** for it, then Tauri's
+/// `set_fullscreen_on_monitor`, which hands tao the monitor itself
+/// (`Borderless(Some(monitor))`) — tao moves the window there in its own
+/// coordinates — then wait for the window to be on that display, and try once
+/// more if it is not. A failure is the caller's to say; it is not silent.
+fn move_to(app: &AppHandle, window: &WebviewWindow, target: Option<&MonitorKey>) -> AppResult<Option<MonitorKey>> {
+    use std::sync::atomic::Ordering;
     let origin = match target {
         Some(key) => monitors::physical_origin(app, key),
         None => app.primary_monitor()?.map(|m| *m.position()),
     };
     let Some(origin) = origin else {
-        tracing::warn!("stage was sent to a display that is no longer listed");
-        return Ok(());
+        tracing::warn!(?target, "a window was sent to a display that is no longer listed");
+        return Ok(landed(app, window));
     };
+    PLACING.fetch_add(1, Ordering::SeqCst);
+    let result = (|| -> AppResult<()> {
+        for _attempt in 0..2 {
+            if is_on(window, origin) && window.is_fullscreen().unwrap_or(false) {
+                return Ok(());
+            }
+            if window.is_fullscreen().unwrap_or(false) {
+                window.set_fullscreen(false)?;
+                wait_until(|| !window.is_fullscreen().unwrap_or(true), 2_000);
+            }
+            window.set_fullscreen_on_monitor(tauri::PhysicalPosition::new(
+                f64::from(origin.x) + 1.0,
+                f64::from(origin.y) + 1.0,
+            ))?;
+            wait_until(|| is_on(window, origin) && window.is_fullscreen().unwrap_or(false), 3_000);
+        }
+        Ok(())
+    })();
+    // Settled before the flag goes, so the last `Moved` is still the app's own.
+    std::thread::sleep(std::time::Duration::from_millis(150));
+    PLACING.fetch_sub(1, Ordering::SeqCst);
+    result?;
+    Ok(landed(app, window))
+}
 
-    // A fullscreen window belongs to its monitor: it has to come out, move,
-    // and go back, in that order.
-    window.set_fullscreen(false)?;
-    window.set_position(origin)?;
-    window.set_fullscreen(true)?;
-    Ok(())
+/// Is the window on the display whose top-left corner is `origin`?
+fn is_on(window: &WebviewWindow, origin: tauri::PhysicalPosition<i32>) -> bool {
+    matches!(window.current_monitor(), Ok(Some(m)) if *m.position() == origin)
+}
+
+/// The display a window stands on, as a key; `None` if the OS will not say.
+fn landed(app: &AppHandle, window: &WebviewWindow) -> Option<MonitorKey> {
+    let monitor = window.current_monitor().ok().flatten()?;
+    monitors::key_at(app, *monitor.position())
+}
+
+/// Poll `done` every 50ms until it holds or `limit_ms` passes. Window state
+/// changes arrive on the event loop; this thread is never the event loop.
+fn wait_until(done: impl Fn() -> bool, limit_ms: u64) {
+    let start = std::time::Instant::now();
+    while !done() && start.elapsed() < std::time::Duration::from_millis(limit_ms) {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+}
+
+/// After the app moved the pacer: where it **really** is becomes what the host
+/// believes and what is remembered, and the operator hears when that is not
+/// where it was sent (beta.10: "Stage on TV" while it sat on the laptop was a
+/// lie the old code told).
+fn settle_pacer(app: &AppHandle, state: &crate::state::AppState, wanted: Option<&MonitorKey>, landed: Option<MonitorKey>) {
+    let Some(landed) = landed else { return };
+    let wanted_key = wanted.cloned().or_else(|| state.lock().display.primary().map(|m| m.key.clone()));
+    if wanted_key.as_ref() == Some(&landed) {
+        return;
+    }
+    {
+        let mut host = state.lock();
+        host.display.adopt(landed.clone());
+        if let Err(error) = remember_stage(&mut host) {
+            tracing::warn!(?error, "could not remember where Stage is");
+        }
+    }
+    crate::emit::notice(
+        app,
+        &questiongame_host::notice::Notice::new(
+            "stage.move_failed",
+            questiongame_host::notice::Severity::Warn,
+            &["pick_monitor", "dismiss"],
+        )
+        .at("stage.monitor_id")
+        .with("monitor", wanted_key.map(|k| k.to_string()).unwrap_or_default())
+        .with("landed", landed.to_string()),
+    );
+}
+
+/// **A Stage or Statistics window moved** (beta.10). The app's own moves are
+/// marked by [`PLACING`]; anything else is the operator's hand — dragged,
+/// Win+Shift+Arrow, the macOS window menu — and the display it lands on is
+/// taken as the answer: remembered, fullscreen there, Studio told. A friend
+/// dragged Stage to his TV by hand and Studio went on saying it was on the
+/// laptop; it now follows.
+pub fn window_moved(app: &AppHandle, label: &str) {
+    use std::sync::atomic::Ordering;
+    if label != STAGE && label != STATS {
+        return;
+    }
+    if PLACING.load(Ordering::SeqCst) > 0 {
+        return;
+    }
+    let app = app.clone();
+    let label = label.to_owned();
+    tauri::async_runtime::spawn_blocking(move || {
+        // A drag raises a stream of `Moved`; wait for it to come to rest.
+        std::thread::sleep(std::time::Duration::from_millis(400));
+        if PLACING.load(Ordering::SeqCst) > 0 {
+            return;
+        }
+        let Some(window) = app.get_webview_window(&label) else { return };
+        let Some(state) = app.try_state::<crate::state::AppState>() else { return };
+        let Some(key) = landed(&app, &window) else { return };
+        let changed = {
+            let mut host = state.lock();
+            if label == STAGE {
+                let now = host.display.current().cloned().or_else(|| host.display.primary().map(|m| m.key.clone()));
+                if now.as_ref() == Some(&key) {
+                    false
+                } else {
+                    host.display.adopt(key.clone());
+                    remember_stage(&mut host).is_ok()
+                }
+            } else {
+                remember_stats(&mut host, &key).unwrap_or(false)
+            }
+        };
+        if changed {
+            if label == STAGE && !window.is_fullscreen().unwrap_or(true) {
+                let _ = window.set_fullscreen(true);
+            }
+            tell_studio(&app, &state);
+        }
+    });
+}
+
+/// Statistics was moved by hand: its display becomes the remembered one.
+fn remember_stats(host: &mut crate::state::Host, key: &MonitorKey) -> AppResult<bool> {
+    use questiongame_host::flags::GlobalSetting;
+    if host.flags.control().stats_monitor_id.as_deref() == Some(key.as_str()) {
+        return Ok(false);
+    }
+    let ctx = host.runtime();
+    host.flags
+        .settings_set_global(GlobalSetting::StatsMonitorId(Some(key.as_str().to_owned())), ctx)?;
+    let globals = host.flags.globals().clone();
+    host.catalog.settings_store(&globals)?;
+    Ok(true)
 }
 
 #[cfg(test)]

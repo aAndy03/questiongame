@@ -285,7 +285,7 @@ pub fn stage_set_monitor(
     // Built where it belongs; `apply` then has nothing to do unless the window
     // already existed somewhere else.
     windows::stage_up(&app, &state)?;
-    windows::apply(&app, &mv)?;
+    windows::apply(&app, &state, &mv)?;
     windows::tell_studio(&app, &state);
     Ok(())
 }
@@ -304,6 +304,14 @@ pub fn stage_open(
     let mut host = state.lock();
     emit::play_state(&app, &mut host, now, true);
     Ok(())
+}
+
+/// The display report (beta.10): plain text for a bug report, copied by
+/// Settings ▸ Monitors. Reads only.
+#[tauri::command(async)]
+pub fn monitors_report(window: WebviewWindow, app: AppHandle, state: State<'_, AppState>) -> AppResult<String> {
+    guard::allow(window.label(), "monitors_report")?;
+    Ok(windows::report(&app, &state))
 }
 
 /// *Close Stage* (beta.10): every Stage window goes; where it was, and the

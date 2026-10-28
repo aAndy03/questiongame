@@ -37,15 +37,27 @@ fn info(
     let size = physical.to_logical::<u32>(scale);
     let position = monitor.position().to_logical::<i32>(scale);
     let name = monitor.name().cloned();
+    // macOS (beta.10): joined by the physical origin, the one thing tao and
+    // CoreGraphics agree on — tao's name is `Monitor #<model>` for every Mac
+    // display.
+    let mac = topology.by_origin.get(&(monitor.position().x, monitor.position().y));
     let friendly_name = name
         .as_deref()
-        .and_then(|n| topology.friendly.get(n).cloned());
-    let also_on = name
+        .and_then(|n| topology.friendly.get(n).cloned())
+        .or_else(|| mac.and_then(|m| m.name.clone()));
+    let mut also_on = name
         .as_deref()
         .and_then(|n| topology.also_on.get(n).cloned())
         .unwrap_or_default();
+    if let Some(mac) = mac {
+        also_on.extend(mac.also_on.iter().cloned());
+    }
+    // On a Mac the key is the display's own name (*Living Room*, *Sidecar
+    // Display*), not tao's model-number name two displays can share; a pick
+    // remembered under the old key still matches (`MonitorInfo::matches`).
+    let key_name = mac.and_then(|m| m.name.clone()).or_else(|| name.clone());
     MonitorInfo {
-        key: MonitorKey::derive(name.as_deref(), physical.width, physical.height),
+        key: MonitorKey::derive(key_name.as_deref(), physical.width, physical.height),
         primary: primary.is_some_and(|(pname, ppos)| *pname == name && ppos == monitor.position()),
         name,
         position: (position.x, position.y),
@@ -61,7 +73,7 @@ fn info(
 /// listing (`topology`): the one read `windows::refresh` wants both halves of.
 pub fn list_with_topology(app: &AppHandle) -> (Vec<MonitorInfo>, Topology) {
     crate::state::assert_unlocked("monitors::list");
-    let topology = crate::topology::read();
+    let topology = crate::topology::read(app);
     let primary = app
         .primary_monitor()
         .ok()
@@ -82,6 +94,29 @@ pub fn list(app: &AppHandle) -> Vec<MonitorInfo> {
     list_with_topology(app).0
 }
 
+/// The Tauri monitor answering to `key` (beta.10: Statistics is placed with
+/// it, in the coordinates its OS wants).
+pub fn monitor_of(app: &AppHandle, key: &MonitorKey) -> Option<Monitor> {
+    crate::state::assert_unlocked("monitors::monitor_of");
+    let topology = crate::topology::read(app);
+    app.available_monitors()
+        .ok()?
+        .into_iter()
+        .find(|m| info(m, None, &topology).matches(key))
+}
+
+/// The key of the display whose top-left corner is `origin` — what a window's
+/// `current_monitor` is, said the way the host names displays (beta.10).
+pub fn key_at(app: &AppHandle, origin: PhysicalPosition<i32>) -> Option<questiongame_host::MonitorKey> {
+    crate::state::assert_unlocked("monitors::key_at");
+    let topology = crate::topology::read(app);
+    app.available_monitors()
+        .ok()?
+        .into_iter()
+        .find(|m| *m.position() == origin)
+        .map(|m| info(&m, None, &topology).key)
+}
+
 /// The physical top-left corner of a display, which is what a window position
 /// has to be set in. [`list`] reports logical pixels too; moving a window needs
 /// the untranslated ones back.
@@ -91,8 +126,11 @@ pub fn list(app: &AppHandle) -> Vec<MonitorInfo> {
 /// still finds its display.
 pub fn physical_origin(app: &AppHandle, key: &MonitorKey) -> Option<PhysicalPosition<i32>> {
     crate::state::assert_unlocked("monitors::physical_origin");
+    // With the topology (beta.10): on a Mac the key is the display's own
+    // name, which only the topology knows.
+    let topology = crate::topology::read(app);
     app.available_monitors().ok()?.into_iter().find_map(|m| {
-        info(&m, None, &Topology::default())
+        info(&m, None, &topology)
             .matches(key)
             .then(|| *m.position())
     })

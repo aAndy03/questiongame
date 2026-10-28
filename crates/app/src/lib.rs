@@ -37,6 +37,7 @@ pub mod stable_copy;
 pub mod state;
 pub mod tick;
 pub mod topology;
+pub mod topology_mac;
 pub mod update;
 pub mod whats_new;
 pub mod windows;
@@ -107,6 +108,11 @@ pub fn run() {
             // Before this, nothing heard it and Studio kept saying it was open.
             if let tauri::WindowEvent::Destroyed = event {
                 window_gone(window.app_handle(), window.label());
+                return;
+            }
+            // Moved by hand to another display (beta.10): followed, not undone.
+            if let tauri::WindowEvent::Moved(_) = event {
+                windows::window_moved(window.app_handle(), window.label());
                 return;
             }
             let tauri::WindowEvent::CloseRequested { api, .. } = event else {
@@ -388,6 +394,7 @@ fn handlers() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + Sync + 'static {
         commands::presentation::stage_add_mirror,
         commands::presentation::stage_remove_mirror,
         commands::presentation::stage_close,
+        commands::presentation::monitors_report,
         commands::presentation::stage_remove_display,
         commands::presentation::stage_open,
         commands::presentation::stage_report,

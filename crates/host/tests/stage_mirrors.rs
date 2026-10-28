@@ -272,3 +272,38 @@ fn unticking_a_display_stage_is_not_on_changes_nothing() {
     assert_eq!(display.remove_display(&right()), StageClosed::Ignored);
     assert!(display.is_open());
 }
+
+// ------------------------------------- beta.10: hand moves, Mac display names
+
+/// Moved by hand, or a placement that landed elsewhere: the window is there,
+/// so it is taken as the answer — nothing refused, a mirror there stands down.
+#[test]
+fn a_display_stage_really_stands_on_is_adopted() {
+    let mut display = loaded();
+    display.add_mirror(left()).unwrap();
+    display.adopt(left());
+    assert_eq!(display.current(), Some(&left()));
+    assert!(display.live_mirrors().is_empty(), "one pane per display");
+    display.adopt(key("not-listed", (800, 600)));
+    assert_eq!(display.current(), Some(&key("not-listed", (800, 600))), "adopted even off the list");
+}
+
+/// On a Mac the key became the display's own name (`Living Room@1920x1080`);
+/// a pick remembered under tao's name (`Monitor #42@1920x1080`) still finds it.
+#[test]
+fn a_mac_display_answers_to_its_name_and_to_the_old_model_number_key() {
+    let tv = MonitorInfo {
+        key: MonitorKey::derive(Some("Living Room"), 1920, 1080),
+        name: Some("Monitor #42".to_owned()),
+        primary: false,
+        position: (1512, 0),
+        size: (1920, 1080),
+        physical_size: (1920, 1080),
+        scale_factor: 1.0,
+        friendly_name: Some("Living Room".to_owned()),
+        also_on: Vec::new(),
+    };
+    assert!(tv.matches(&MonitorKey::new("Living Room@1920x1080")));
+    assert!(tv.matches(&MonitorKey::new("Monitor #42@1920x1080")), "the beta.9 key");
+    assert!(!tv.matches(&MonitorKey::new("Monitor #43@1920x1080")));
+}

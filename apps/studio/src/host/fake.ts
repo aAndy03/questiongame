@@ -1109,6 +1109,8 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
       return null
     },
     // beta.10, mirroring `StageDisplay::remove_display` and `stage_down`.
+    monitors_report: () => `questiongame (fake) on test
+displays: ${monitors.length}`,
     stage_close: () => {
       fake.stageOpen = false
       emitMonitors()

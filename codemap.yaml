@@ -290,6 +290,13 @@ commands:
     file: crates/app/src/commands/presentation.rs
     params: []
     returns: "AppResult<Vec<questiongame_host::MonitorInfo>>"
+  monitors_report:
+    async: true
+    callers: [main]
+    doc: "The display report (beta.10): plain text for a bug report, copied by Settings ▸ Monitors."
+    file: crates/app/src/commands/presentation.rs
+    params: []
+    returns: "AppResult<String>"
   operator_activate:
     async: true
     callers: [main]
@@ -985,6 +992,7 @@ contract:
       - stage_add_mirror
       - stage_remove_mirror
       - stage_close
+      - monitors_report
       - stage_remove_display
       - stage_open
       - stage_ready
@@ -1032,7 +1040,7 @@ contract:
   files:
     packages/contract/src/commands.ts:
       COMMANDS: {kind: const, sig: "#e3696517"}
-      COMMAND_GROUPS: {doc: "Commands grouped by the module that owns them.", kind: const, sig: "{ catalog, match, presentation, flags, stats, organise, workspace, app } #0c0c00ac"}
+      COMMAND_GROUPS: {doc: "Commands grouped by the module that owns them.", kind: const, sig: "{ catalog, match, presentation, flags, stats, organise, workspace, app } #ea5df0e7"}
       CatalogChange: {doc: "`catalog-changed`.", kind: interface, sig: "{ kind, id, op }"}
       Command: {kind: type, sig: "(typeof COMMAND_GROUPS)[CommandGroup][number]"}
       CommandGroup: {kind: type, sig: "keyof typeof COMMAND_GROUPS"}
@@ -1853,6 +1861,7 @@ host_api:
     "monitor::StageClosed": {doc: "What a Stage window going away means, for the app crate to carry out.", kind: enum, sig: "enum StageClosed { Ignored | Promoted(MonitorKey) | Closed | MirrorDropped(MonitorKey) }"}
     "monitor::StageDisplay": {doc: "The connected displays and where the Stage window actually is.", kind: struct, sig: "struct StageDisplay {  }"}
     "monitor::StageDisplay::add_mirror": {doc: "Ask for another mirror.", kind: method, sig: "fn add_mirror(&mut self, key: MonitorKey) -> Result<Vec<MonitorKey>, MonitorError>"}
+    "monitor::StageDisplay::adopt": {doc: "**The pacer is on `key`, whatever was asked** (beta.10): moved there by hand, or a placement that landed elsewhere.", kind: method, sig: "fn adopt(&mut self, key: MonitorKey)"}
     "monitor::StageDisplay::current": {doc: "Where the window is now, as opposed to where the pick says it belongs.", kind: method, sig: "fn current(&self) -> Option<&MonitorKey>"}
     "monitor::StageDisplay::is_open": {doc: "Is Stage up?", kind: method, sig: "fn is_open(&self) -> bool"}
     "monitor::StageDisplay::is_single_display": {doc: "One display total is a valid configuration (§9): Stage fullscreens on it, Studio is an Alt-Tab away.", kind: method, sig: "fn is_single_display(&self) -> bool"}
@@ -2210,6 +2219,7 @@ studio_calls:
     library_repair: [apps/studio/src/organisms/useNoticeActions.ts]
     lock_selection: [apps/studio/src/organisms/ActionPanel.tsx, apps/studio/src/organisms/useControlHotkeys.ts]
     monitors_list: [apps/studio/src/host/queries.ts]
+    monitors_report: [apps/studio/src/organisms/MonitorsSettings.tsx]
     operator_activate: [apps/studio/src/organisms/FirstRunFlow.tsx, apps/studio/src/organisms/useActivateOperator.tsx]
     operator_set_pin: [apps/studio/src/organisms/FirstRunFlow.tsx, apps/studio/src/organisms/OperatorPinPanel.tsx]
     paths_get: [apps/studio/src/host/queries.ts]
@@ -2361,8 +2371,10 @@ app_crate:
       "logfile::rotate": {doc: "Rotate `dir/file` if it is larger than `at_bytes`.", kind: fn, sig: "fn rotate(dir: &Path, file: &str, at_bytes: u64, keep: usize) -> std::io::Result<bool>"}
       "logfile::rotated_name": {doc: "`questiongame.log` → `questiongame.1.log`.", kind: fn, sig: "fn rotated_name(file: &str, n: usize) -> String"}
     crates/app/src/monitors.rs:
+      "monitors::key_at": {doc: "The key of the display whose top-left corner is `origin` — what a window's `current_monitor` is, said the way the host names displays (beta.10).", kind: fn, sig: "fn key_at(app: &AppHandle, origin: PhysicalPosition<i32>) -> Option<questiongame_host::MonitorKey>"}
       "monitors::list": {doc: "The connected displays, primary first-class rather than positional.", kind: fn, sig: "fn list(app: &AppHandle) -> Vec<MonitorInfo>"}
       "monitors::list_with_topology": {doc: "The connected displays plus what the OS knows about the panels it is not listing (`topology`): the one read `windows::refresh` wants both halves of.", kind: fn, sig: "fn list_with_topology(app: &AppHandle) -> (Vec<MonitorInfo>, Topology)"}
+      "monitors::monitor_of": {doc: "The Tauri monitor answering to `key` (beta.10: Statistics is placed with it, in the coordinates its OS wants).", kind: fn, sig: "fn monitor_of(app: &AppHandle, key: &MonitorKey) -> Option<Monitor>"}
       "monitors::physical_origin": {doc: "The physical top-left corner of a display, which is what a window position has to be set in.", kind: fn, sig: "fn physical_origin(app: &AppHandle, key: &MonitorKey) -> Option<PhysicalPosition<i32>>"}
     crates/app/src/perf/line.rs:
       "perf::line::build": {doc: "Build the line, deciding whether this second is a spike.", kind: fn, sig: "fn build(mut inputs: Inputs) -> Line"}
@@ -2396,7 +2408,11 @@ app_crate:
       "tick::spawn": {kind: fn, sig: "fn spawn(app: AppHandle)"}
     crates/app/src/topology.rs:
       "topology::fold": {doc: "Fold a list of paths into a [`Topology`].", kind: fn, sig: "fn fold(paths: &[Path]) -> Topology"}
-      "topology::read": {doc: "The topology now.", kind: fn, sig: "fn read() -> Topology"}
+      "topology::read": {doc: "The topology now: Windows' paths, macOS' displays (beta.10); empty elsewhere.", kind: fn, sig: "fn read(app: &tauri::AppHandle) -> Topology"}
+    crates/app/src/topology_mac.rs:
+      "topology_mac::fold": {doc: "Fold the online displays into what each listed one is called and what mirrors it, keyed by physical origin.", kind: fn, sig: "fn fold(screens: &[MacScreen]) -> BTreeMap<(i32, i32), MacDisplay>"}
+      "topology_mac::physical_origin": {doc: "The physical origin tao reports for a display: its points × its scale.", kind: fn, sig: "fn physical_origin(screen: &MacScreen) -> (i32, i32)"}
+      "topology_mac::read": {doc: "The online displays and whether \"Displays have separate Spaces\" is on.", kind: fn, sig: "fn read(app: &tauri::AppHandle) -> (Vec<MacScreen>, Option<bool>)"}
     crates/app/src/update.rs:
       "update::check": {doc: "Ask `fetch` (given [`path_for`] this line) for the releases and compare them with `current`.", kind: fn, sig: "fn check(fetch: impl FnOnce(&str) -> Result<String, String>, current: &str, line: Line) -> Result<UpdateStatus, String>"}
       "update::fetch": {doc: "The one network call: GitHub's releases for [`REPOSITORY`] at `path` ([`path_for`]), through the OS trust store, five seconds at most.", kind: fn, sig: "fn fetch(path: &str) -> Result<String, String>"}
@@ -2408,7 +2424,7 @@ app_crate:
     crates/app/src/whats_new.rs:
       "whats_new::since": {doc: "`last_seen` is `META_LAST_SEEN`; `report` is what opening the library found (`None` for a library opened without one — memory, tests).", kind: fn, sig: "fn since(last_seen: Option<String>, report: Option<&OpenReport>) -> Since"}
     crates/app/src/windows.rs:
-      "windows::apply": {doc: "Carry out a [`StageMove`].", kind: fn, sig: "fn apply(app: &AppHandle, mv: &StageMove) -> AppResult<()>"}
+      "windows::apply": {doc: "Carry out a [`StageMove`].", kind: fn, sig: "fn apply(app: &AppHandle, state: &crate::state::AppState, mv: &StageMove) -> AppResult<()>"}
       "windows::carry_out": {doc: "Carry out what a Stage window going away means (beta.10): the OS closed one, or the operator unticked a display.", kind: fn, sig: "fn carry_out(app: &AppHandle, state: &crate::state::AppState, closed: &questiongame_host::StageClosed) -> AppResult<()>"}
       "windows::close_stats": {doc: "Close the Statistics window if it is open.", kind: fn, sig: "fn close_stats(app: &AppHandle) -> AppResult<()>"}
       "windows::ensure_stage": {doc: "Stage, ready.", kind: fn, sig: "fn ensure_stage(app: &AppHandle, on: Option<&MonitorKey>) -> AppResult<WebviewWindow>"}
@@ -2418,6 +2434,7 @@ app_crate:
       "windows::open_studio": {kind: fn, sig: "fn open_studio(app: &AppHandle) -> AppResult<WebviewWindow>"}
       "windows::reconcile_mirrors": {doc: "Make the mirror windows match `wanted` — [`StageDisplay::live_mirrors`], the connected displays that should carry one right now (§9, P11.11).", kind: fn, sig: "fn reconcile_mirrors(app: &AppHandle, wanted: &[MonitorKey]) -> AppResult<()>"}
       "windows::refresh": {doc: "Re-read the OS display list, run the §9 policy over it, and **act on the result** — move the window, raise the notice, tell `main`.", kind: fn, sig: "fn refresh(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()>"}
+      "windows::report": {doc: "**The display report** (beta.10, Settings ▸ Monitors ▸ *Copy display report*): what the app sees, as plain text an operator can paste into a bug report — each display as the OS lists it and as the ...", kind: fn, sig: "fn report(app: &AppHandle, state: &crate::state::AppState) -> String"}
       "windows::retitle_stats": {doc: "Retitle the Statistics window, if it is open.", kind: fn, sig: "fn retitle_stats(app: &AppHandle, title: &str)"}
       "windows::stage_down": {doc: "*Close Stage* (beta.10): every Stage window goes.", kind: fn, sig: "fn stage_down(app: &AppHandle, state: &crate::state::AppState) -> AppResult<()>"}
       "windows::stage_is_open": {doc: "Is it on screen right now?", kind: fn, sig: "fn stage_is_open(app: &AppHandle) -> bool"}
@@ -2427,6 +2444,7 @@ app_crate:
       "windows::stats_title": {doc: "The Statistics window's title: it names the workspace it shows, because on another display nothing else says which library the numbers are from (beta.2).", kind: fn, sig: "fn stats_title(workspace: Option<&str>) -> String"}
       "windows::studio_title": {doc: "Studio.", kind: fn, sig: "fn studio_title(is_dev: bool) -> &'static str"}
       "windows::tell_studio": {doc: "`monitors-changed`, with the window map read before the lock is taken.", kind: fn, sig: "fn tell_studio(app: &AppHandle, state: &crate::state::AppState)"}
+      "windows::window_moved": {doc: "**A Stage or Statistics window moved** (beta.10).", kind: fn, sig: "fn window_moved(app: &AppHandle, label: &str)"}
   modules:
     - boot
     - commands
@@ -2455,6 +2473,7 @@ app_crate:
     - state
     - tick
     - topology
+    - topology_mac
     - update
     - whats_new
     - windows
@@ -3038,6 +3057,10 @@ build:
       path: tools/codemap
     questiongame-app:
       dependencies:
+        "[cfg(target_os = \"macos\")] core-graphics": "0.25"
+        "[cfg(target_os = \"macos\")] objc2": "0.6"
+        "[cfg(target_os = \"macos\")] objc2-app-kit": "0.3; features [NSScreen, NSGraphics]"
+        "[cfg(target_os = \"macos\")] objc2-foundation": "0.3; features [NSString, NSValue, NSDictionary, NSArray, NSEnumerator]"
         "[cfg(windows)] windows": "0.61; features [Win32_Foundation, Win32_Devices_Display, Win32_Graphics_Gdi]"
         fs4: "workspace = 1.1; features [sync]; no default features"
         questiongame-host: "path ../host"

@@ -1,6 +1,7 @@
 import type { MonitorInfo } from '@questiongame/contract'
 import { Button, CheckboxField, IconButton, MeaningChip, Text } from '@/atoms'
 import { SETTINGS } from '@/copy/settings'
+import { isMac } from '@/chrome/platform'
 import { STATS } from '@/copy/stats'
 import { DisplayTile, type DisplayStageState, type DisplayStatsState } from './DisplayTile'
 
@@ -100,6 +101,14 @@ export function DisplayRow({ monitor, stage, stats, onSendStage, onMoveStage, on
             <Text variant="studio-caption" tone="muted">
               {SETTINGS.monitors.alsoOn(monitor.alsoOn)}
             </Text>
+            {/* A Mac mirror is in no list (beta.10): say how to make it a display of its own. */}
+            {isMac() ? (
+              <span className="block" data-mirror-hint>
+                <Text variant="studio-caption" tone="muted">
+                  {SETTINGS.monitors.mirrorHint}
+                </Text>
+              </span>
+            ) : null}
           </span>
         ) : null}
       </div>

@@ -157,7 +157,12 @@ impl MonitorInfo {
     /// stops going where the operator sent it — so the old spelling is honoured
     /// rather than migrated. It costs one comparison and it cannot go stale.
     pub fn matches(&self, key: &MonitorKey) -> bool {
-        self.key == *key || self.legacy_key() == *key
+        self.key == *key
+            || self.legacy_key() == *key
+            // beta.10: on a Mac the key became the display's own name; a pick
+            // remembered under the OS name (`Monitor #<model>@WxH`) still
+            // finds it. Elsewhere this is the key itself.
+            || MonitorKey::derive(self.name.as_deref(), self.physical_size.0, self.physical_size.1) == *key
     }
 
     /// The pre-P11.6 key: name plus **logical** size.
@@ -329,6 +334,15 @@ impl StageDisplay {
             .filter(|key| self.monitors.iter().any(|m| m.matches(key)))
             .cloned()
             .collect()
+    }
+
+    /// **The pacer is on `key`, whatever was asked** (beta.10): moved there by
+    /// hand, or a placement that landed elsewhere. Unlike [`Self::set_monitor`]
+    /// nothing is refused — the window is already there — and a mirror on that
+    /// display stands down, one pane per display.
+    pub fn adopt(&mut self, key: MonitorKey) {
+        self.wanted_mirrors.retain(|k| k != &key);
+        self.on = Some(key);
     }
 
     /// Is Stage up? See the field.

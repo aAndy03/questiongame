@@ -824,8 +824,18 @@ export const NOTICE_COPY: Readonly<Record<string, { title: string; actions: Read
     actions: { open_release: 'Open release page', dismiss: 'Not now' },
   },
   'stage.monitor_lost': {
-    title: 'The Stage display was unplugged. Stage is back on the primary display; the Play continues.',
+    title: '{monitor} is not connected any more. Stage is on the primary display; the Play continues.',
     actions: { pick_monitor: 'Pick a display', dismiss: 'Dismiss' },
+  },
+  // beta.10: a placement that did not land where it was sent — said, not hidden.
+  'stage.move_failed': {
+    title: 'Stage could not go to {monitor}; it is on {landed}. If the display mirrors another, set it to extend the desktop.',
+    actions: { pick_monitor: 'Monitors settings', dismiss: 'Dismiss' },
+  },
+  // beta.10, macOS: with this off, Stage full screen on the TV blanks the laptop.
+  'stage.separate_spaces_off': {
+    title: 'For Stage to fill another display while Studio stays on this one, turn on “Displays have separate Spaces” (Desktop & Dock), then log out and in.',
+    actions: { open_spaces_settings: 'Open Desktop & Dock', dismiss: 'Dismiss' },
   },
   'stage.monitor_returned': {
     title: 'The remembered Stage display is back.',
@@ -931,7 +941,11 @@ export const NOTICE_COPY: Readonly<Record<string, { title: string; actions: Read
 export function noticeTitle(code: string, detail: Readonly<Record<string, string>>): string {
   const title = NOTICE_COPY[code]?.title
   if (title === undefined) return detail.message ?? code
-  return title.replace(/\{(\w+)\}/g, (_, k: string) => detail[k] ?? k)
+  // A display named by its key (`Living Room@1920x1080`) reads as its name (beta.10).
+  return title.replace(/\{(\w+)\}/g, (_, k: string) => {
+    const value = detail[k] ?? k
+    return k === 'monitor' || k === 'landed' ? value.replace(/@\d+x\d+$/, '') : value
+  })
 }
 
 export function noticeAction(code: string, action: string): string {

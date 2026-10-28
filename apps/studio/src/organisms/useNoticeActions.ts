@@ -55,6 +55,10 @@ export function useNoticeActions() {
       case 'open_display_settings':
         await run('paths_reveal', { which: 'displaySettings' })
         return
+      case 'open_spaces_settings':
+        await run('paths_reveal', { which: 'spacesSettings' })
+        dismiss(notice.id)
+        return
       case 'rebuild_search':
         await run('catalog_rebuild_search')
         dismiss(notice.id)

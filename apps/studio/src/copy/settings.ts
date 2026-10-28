@@ -227,7 +227,12 @@ export const SETTINGS = {
     unnamed: 'Display',
     /** A Windows Duplicate group: the OS shows one display, and these panels
      * get its picture too (a recorder on a laptop usually arrives this way). */
-    alsoOn: (names: readonly string[]) => `Also shown on ${names.join(', ')} (duplicated by Windows)`,
+    alsoOn: (names: readonly string[]) => `Also shown on ${names.join(', ')} (duplicated by the system)`,
+    /** beta.10, a Mac: a display mirroring this one cannot take a Stage of its own. */
+    mirrorHint: 'To put Stage on a mirrored display, choose “Use as Separate Display” (Control Center ▸ Screen Mirroring, or System Settings ▸ Displays).',
+    /** beta.10: what the app sees, for a bug report. */
+    copyReport: 'Copy display report',
+    reportCopied: 'Display report copied',
     single: 'One display: Stage fullscreen on this display; Studio is an Alt-Tab away.',
     standsOn: 'Stage stands on',
     remembered: 'Remembered',

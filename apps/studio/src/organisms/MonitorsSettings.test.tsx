@@ -1,3 +1,4 @@
+import type { MonitorInfo } from '@questiongame/contract'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { App } from '@/App'
@@ -155,6 +156,39 @@ describe('Settings ▸ Monitors, with several displays', () => {
     // The last one off: Stage is closed.
     await act(async () => button(cardFor('tv@1920x1080'), off)!.click())
     await waitFor(() => expect(cardFor('tv@1920x1080').dataset['stage']).toBe('free'))
+  })
+
+  it('copies a display report for a bug report (beta.10)', async () => {
+    const writes: string[] = []
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (t: string) => void writes.push(t) }, configurable: true })
+    await openMonitors()
+    await act(async () => screen.getByRole('button', { name: 'Copy display report' }).click())
+    await waitFor(() => expect(writes[0]).toMatch(/displays: 2/))
+    expect(fake.calls.some((c) => c.name === 'monitors_report')).toBe(true)
+  })
+
+  it('says how to free a mirrored display on a Mac, and only there (beta.10)', async () => {
+    const { DisplayRow } = await import('@/molecules')
+    const monitor = { ...((await monitorList())[0] as MonitorInfo), alsoOn: ['a mirrored display'] }
+    const row = () =>
+      render(
+        <div role="list">
+          <DisplayRow monitor={monitor} stage="free" stats="free" onSendStage={() => {}} onRemoveStage={() => {}} onShowStats={() => {}} onCloseStats={() => {}} />
+        </div>,
+      )
+    const ua = navigator.userAgent
+    try {
+      Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)', configurable: true })
+      const mac = row()
+      expect(mac.container.querySelector('[data-mirror-hint]')?.textContent).toMatch(/Use as Separate Display/)
+      mac.unmount()
+      Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 (Windows NT 10.0)', configurable: true })
+      const win = row()
+      expect(win.container.querySelector('[data-mirror-hint]')).toBeNull()
+      expect(win.container.textContent).toMatch(/Also shown on a mirrored display/)
+    } finally {
+      Object.defineProperty(navigator, 'userAgent', { value: ua, configurable: true })
+    }
   })
 
   it('closes Stage from its own button, and opens it again where it was (beta.10)', async () => {
