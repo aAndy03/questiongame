@@ -625,7 +625,7 @@ checksum = "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a"
 
 [[package]]
 name = "codemap"
-version = "2.0.0-beta.9"
+version = "2.0.0-beta.10"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3252,7 +3252,7 @@ dependencies = [
 
 [[package]]
 name = "questiongame-app"
-version = "2.0.0-beta.9"
+version = "2.0.0-beta.10"
 dependencies = [
  "core-graphics",
  "fs4 1.1.0",
@@ -3280,7 +3280,7 @@ dependencies = [
 
 [[package]]
 name = "questiongame-host"
-version = "2.0.0-beta.9"
+version = "2.0.0-beta.10"
 dependencies = [
  "argon2",
  "proptest",
