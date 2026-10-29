@@ -12,38 +12,86 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { MosaicNode } from 'react-mosaic-component'
 
-export type PanelId = 'viewer' | 'game' | 'action' | 'strips' | 'timeline'
+/**
+ * The mosaic's tiles. The Timeline is not one since beta.13: it is a fixed
+ * strip under the mosaic (`organisms/TimelineStrip.tsx`), never resized.
+ */
+export type PanelId = 'viewer' | 'game' | 'action' | 'strips'
 
-/** The spec's default arrangement (§11.H). */
+/**
+ * The spec's default arrangement (§11.H), re-weighted in beta.13: the Action
+ * column is the one the operator presses, so it is wide enough not to drop to
+ * `compact` at 1100 px, and the Game column — mostly read — gives way.
+ */
 export const DEFAULT_LAYOUT: MosaicNode<PanelId> = {
   type: 'split',
-  direction: 'column',
-  splitPercentages: [78, 22],
+  direction: 'row',
+  splitPercentages: [18, 50, 32],
   children: [
-    {
-      type: 'split',
-      direction: 'row',
-      splitPercentages: [22, 52, 26],
-      children: [
-        'game',
-        'viewer',
-        { type: 'split', direction: 'column', splitPercentages: [60, 40], children: ['action', 'strips'] },
-      ],
-    },
-    'timeline',
+    'game',
+    'viewer',
+    { type: 'split', direction: 'column', splitPercentages: [62, 38], children: ['action', 'strips'] },
   ],
 }
 
-export const PANEL_IDS: readonly PanelId[] = ['viewer', 'game', 'action', 'strips', 'timeline']
+export const PANEL_IDS: readonly PanelId[] = ['viewer', 'game', 'action', 'strips']
+
+/**
+ * A saved layout without the Timeline tile (beta.13), or null when what is
+ * left is not a whole Control — then the default stands. A split that loses
+ * a child gives its share to the one that stays.
+ */
+export function withoutTimeline(node: unknown): MosaicNode<PanelId> | null {
+  const prune = (n: unknown): unknown => {
+    if (typeof n === 'string') return n === 'timeline' ? null : n
+    if (!n || typeof n !== 'object') return null
+    const o = n as { type?: string; children?: unknown[]; splitPercentages?: number[]; tabs?: unknown[]; activeTabIndex?: number }
+    if (o.type === 'tabs' && Array.isArray(o.tabs)) {
+      const tabs = o.tabs.filter((t) => t !== 'timeline')
+      if (tabs.length === 0) return null
+      return tabs.length === 1 ? tabs[0] : { ...o, tabs, activeTabIndex: Math.min(o.activeTabIndex ?? 0, tabs.length - 1) }
+    }
+    if (!Array.isArray(o.children)) return null
+    const kept = o.children.map((c, i) => ({ c: prune(c), share: o.splitPercentages?.[i] ?? 100 / o.children!.length })).filter((k) => k.c !== null)
+    if (kept.length === 0) return null
+    if (kept.length === 1) return kept[0]!.c
+    const total = kept.reduce((sum, k) => sum + k.share, 0)
+    return { ...o, children: kept.map((k) => k.c), splitPercentages: kept.map((k) => (k.share / total) * 100) }
+  }
+  const pruned = prune(node)
+  const ids = new Set<string>()
+  const collect = (n: unknown) => {
+    if (typeof n === 'string') ids.add(n)
+    else if (n && typeof n === 'object') {
+      const o = n as { children?: unknown[]; tabs?: unknown[] }
+      for (const c of o.children ?? o.tabs ?? []) collect(c)
+    }
+  }
+  collect(pruned)
+  return PANEL_IDS.every((id) => ids.has(id)) ? (pruned as MosaicNode<PanelId>) : null
+}
+
+/**
+ * How finely the Viewer draws its preview (beta.13), as a share of the pixels
+ * it is shown at. Lower spares the computer; Stage itself is never touched.
+ */
+export type ViewerQuality = 'native' | 'high' | 'medium' | 'low'
+export const VIEWER_QUALITIES: readonly ViewerQuality[] = ['native', 'high', 'medium', 'low']
+export const VIEWER_QUALITY: Readonly<Record<ViewerQuality, { readonly pixels: number; readonly tickMs: number }>> = {
+  native: { pixels: 1, tickMs: 0 },
+  high: { pixels: 0.75, tickMs: 0 },
+  medium: { pixels: 0.5, tickMs: 200 },
+  low: { pixels: 0.33, tickMs: 500 },
+}
 
 interface ControlLayoutState {
   readonly operatorId: string
   readonly layouts: Readonly<Record<string, MosaicNode<PanelId>>>
-  readonly timelineCollapsed: Readonly<Record<string, boolean>>
+  readonly viewerQuality: Readonly<Record<string, ViewerQuality>>
   setOperator(id: string | null): void
+  setViewerQuality(quality: ViewerQuality): void
   setLayout(node: MosaicNode<PanelId> | null): void
   resetLayout(): void
-  setTimelineCollapsed(collapsed: boolean): void
 }
 
 export const useControlLayoutStore = create<ControlLayoutState>()(
@@ -51,7 +99,10 @@ export const useControlLayoutStore = create<ControlLayoutState>()(
     (set) => ({
       operatorId: '',
       layouts: {},
-      timelineCollapsed: {},
+      viewerQuality: {},
+      setViewerQuality(quality) {
+        set((s) => ({ viewerQuality: { ...s.viewerQuality, [s.operatorId]: quality } }))
+      },
       setOperator(id) {
         set({ operatorId: id ?? '' })
       },
@@ -61,24 +112,34 @@ export const useControlLayoutStore = create<ControlLayoutState>()(
       resetLayout() {
         set((s) => ({ layouts: { ...s.layouts, [s.operatorId]: DEFAULT_LAYOUT } }))
       },
-      setTimelineCollapsed(collapsed) {
-        set((s) => ({ timelineCollapsed: { ...s.timelineCollapsed, [s.operatorId]: collapsed } }))
-      },
     }),
     {
       name: 'questiongame.studio.control',
       storage: createJSONStorage(() => safeStorage()),
-      partialize: (s) => ({ layouts: s.layouts, timelineCollapsed: s.timelineCollapsed }),
+      partialize: (s) => ({ layouts: s.layouts, viewerQuality: s.viewerQuality }),
+      // v1 (beta.13): the Timeline left the mosaic. Saved layouts lose its
+      // tile; one that no longer holds every panel goes back to the default.
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as { layouts?: Record<string, unknown> }
+        if (version >= 1) return state as { layouts: Record<string, MosaicNode<PanelId>>; viewerQuality: Record<string, ViewerQuality> }
+        const layouts: Record<string, MosaicNode<PanelId>> = {}
+        for (const [operator, node] of Object.entries(state.layouts ?? {})) {
+          const kept = withoutTimeline(node)
+          if (kept) layouts[operator] = kept
+        }
+        return { layouts, viewerQuality: {} }
+      },
     },
   ),
 )
 
-export function useControlLayout(): MosaicNode<PanelId> {
-  return useControlLayoutStore((s) => s.layouts[s.operatorId] ?? DEFAULT_LAYOUT)
+export function useViewerQuality(): ViewerQuality {
+  return useControlLayoutStore((s) => s.viewerQuality[s.operatorId] ?? 'native')
 }
 
-export function useTimelineCollapsed(): boolean {
-  return useControlLayoutStore((s) => s.timelineCollapsed[s.operatorId] ?? true)
+export function useControlLayout(): MosaicNode<PanelId> {
+  return useControlLayoutStore((s) => s.layouts[s.operatorId] ?? DEFAULT_LAYOUT)
 }
 
 function safeStorage(): Storage {

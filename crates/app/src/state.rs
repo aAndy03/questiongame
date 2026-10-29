@@ -213,6 +213,7 @@ impl Host {
             self.flags.audio(),
             self.flags.language(),
         )
+        .with_view(self.flags.stage_view())
     }
 
     /// What `main` receives: the same state plus the operator half — the

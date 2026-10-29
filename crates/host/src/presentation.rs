@@ -35,7 +35,7 @@
 //! channel still reaches Stage, which is where the outcome's arrival animates.
 
 use crate::error::{MatchError, MatchResult};
-use crate::flags::AudioSettings;
+use crate::flags::{AudioSettings, StageView};
 use crate::play::PlayStatus;
 use crate::service::MatchService;
 use crate::settings::{Language, RevealChannel, RevealMode, RevealSettings};
@@ -429,6 +429,9 @@ impl PresentationService {
             reveal_modes: modes,
             audio,
             language,
+            // The defaults; the app crate's `stage_state` puts the operator's
+            // aids on top with [`PlayStateForStage::with_view`].
+            view: StageView::default(),
         }
     }
 }

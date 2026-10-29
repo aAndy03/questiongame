@@ -59,6 +59,9 @@ export const TRANSPORT = {
   abandonBody: 'The Play ends as abandoned. Its events stay on record. This cannot be undone from Control.',
   undo: 'Undo turn',
   redo: 'Redo turn',
+  /** Why Undo / Redo are off when no overlay is in the way (beta.13). */
+  nothingToUndo: 'Nothing to undo yet',
+  redoAfterUndo: 'Redo is only available right after an undo',
   waitOverlay: 'Wait for the overlay to finish',
   ended: 'The Play has ended',
   notStarted: 'Press Start Play first',
@@ -89,6 +92,8 @@ export const TIMER = {
   start: 'Start timer',
   pause: 'Pause timer',
   operatorPace: 'Operator pace',
+  /** Where the clock would be, when the game runs without one (beta.13). */
+  operatorPaceHint: 'No countdown: you lock and reveal when the team is ready.',
   expired: 'Expired',
   locked: 'Locked',
 } as const
@@ -114,6 +119,34 @@ export const SESSION = {
   revealAndPass: 'Reveal & pass',
   revealFirst: 'Reveal first',
   armed: 'Press again to confirm',
+  /**
+   * The turn's result, kept on screen after the reveal (beta.13): what was
+   * scored, and what happened to the token because of it.
+   */
+  result: {
+    keeps: (team: string) => `${team} keeps the token`,
+    free: 'The token is free',
+    capReached: 'Cap reached: the token is free',
+  },
+  /** `resolved`: passing is an override, never the next step. */
+  passOptional: 'Pass the token (optional)',
+  handoverNext: (team: string) => `Give it to ${team}, next in order, or press another team.`,
+  handoverNone: 'Give it to a team to continue.',
+  passArmed: (team: string) => `Pass to ${team}? Press again`,
+  revealAndPassArmed: (team: string) => `Reveal and pass to ${team}? Press again`,
+  /** Reveal before Lock counts as an empty answer (`rules.rs`): arm first. */
+  revealUnlocked: 'Not locked: this counts as a wrong answer. Press again to reveal.',
+  pausedReason: 'Resume the Play first',
+  autoReveal: 'Stage reveals this by itself',
+  /** The T key, when there is nothing it can do. */
+  tokenKeyNothing: {
+    revealFirst: 'Reveal the outcome before passing the token',
+    noTarget: 'No team can take the token now',
+    solo: 'The only team keeps the token',
+  },
+  roundProgress: (round: number, played: number, total: number) => `Round ${round} · ${played} of ${total} played`,
+  domainInPlay: 'In play',
+  optionKey: (key: string, letter: string) => `${key} · ${letter}`,
   noTargets: 'No legal target',
   round: (n: number) => `Round ${n}`,
   question: (n: number) => `Question ${n}`,
@@ -157,6 +190,10 @@ export const RING_ROLE = {
   served: 'Played this round',
   inactive: 'Not in this Play',
   solo: 'The only team',
+  /** beta.13: the holder after a correct answer — passing is optional. */
+  keeps: 'Keeps the token',
+  /** beta.13: the only team, with the token free — press to take it again. */
+  again: 'Take the token again',
   closed: 'The Play has ended',
 } as const
 
@@ -193,12 +230,38 @@ export const OVERLAYS: Readonly<Record<OverlayKind, string>> = {
   'current-team': 'Current team',
 }
 
+/**
+ * The Viewer's own controls (beta.13): how finely the preview is drawn, and
+ * the display aids — which are Stage's, live, for the people watching it.
+ */
+export const VIEWER = {
+  options: 'Viewer and display aids',
+  quality: 'Preview quality',
+  qualityHint: 'Draws this preview with fewer pixels to spare the computer. Stage is not affected.',
+  qualities: { native: 'Native', high: 'High', medium: 'Medium', low: 'Low' },
+  aids: 'Display aids on Stage',
+  aidsHint: 'Changes what the audience sees, live. For pupils who see poorly.',
+  colours: 'Colours',
+  filters: { none: 'Normal', invert: 'Invert', greyscale: 'Greyscale', 'greyscale-invert': 'Grey inverted' },
+  brightness: 'Brightness',
+  motion: 'Reduce motion',
+  motionHint: 'Reveals and transitions jump to their end, and the shapes stay still.',
+  scale: (percent: number) => `${percent}%`,
+  aidsOn: 'Display aids are on',
+} as const
+
 export const STRIPS = {
   screens: 'Screens',
   overlays: 'Overlays',
   overlayBusy: 'Overlay playing',
   overlayPending: 'Queued',
   overlaysOff: 'Overlay animations are off',
+  /** beta.13: an overlay whose payload would be made up is off, with why. */
+  noHolder: 'Nobody holds the token',
+  noOutcome: 'No outcome yet',
+  noSelection: 'No answer selected',
+  screenIndex: (at: number, of: number) => `${at} / ${of}`,
+  stepKeys: 'Previous and next screen',
 } as const
 
 export const TIMELINE = {
@@ -207,7 +270,14 @@ export const TIMELINE = {
   expand: 'Expand timeline',
   collapse: 'Collapse timeline',
   empty: 'No events yet',
-  undoWarning: 'Undoing back to the first event? Restart may be cleaner.',
+  /** beta.13: the track never says "No events" over a count. */
+  loading: 'Reading the timeline…',
+  failed: 'The timeline could not be read. It will try again on the next event.',
+  turn: (n: number, domain: string) => (domain ? `Q${n} · ${domain}` : `Q${n}`),
+  undone: 'Undone',
+  inPlay: 'In play',
+  tokenTo: (team: string) => `→ ${team}`,
+  at: (time: string) => `at ${time}`,
   /** A `selection_set` row's detail: how many answers the selection holds. */
   selected: (n: number) => (n === 1 ? '1 answer selected' : `${n} answers selected`),
   /** A kind this build has no name for (a newer host) — never the raw type. */

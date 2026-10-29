@@ -24,7 +24,7 @@ use serde_json::Value;
 use support::*;
 
 /// Owned by `PresentationService`, merged into the emission.
-const PRESENTATION_KEYS: [&str; 7] = [
+const PRESENTATION_KEYS: [&str; 8] = [
     "audio",
     "currentScreen",
     "decor",
@@ -32,6 +32,7 @@ const PRESENTATION_KEYS: [&str; 7] = [
     "layout",
     "overlay",
     "revealModes",
+    "view",
 ];
 
 fn fixtures_dir() -> PathBuf {

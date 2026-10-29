@@ -324,6 +324,68 @@ impl AudioSettings {
     }
 }
 
+// ------------------------------------------------------------ display aids
+
+/// How Stage's picture is drawn for the people watching it (beta.13): the
+/// display aids a teacher turns on for pupils who see poorly. Control-behaviour
+/// — live mid-Play, never frozen, and it moves no score. Serialized as-is into
+/// `play-state.view`, so Stage and the Viewer draw the same thing.
+///
+/// The set is what operating systems ship and test (Windows colour filters,
+/// Apple's invert, greyscale and Reduce White Point, Reduce Motion), not one
+/// of our own: `docs/research/2026-10-29-display-filters.md`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StageView {
+    pub filter: StageFilter,
+    /// 50–100: how bright the picture is, for glare and light sensitivity.
+    pub brightness: u8,
+    pub motion: StageMotion,
+}
+
+impl Default for StageView {
+    fn default() -> Self {
+        StageView {
+            filter: StageFilter::None,
+            brightness: 100,
+            motion: StageMotion::Full,
+        }
+    }
+}
+
+impl StageView {
+    /// Under 50 % a projector shows grey on grey; over 100 is not a filter.
+    pub fn validate(&self) -> MatchResult<()> {
+        if !(50..=100).contains(&self.brightness) {
+            return Err(MatchError::IllegalSettings {
+                key: "stage.view",
+                reason: "brightness is 50-100",
+            });
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum StageFilter {
+    #[default]
+    None,
+    /// Lightness flipped, hues kept roughly (`invert` then a half-turn of hue).
+    Invert,
+    Greyscale,
+    GreyscaleInvert,
+}
+
+/// `reduced`: every reveal and transition jumps to its end, and the decor
+/// settles and stays still. Results still show, and still report once.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum StageMotion {
+    #[default]
+    Full,
+    Reduced,
+}
+
 // ------------------------------------------------------------------- documents
 
 /// How dense the Control mosaic packs its panels (§4.2 `control.mosaic_density`).
@@ -424,6 +486,9 @@ pub struct ControlSettings {
     /// Cue volume, mute and the cue map (§2.25). Live mid-Play.
     #[serde(default)]
     pub audio: AudioSettings,
+    /// The display aids (beta.13). Live mid-Play; an older document has none.
+    #[serde(default)]
+    pub stage_view: StageView,
 }
 
 /// serde default for a flag that ships on. An older stored document has no
@@ -653,6 +718,8 @@ pub enum GlobalSetting {
     UpdatesCheckOnStart(bool),
     /// `window.native_title_bar` (beta.10).
     WindowNativeTitleBar(bool),
+    /// `stage.view` (beta.13): the display aids, as one record.
+    StageView(StageView),
 }
 
 impl GlobalSetting {
@@ -678,6 +745,7 @@ impl GlobalSetting {
             GlobalSetting::ActiveOperatorId(_) => "operator.active",
             GlobalSetting::UpdatesCheckOnStart(_) => "updates.check_on_start",
             GlobalSetting::WindowNativeTitleBar(_) => "window.native_title_bar",
+            GlobalSetting::StageView(_) => "stage.view",
         }
     }
 }
@@ -994,6 +1062,10 @@ impl FlagService {
             GlobalSetting::ActiveOperatorId(v) => globals.active_operator_id = v,
             GlobalSetting::UpdatesCheckOnStart(v) => globals.updates.check_on_start = v,
             GlobalSetting::WindowNativeTitleBar(v) => globals.window.native_title_bar = v,
+            GlobalSetting::StageView(v) => {
+                globals.control.stage_view = v;
+                control.stage_view = v;
+            }
         }
 
         validate_globals(&globals)?;
@@ -1113,6 +1185,11 @@ impl FlagService {
     /// (§12.5). Passed in per call like `reveal_modes`, never stored twice.
     pub fn audio(&self) -> AudioSettings {
         self.control.audio.clone()
+    }
+
+    /// The display aids `PresentationService` merges into `play-state` (beta.13).
+    pub fn stage_view(&self) -> StageView {
+        self.control.stage_view
     }
 
     /// The §2.18 cascade as it stands now — what a Play *would* freeze.
@@ -1382,6 +1459,7 @@ pub fn validate(game: &GameSettings) -> MatchResult<()> {
 fn validate_globals(globals: &GlobalSettings) -> MatchResult<()> {
     validate(&globals.game_defaults)?;
     globals.control.audio.validate()?;
+    globals.control.stage_view.validate()?;
     globals.timer.validate("globals.timer.duration_ms")
 }
 

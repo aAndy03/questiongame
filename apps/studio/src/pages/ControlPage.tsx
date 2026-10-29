@@ -1,7 +1,7 @@
 import { useCallback, useEffect, type ReactNode } from 'react'
 import { Button } from '@/atoms'
 import { EmptyState, MosaicPanel, type MosaicDensityFloor } from '@/molecules'
-import { ActionPanel, GamePanel, RecentGames, StripsPanel, TimelinePanel, Viewer, useControlHotkeys } from '@/organisms'
+import { ActionPanel, GamePanel, RecentGames, StripsPanel, TimelineStrip, Viewer, useControlHotkeys } from '@/organisms'
 import { MosaicLayout } from '@/templates'
 import { useControlLayout, useControlLayoutStore, type PanelId } from '@/chrome/control'
 import { useNavStore } from '@/chrome/nav'
@@ -57,12 +57,13 @@ export function ControlPage() {
   }
 
   return (
-    <MosaicLayout<PanelId>
-      value={layout}
-      onChange={setLayout}
-      titles={CONTROL.panels}
-      renderTile={renderTile}
-    />
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="min-h-0 flex-1">
+        <MosaicLayout<PanelId> value={layout} onChange={setLayout} titles={CONTROL.panels} renderTile={renderTile} />
+      </div>
+      {/* Fixed height, under every layout: the Timeline is a track, not a tile (beta.13). */}
+      <TimelineStrip />
+    </div>
   )
 }
 
@@ -94,8 +95,6 @@ function useRenderTile(floor: MosaicDensityFloor) {
           return <MosaicPanel floor={floor}>{(density) => <ActionPanel density={density} />}</MosaicPanel>
         case 'strips':
           return <MosaicPanel floor={floor}>{(density) => <StripsPanel density={density} />}</MosaicPanel>
-        case 'timeline':
-          return <MosaicPanel floor={floor}>{(density) => <TimelinePanel density={density} />}</MosaicPanel>
       }
     },
     [floor],

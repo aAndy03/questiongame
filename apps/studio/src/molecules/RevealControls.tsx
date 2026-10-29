@@ -7,6 +7,8 @@ export interface RevealControlsProps {
   optionsTotal: number
   outcomeRevealed: boolean
   locked: boolean
+  /** Reveal outcome is armed: pressed once before Lock (beta.13). */
+  outcomeArmed?: boolean | undefined
   /** From `revealModes`: an auto channel greys its button (the host drives it). */
   autoStem: boolean
   autoAnswers: boolean
@@ -26,6 +28,7 @@ export function RevealControls({
   optionsTotal,
   outcomeRevealed,
   locked,
+  outcomeArmed,
   autoStem,
   autoAnswers,
   isDisabled,
@@ -45,7 +48,7 @@ export function RevealControls({
         state={stemRevealed ? 'active' : 'rest'}
         onPress={onRevealStem}
         isDisabled={isDisabled || stemRevealed || autoStem}
-        disabledReason={disabledReason ?? (autoStem ? 'Auto' : null)}
+        disabledReason={disabledReason ?? (autoStem ? SESSION.autoReveal : null)}
         kbd={kbd?.stem}
       />
       <div className="flex items-center gap-1.5">
@@ -54,7 +57,7 @@ export function RevealControls({
           label={SESSION.revealOption}
           onPress={onRevealOption}
           isDisabled={isDisabled || allOptions || autoAnswers}
-          disabledReason={disabledReason ?? (autoAnswers ? 'Auto' : null)}
+          disabledReason={disabledReason ?? (autoAnswers ? SESSION.autoReveal : null)}
           kbd={kbd?.option}
         />
         <Text variant="studio-mono" tone="muted" tabular>
@@ -74,7 +77,7 @@ export function RevealControls({
       <TransportButton
         icon="correct"
         label={SESSION.revealOutcome}
-        state={outcomeRevealed ? 'active' : 'rest'}
+        state={outcomeRevealed ? 'active' : outcomeArmed ? 'armed' : 'rest'}
         withLabel
         onPress={onRevealOutcome}
         isDisabled={isDisabled || outcomeRevealed}

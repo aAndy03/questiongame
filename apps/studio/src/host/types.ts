@@ -21,6 +21,7 @@ import type {
   RevealMode,
   StageLanguage,
   StageReattach,
+  StageView,
 } from '@questiongame/contract'
 
 export type { CueKey, HealthReport, HealthStatus, RevealChannel, RevealMode, StageReattach }
@@ -231,10 +232,15 @@ export interface Recipe extends Stamps {
 }
 
 /** One Timeline row (`play_events`). The kind is `{ type, ...fields }`. */
+/**
+ * One event of a Play's log, as `play_events` sends it — the host's `Event`
+ * with **its own field names** (beta.13: this said `atMs`, the wire says
+ * `at_ms`, so every Timeline row showed the time it was drawn).
+ */
 export interface PlayEvent {
   readonly seq: number
   readonly id: string
-  readonly atMs: number
+  readonly at_ms: number
   readonly kind: { readonly type: string } & Record<string, unknown>
 }
 
@@ -361,6 +367,8 @@ export interface ControlSettings {
   readonly stats_fullscreen: boolean
   readonly stage_reattach: StageReattach
   readonly audio: AudioSettings
+  /** The display aids on Stage (beta.13). Live mid-Play. */
+  readonly stage_view: StageView
 }
 
 export interface FeatureRoots {
@@ -452,6 +460,7 @@ export type GlobalSetting =
   | { readonly key: 'audio_volume'; readonly value: number }
   | { readonly key: 'audio_muted'; readonly value: boolean }
   | { readonly key: 'audio_cue'; readonly value: readonly [CueKey, string | null] }
+  | { readonly key: 'stage_view'; readonly value: StageView }
 
 // ------------------------------------------------ incomplete questions · import
 

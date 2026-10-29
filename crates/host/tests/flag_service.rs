@@ -16,6 +16,7 @@ use questiongame_host::flags::{
     GlobalSetting, GlobalSettings, MosaicDensity, RuntimeContext,
 };
 use questiongame_host::monitor::StageReattach;
+use questiongame_host::{StageFilter, StageMotion, StageView};
 use questiongame_host::play::PlayStatus;
 use questiongame_host::settings::{
     ConsecutiveBonus, DifficultyMap, Language, LockSpeedBase, OverrideAfterLock, RevealChannel,
@@ -441,6 +442,30 @@ fn allow_shows_give_token_even_while_locked() {
     assert_eq!(flags.live().override_after_lock, OverrideAfterLock::Allow);
 }
 
+/// The display aids a teacher turns on (beta.13).
+const VIEW: StageView = StageView {
+    filter: StageFilter::GreyscaleInvert,
+    brightness: 70,
+    motion: StageMotion::Reduced,
+};
+
+/// beta.13: the display aids are Control-behaviour — a teacher turns them on
+/// in the middle of a Play — and a brightness that is not a filter is refused.
+#[test]
+fn the_display_aids_are_live_mid_play_and_bounded() {
+    let mut flags = loaded();
+    flags.settings_set_global(GlobalSetting::StageView(VIEW), playing()).unwrap();
+    assert_eq!(flags.stage_view(), VIEW);
+    for brightness in [0, 49, 101] {
+        let refused = flags.settings_set_global(GlobalSetting::StageView(StageView { brightness, ..VIEW }), playing());
+        assert!(matches!(refused, Err(MatchError::IllegalSettings { key: "stage.view", .. })), "{brightness}");
+    }
+    assert_eq!(flags.stage_view(), VIEW, "a refused write leaves the aids as they were");
+    // The wire words Stage and Studio read.
+    let wire = serde_json::to_value(VIEW).unwrap();
+    assert_eq!(wire, serde_json::json!({ "filter": "greyscale-invert", "brightness": 70, "motion": "reduced" }));
+}
+
 #[test]
 fn a_control_behaviour_write_takes_effect_immediately_and_is_remembered() {
     let mut flags = loaded();
@@ -453,6 +478,7 @@ fn a_control_behaviour_write_takes_effect_immediately_and_is_remembered() {
         GlobalSetting::StatsFullscreen(false),
         GlobalSetting::StageReattach(StageReattach::Auto),
         GlobalSetting::Reveal(RevealChannel::Answers, RevealMode::Auto),
+        GlobalSetting::StageView(VIEW),
     ] {
         flags.settings_set_global(write, playing()).unwrap();
     }
@@ -468,6 +494,7 @@ fn a_control_behaviour_write_takes_effect_immediately_and_is_remembered() {
         stats_fullscreen: false,
         stage_reattach: StageReattach::Auto,
         audio: AudioSettings::default(),
+        stage_view: VIEW,
     };
     assert_eq!(flags.control(), &expected);
     assert_eq!(

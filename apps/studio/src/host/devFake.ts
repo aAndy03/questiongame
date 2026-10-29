@@ -22,7 +22,7 @@
 import { FIXTURES, type Command, type FixtureName, type MonitorInfo, type PlayStateForMain } from '@questiongame/contract'
 import { createFakeHost, DEFAULT_GAME_SETTINGS, FAKE_MONITORS, type FakeHost } from './fake'
 import { hasTauri, setHostTransport, type HostTransport } from './host'
-import type { CatalogItem, Recipe, StatsDimension, StatsMetric, StatsResult, StatsRow } from './types'
+import type { CatalogItem, PlayEvent, Recipe, StatsDimension, StatsMetric, StatsResult, StatsRow } from './types'
 
 export function installDevFakeIfAsked(): FakeHost | null {
   if (!import.meta.env.DEV || hasTauri()) return null
@@ -47,7 +47,11 @@ export function installDevFakeIfAsked(): FakeHost | null {
   // `&play=<fixture>` also hands Control a Play to draw. The fixture is Stage's
   // half; the operator half is synthesised here and nowhere else.
   const fixture = params.get('play')
-  if (fixture && fixture in FIXTURES) fake.playState = demoPlay(fixture as FixtureName)
+  if (fixture && fixture in FIXTURES) {
+    const play = demoPlay(fixture as FixtureName)
+    fake.events = demoEvents(play)
+    fake.playState = { ...play, operator: { ...play.operator, eventCount: fake.events.length } }
+  }
   // Statistics reads a fold the fake does not do (§13.1); a canned answer is
   // what lets the tab be worked on in a browser, the way `play=` does Control.
   // One per dimension (P20), since Live alone asks three at once; the team
@@ -105,6 +109,43 @@ function delayed(fake: FakeHost, ms: number): HostTransport {
       }),
     listen: (name, handler) => fake.listen(name, handler),
   }
+}
+
+/**
+ * A plausible log for a demo Play (beta.13), so `?fake&play=` draws a
+ * Timeline: the Play's start, then each question issued so far — the last
+ * one as far as the fixture's session goes. Its length is the operator's
+ * `eventCount`, as the host's always is.
+ */
+export function demoEvents(play: PlayStateForMain): PlayEvent[] {
+  const events: PlayEvent[] = []
+  const t = Date.now() - 600_000
+  const add = (type: string, fields: Record<string, unknown> = {}) => {
+    const seq = events.length + 1
+    events.push({ seq, id: `${play.playId}:${seq}`, at_ms: t + seq * 9_000, kind: { type, ...fields } })
+  }
+  add('play_loaded')
+  if (play.status === 'loaded') return events
+  add('play_started')
+  const domains = play.domains.map((d) => d.id)
+  const order = play.ring.order
+  for (let q = 1; q <= play.questionsIssued; q++) {
+    const last = q === play.questionsIssued
+    const team = last ? (play.ring.currentTeamId ?? order[0]) : order[(q - 1) % Math.max(1, order.length)]
+    add('question_issued', { domain: last ? (play.session?.domainId ?? domains[0]) : domains[(q - 1) % Math.max(1, domains.length)], question: `q${q}`, team, timer_duration_ms: 30_000 })
+    if (last && play.session && play.session.outcome === null) {
+      if (play.session.reveals.stem) add('stem_revealed')
+      if (play.session.selectedOptionIds.length > 0) add('selection_set', { options: play.session.selectedOptionIds })
+      if (play.session.lockedOptionIds) add('selection_locked', { options: play.session.lockedOptionIds, remaining_ms_at_lock: 12_000, auto: false })
+      break
+    }
+    add('stem_revealed')
+    add('selection_set', { options: ['opt-a'] })
+    const outcome = last ? play.session?.outcome : null
+    add('turn_resolved', { verdict: outcome?.verdict ?? (q % 3 === 0 ? 'incorrect' : 'correct'), points_awarded: outcome?.pointsAwarded ?? (q % 3 === 0 ? 0 : 250), bonus_awarded: null, token_ends: q % 3 === 0 })
+    if (!last && q % 3 === 0) add('token_given', { team: order[q % Math.max(1, order.length)] })
+  }
+  return events
 }
 
 export function demoPlay(name: FixtureName): PlayStateForMain {

@@ -81,6 +81,7 @@ pub use event::{Event, EventKind};
 pub use explain::{AwardBreakdown, BaseSource, SpeedFactor, SpeedOff};
 pub use flags::{
     AudioSettings, CueKey, FeatureRoot, FlagService, GameSettings, GlobalSettings, RuntimeContext,
+    StageFilter, StageMotion, StageView,
 };
 pub use health::{HealthInputs, HealthReport, HealthStatus};
 pub use ids::{

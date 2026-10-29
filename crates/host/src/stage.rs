@@ -19,7 +19,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::flags::AudioSettings;
+use crate::flags::{AudioSettings, StageView};
 use crate::ids::{DomainId, OptionId, QuestionId, TeamId};
 use crate::play::{Play, PlayStatus};
 use crate::rules::Verdict;
@@ -559,4 +559,14 @@ pub struct PlayStateForStage {
     /// `FlagService::language`. Presentation only: nothing derived from the
     /// Play is translated.
     pub language: Language,
+    /// The display aids (beta.13), from `FlagService::stage_view`. Stage
+    /// applies them to its root; it never decides them.
+    pub view: StageView,
+}
+
+impl PlayStateForStage {
+    /// The same emission with the operator's display aids (beta.13).
+    pub fn with_view(self, view: StageView) -> Self {
+        PlayStateForStage { view, ..self }
+    }
 }

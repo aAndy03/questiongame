@@ -1,11 +1,20 @@
+import { useEffect } from 'react'
 import { useHotkeys, type RegisterableHotkeyChord } from '@tanstack/react-hotkeys'
 import { STAGE_SCREENS } from '@questiongame/contract'
-import { HOTKEYS } from '@/copy'
+import { armOrConfirm, useArmStore } from '@/chrome/arm'
+import { toast } from '@/chrome/toast'
+import { SESSION } from '@/copy'
+import { useChord } from '@/host/chords'
 import { useHostCommand } from '@/host/commands'
 import { usePlayState } from '@/host/playState'
 import { canChooseDomain, liveSession } from '@/host/session'
-import { useSettings } from '@/host/queries'
+import { tokenKey } from '@/host/token'
 import { tipLearned } from '@/tips/signals'
+
+/** A dialog is up: Enter, R and the digits belong to it, not to the show (beta.13). */
+function dialogOpen(): boolean {
+  return typeof document !== 'undefined' && document.querySelector('[role="dialog"], [role="alertdialog"]') !== null
+}
 
 /**
  * Chords → the same `run` the buttons and the Viewer call (05_STUDIO_DESIGN.md
@@ -15,13 +24,18 @@ import { tipLearned } from '@/tips/signals'
  */
 export function useControlHotkeys(enabled: boolean): void {
   const play = usePlayState()
-  const settings = useSettings()
   const run = useHostCommand()
-  const chord = (command: string) => settings.data?.globals.shortcuts[command] ?? HOTKEYS.defaults[command] ?? ''
+  const chord = useChord()
   const open = play !== null && (play.status === 'playing' || play.status === 'paused')
   // The live one: a resolved question is still in `play.session`, and the
   // number keys have to fall back to picking a domain once it is revealed.
   const session = liveSession(play)
+
+  // Anything armed is let go the moment the Play moves on — the holder, the
+  // question, the lock, the outcome or the status (spec §14: an arm is for
+  // the state it was made in). Here, because Control mounts this once.
+  const disarm = useArmStore((s) => s.disarm)
+  useEffect(() => disarm(), [disarm, play?.ring.currentTeamId, play?.session?.questionId, play?.session?.lockedOptionIds, play?.session?.outcome, play?.status])
 
   const screenStep = (dir: -1 | 1) => {
     if (!play) return
@@ -47,14 +61,27 @@ export function useControlHotkeys(enabled: boolean): void {
   const definitions = [
     { hotkey: chord('start_timer'), callback: () => void run(session?.timer?.running ? 'pause_timer' : 'start_timer') },
     { hotkey: chord('lock_selection'), callback: () => void run('lock_selection') },
-    { hotkey: chord('reveal_outcome'), callback: () => void run('reveal_outcome') },
+    {
+      hotkey: chord('reveal_outcome'),
+      // Before Lock the host scores the reveal as an empty answer: arm, as the
+      // button does (beta.13). A clock that ran out reveals at once.
+      callback: () => {
+        if (session && session.lockedOptionIds === null && !session.timer?.expiredOpen && !armOrConfirm({ kind: 'reveal-unlocked' })) return
+        void run('reveal_outcome')
+      },
+    },
     { hotkey: chord('reveal_stem'), callback: () => void run('reveal_stem') },
     { hotkey: chord('reveal_next_option'), callback: () => void run('reveal_next_option') },
     {
       hotkey: chord('give_token'),
       callback: () => {
-        const target = play?.operator.defaultNextTeamId
-        if (target && !session) void run('give_token', { teamId: target })
+        if (!play) return
+        const action = tokenKey(play, useArmStore.getState().armed)
+        if (action.kind === 'arm') useArmStore.getState().arm(action.arm)
+        else if (action.kind === 'run') {
+          useArmStore.getState().disarm()
+          void run(action.command, { teamId: action.teamId })
+        } else toast.info(SESSION.tokenKeyNothing[action.why])
       },
     },
     { hotkey: chord('undo_turn'), callback: () => void run('undo_turn') },
@@ -68,6 +95,7 @@ export function useControlHotkeys(enabled: boolean): void {
     definitions.map((d) => ({
       hotkey: d.hotkey as RegisterableHotkeyChord,
       callback: () => {
+        if (dialogOpen()) return
         tipLearned('control-keys')
         d.callback()
       },

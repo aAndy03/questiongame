@@ -95,16 +95,19 @@ export function reorderedRing(state: PlayStateForMain, fromId: string, toId: str
  *   served        already played this round; the invariant will not serve it
  *                 again until everyone has
  *   inactive      not in this Play
- *   solo          the only team — a rehearsal (§4.3)
+ *   solo          the only team, holding the token — a rehearsal (§4.3)
+ *   again         the only team, with the token free: pressing takes it back
  *   closed        the Play can no longer take a hand-over
  */
-export type RingRole = 'holder' | 'next' | 'override' | 'reveal-first' | 'served' | 'inactive' | 'solo' | 'closed'
+export type RingRole = 'holder' | 'next' | 'override' | 'reveal-first' | 'served' | 'inactive' | 'solo' | 'again' | 'closed'
 
 export function ringRole(state: PlayStateForMain, entry: RingEntry): RingRole {
-  if (state.operator.isRehearsal) return 'solo'
+  const open = state.status === 'playing' || state.status === 'paused'
+  // beta.13: a rehearsal's free token was drawn as held, and the row never
+  // said it could be pressed to take it back.
+  if (state.operator.isRehearsal) return open && entry.phase !== 'current' && entry.isLegalTarget ? 'again' : 'solo'
   if (entry.phase === 'inactive') return 'inactive'
   if (entry.phase === 'current') return 'holder'
-  const open = state.status === 'playing' || state.status === 'paused'
   if (!open) return 'closed'
   if (!entry.isLegalTarget) return 'served'
   // §2.6 path 2: a question that is issued and unrevealed holds every

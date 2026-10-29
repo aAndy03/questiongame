@@ -18,9 +18,14 @@ export interface StageFrameProps {
   children: ReactNode
   /** Data hook for the current screen, for tests and the Screens canvas. */
   screen?: string
+  /**
+   * The display aids' CSS filter (beta.13), on the canvas itself — not the
+   * window — so a letterbox stays black under Invert instead of turning white.
+   */
+  filter?: string | undefined
 }
 
-export function StageFrame({ header, decor, overlay, children, screen }: StageFrameProps) {
+export function StageFrame({ header, decor, overlay, children, screen, filter }: StageFrameProps) {
   return (
     <div
       data-surface="stage"
@@ -34,7 +39,9 @@ export function StageFrame({ header, decor, overlay, children, screen }: StageFr
         overflow: 'hidden',
         background: 'var(--surface)',
         color: 'var(--text-primary)',
+        ...(filter && filter !== 'none' ? { filter } : {}),
       }}
+      {...(filter && filter !== 'none' ? { 'data-stage-filter': filter } : {})}
     >
       <div
         data-stage-decor

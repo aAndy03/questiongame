@@ -35,7 +35,7 @@ describe('Control', () => {
 
   /** `anchor` is what says the panel has drawn — the Lock button, unless the
     * phase has no question in it. */
-  async function openControl(state: PlayStateForMain, anchorText?: string) {
+  async function openControl(state: PlayStateForMain, anchorText?: string | RegExp) {
     fake.playState = state
     render(<App />)
     await act(async () => {
@@ -101,7 +101,8 @@ describe('Control', () => {
     await openControl(resolved, 'Next question')
 
     const domain = resolved.domains.find((d) => !d.exhausted)!
-    const button = screen.getAllByRole('button').find((b) => b.textContent?.startsWith(domain.name))
+    // beta.13: the button leads with the digit that picks it ("1 · History").
+    const button = screen.getAllByRole('button').find((b) => b.textContent?.replace(/^\d · /, '').startsWith(domain.name))
     expect(button, 'a domain button on the Action Panel').toBeTruthy()
     expect(isDisabled(button!)).toBe(false)
 
@@ -120,7 +121,7 @@ describe('Control', () => {
     // is not a disabled control, it is the wrong block.
     expect(screen.getByLabelText('Reveal outcome')).toBeTruthy()
     const domain = live.domains.find((d) => !d.exhausted)!
-    expect(screen.queryAllByRole('button').find((b) => b.textContent?.startsWith(domain.name))).toBeUndefined()
+    expect(screen.queryAllByRole('button').find((b) => b.textContent?.replace(/^\d · /, '').startsWith(domain.name))).toBeUndefined()
   })
 
   /**
@@ -168,7 +169,8 @@ describe('Control', () => {
   it('the token rows disappear once the Play can no longer take one', async () => {
     const playing = demoPlay('question-outcome-correct')
     await openControl(playing, 'Next question')
-    expect(screen.queryByText('Give token')).not.toBeNull()
+    // beta.13: after a correct answer the holder keeps it, and passing says it is optional.
+    expect(screen.queryByText('Pass the token (optional)')).not.toBeNull()
   })
 
   /**
@@ -178,7 +180,7 @@ describe('Control', () => {
    */
   it('a game that was never played is unloaded without a question, and discarded', async () => {
     const loaded: PlayStateForMain = { ...demoPlay('question-issued'), status: 'loaded', session: null }
-    await openControl(loaded, 'Round 2')
+    await openControl(loaded, /^Round 2/)
 
     fireEvent.click(await screen.findByRole('button', { name: 'Unload game' }))
     await waitFor(() => expect(fake.calls.filter((c) => c.name === 'play_unload')).toHaveLength(1))

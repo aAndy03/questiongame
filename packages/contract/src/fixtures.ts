@@ -21,7 +21,7 @@ import type {
   StageSession,
   StageTeam,
 } from './play-state'
-import { CONTRACT_VERSION, DEFAULT_AUDIO, DEFAULT_DECOR_SETTINGS, DEFAULT_STAGE_LANGUAGE } from './play-state'
+import { CONTRACT_VERSION, DEFAULT_AUDIO, DEFAULT_DECOR_SETTINGS, DEFAULT_STAGE_LANGUAGE, DEFAULT_STAGE_VIEW } from './play-state'
 
 const PLAY_ID = 'play-fixture-1'
 
@@ -91,6 +91,7 @@ function base(overrides: Partial<PlayStateForStage> = {}): PlayStateForStage {
     },
     audio: DEFAULT_AUDIO,
     language: DEFAULT_STAGE_LANGUAGE,
+    view: DEFAULT_STAGE_VIEW,
     ...overrides,
   }
 }

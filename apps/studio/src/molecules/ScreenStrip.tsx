@@ -1,6 +1,6 @@
 import { ToggleButton, ToggleButtonGroup } from '@heroui/react'
 import { STAGE_SCREENS, type StageScreen } from '@questiongame/contract'
-import { Icon, Text, Tooltip, type IconName } from '@/atoms'
+import { Icon, Kbd, Text, Tooltip, type IconName } from '@/atoms'
 import { SCREENS, STRIPS } from '@/copy'
 
 export interface ScreenStripProps {
@@ -8,6 +8,8 @@ export interface ScreenStripProps {
   /** A base transition may not start under a running overlay (spec §2.6). */
   overlayBusy: boolean
   density?: 'comfortable' | 'compact' | 'dense'
+  /** The operator's chords for the previous and next screen (beta.13). */
+  keys?: { prev: string; next: string } | undefined
   onShow: (screen: StageScreen) => void
 }
 
@@ -31,18 +33,33 @@ const ICON: Record<StageScreen, IconName> = {
  * every width, so the density decides one thing only: whether the label is
  * printed beside the icon or hung on a tooltip.
  */
-export function ScreenStrip({ current, overlayBusy, density = 'comfortable', onShow }: ScreenStripProps) {
+export function ScreenStrip({ current, overlayBusy, density = 'comfortable', keys, onShow }: ScreenStripProps) {
   const labelled = density === 'comfortable'
+  const at = STAGE_SCREENS.indexOf(current) + 1
   return (
     <div className="flex flex-col gap-2" data-screen-strip>
       <div className="flex items-center justify-between gap-2">
-        <Text variant="studio-caption" tone="muted">
-          {STRIPS.screens}
-        </Text>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Text variant="studio-caption" tone="muted">
+            {STRIPS.screens}
+          </Text>
+          <span data-screen-index>
+            <Text variant="studio-mono" tone="muted" tabular>
+              {STRIPS.screenIndex(at, STAGE_SCREENS.length)}
+            </Text>
+          </span>
+        </div>
         {overlayBusy ? (
           <Text variant="studio-caption" tone="warning">
             {STRIPS.overlayBusy}
           </Text>
+        ) : keys && (keys.prev || keys.next) ? (
+          <Tooltip content={STRIPS.stepKeys}>
+            <span className="inline-flex items-center gap-0.5" aria-label={STRIPS.stepKeys}>
+              {keys.prev ? <Kbd chord={keys.prev} /> : null}
+              {keys.next ? <Kbd chord={keys.next} /> : null}
+            </span>
+          </Tooltip>
         ) : null}
       </div>
       <ToggleButtonGroup

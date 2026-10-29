@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from 'react'
-import { STAGE_SCREENS, type PlayStateForStage, type StageScreen } from '@questiongame/contract'
+import { STAGE_SCREENS, stageViewFilter, type PlayStateForStage, type StageScreen } from '@questiongame/contract'
 import { Text } from '@/atoms'
-import { runTransition, sequencer, type RunningTransition } from '@/presentation'
+import { motionConfig, runTransition, sequencer, type RunningTransition } from '@/presentation'
 import { DecorField, OverlayLayer, StageHeader } from '@/organisms'
 import { StageFrame } from '@/templates'
 import { LayoutProvider, applyLayout } from '@/layout'
@@ -74,6 +74,18 @@ export function StageRoot({ state }: StageRootProps) {
   const [leaving, setLeaving] = useState<Leaving | null>(null)
   // Which screen the persistent slots present; flips mid-transition.
   const [presented, setPresented] = useState<StageScreen>(screen)
+
+  // Reduce motion (beta.13): every timeline jumps to its end — results still
+  // show and `anim-complete` still reports once — for as long as it is on.
+  const reduced = state.view.motion === 'reduced'
+  useLayoutEffect(() => {
+    if (!reduced) return
+    const before = motionConfig.immediate
+    motionConfig.immediate = true
+    return () => {
+      motionConfig.immediate = before
+    }
+  }, [reduced])
 
   // The recipe's node overrides, written onto the DOM (layout/apply.ts).
   const frameForLayout = useRef<HTMLDivElement | null>(null)
@@ -165,6 +177,7 @@ export function StageRoot({ state }: StageRootProps) {
     <div ref={frame} style={{ display: 'contents' }}>
       <StageFrame
         screen={screen}
+        filter={stageViewFilter(state.view)}
         header={<StageHeader state={headerState} screen={presented} />}
         decor={<DecorField state={state} screen={presented} />}
         overlay={<OverlayLayer state={state} />}

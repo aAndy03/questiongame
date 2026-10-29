@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button, MeaningChip, Separator, Text, TransportButton } from '@/atoms'
 import { ConfirmDialog, EmptyState, RevealControls, RingRow, TimerCluster, type RingRowVariant, type TimerClusterProps } from '@/molecules'
-import { CONTROL, HOTKEYS, PHASE, RING, RING_ROLE, SESSION, TRANSPORT } from '@/copy'
+import { armOrConfirm, sameArm, useArmStore } from '@/chrome/arm'
+import { CONTROL, PHASE, RING, RING_ROLE, SESSION, TIMER, TRANSPORT } from '@/copy'
+import { useChord } from '@/host/chords'
 import { useHostCommand } from '@/host/commands'
 import { isPlayOpen, usePlayClock, usePlayState } from '@/host/playState'
 import { ringEntries, ringRole } from '@/host/ring'
 import { canChooseDomain, controlPhase, isSessionLive, nextLeaderboardRank } from '@/host/session'
+import { turnResult, type TurnResult } from '@/host/token'
 
 export interface ActionPanelProps {
   density: 'comfortable' | 'compact' | 'dense'
@@ -29,12 +32,12 @@ export interface ActionPanelProps {
 export function ActionPanel({ density }: ActionPanelProps) {
   const play = usePlayState()
   const run = useHostCommand()
-  const [armed, setArmed] = useState<string | null>(null)
+  const chord = useChord()
+  // Shared with the Viewer and the chords (`chrome/arm.ts`); the Control
+  // hotkeys hook disarms it when the Play moves on.
+  const armed = useArmStore((s) => s.armed)
   const [confirm, setConfirm] = useState<'restart-same' | 'restart-different' | 'abandon' | null>(null)
   const [pending, setPending] = useState(false)
-
-  // An armed override disarms itself when the state moves on.
-  useEffect(() => setArmed(null), [play?.ring.currentTeamId, play?.session?.outcome])
 
   if (!play) return <EmptyState kind="empty" what={CONTROL.panels.action.toLowerCase()} detail={CONTROL.noRecipeBody} compact />
 
@@ -55,25 +58,37 @@ export function ActionPanel({ density }: ActionPanelProps) {
   const nextRank = nextLeaderboardRank(play)
   const entries = ringEntries(play)
   const compact = density !== 'comfortable'
+  const result = turnResult(play)
   // The hand-over is drawn while the Play can still take one. On a completed
   // or abandoned Play `give_token` is refused, so the rows would be dead.
-  const showRing = open && play.operator.showGiveToken && entries.length > 0
+  // beta.13: **never hidden while open** — under `refuse_until_reveal` the
+  // block used to vanish at Lock; now its rows stay, disabled with the reason
+  // (§4.2). A rehearsal that keeps its token has nothing to pass.
+  const showRing = open && entries.length > 0 && !(play.operator.isRehearsal && phase === 'resolved')
+  const blocked = (sessionLive && play.operator.overrideAfterLock === 'refuse_until_reveal') || !play.operator.showGiveToken
+  const defaultName = play.teams.find((t) => t.id === play.operator.defaultNextTeamId)?.name ?? null
+  const pausedReason = play.status === 'paused' ? SESSION.pausedReason : null
 
-  const giveToken = (teamId: string, name: string) => {
-    if (session && !resolved) {
+  const giveToken = (teamId: string) => {
+    if (sessionLive) {
       // §2.6 path 2: reveal is required; `allow` offers Reveal & pass, armed.
       if (play.operator.overrideAfterLock === 'refuse_until_reveal') return
-      if (armed !== teamId) {
-        setArmed(teamId)
-        return
-      }
-      setArmed(null)
-      void run('reveal_and_pass', { teamId })
+      if (armOrConfirm({ kind: 'reveal-and-pass', teamId })) void run('reveal_and_pass', { teamId })
       return
     }
-    void name
+    // After a correct answer the holder keeps the token: passing is an
+    // override, so it confirms (beta.13). A free token just goes.
+    if (phase === 'resolved' && !armOrConfirm({ kind: 'pass', teamId })) return
     void run('give_token', { teamId })
   }
+
+  // Reveal before Lock is scored as an empty answer (`rules.rs`): arm first,
+  // unless the clock already ran out — that reveal is the expected one.
+  const revealOutcome = () => {
+    if (session && !locked && !timer?.expiredOpen && !armOrConfirm({ kind: 'reveal-unlocked' })) return
+    void run('reveal_outcome')
+  }
+  const revealArmed = armed?.kind === 'reveal-unlocked'
 
   const doConfirm = async () => {
     setPending(true)
@@ -95,20 +110,20 @@ export function ActionPanel({ density }: ActionPanelProps) {
         ) : play.status === 'paused' ? (
           <TransportButton icon="play" label={TRANSPORT.resume} state="active" withLabel={!compact} onPress={() => void run('resume')} />
         ) : null}
-        <TransportButton icon="undo" label={TRANSPORT.undo} onPress={() => void run('undo_turn')} isDisabled={!play.operator.canUndo} disabledReason={waitReason} kbd={HOTKEYS.defaults['undo_turn']} />
-        <TransportButton icon="redo" label={TRANSPORT.redo} onPress={() => void run('redo_turn')} isDisabled={!play.operator.canRedo} disabledReason={waitReason} kbd={HOTKEYS.defaults['redo_turn']} />
+        {/* Undo and Redo live on the Timeline strip (beta.13), beside what they act on. */}
         <div className="flex-1" />
         {/* A completed Play may be restarted — the board is empty and playing
           * it again is the obvious next act (`MatchService::restart`). Only an
           * abandoned or already-restarted record refuses. */}
         <TransportButton icon="restart" label={TRANSPORT.restart} onPress={() => setConfirm('restart-same')} isDisabled={!open && play.status !== 'completed'} disabledReason={waitReason ?? (play.status === 'abandoned' ? TRANSPORT.ended : !open && play.status !== 'completed' ? TRANSPORT.notStarted : null)} />
+        <span className="mx-0.5 h-5 w-px bg-[var(--separator)]" aria-hidden />
         <TransportButton icon="abandon" label={TRANSPORT.abandon} state="rest" onPress={() => setConfirm('abandon')} isDisabled={!open} disabledReason={waitReason ?? notOpen} />
       </div>
 
       <Separator />
 
       {/* the phase block: the question, while there is one */}
-      {session && (phase === 'question' || phase === 'resolved') ? (
+      {session && (phase === 'question' || phase === 'resolved' || phase === 'handover') ? (
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1">
@@ -120,13 +135,13 @@ export function ActionPanel({ density }: ActionPanelProps) {
                 <Text variant="studio-caption" tone="muted">
                   {SESSION.difficulty(session.difficulty)}
                 </Text>
-                {resolved && session.outcome ? (
-                  <MeaningChip meaning={session.outcome.verdict === 'correct' ? 'easy' : session.outcome.verdict === 'incorrect' ? 'hard' : 'medium'}>
-                    {`${SESSION.verdict[session.outcome.verdict]} ${SESSION.points(session.outcome.pointsAwarded)}`}
-                  </MeaningChip>
-                ) : null}
               </div>
             </div>
+            {phase === 'question' && timer === null ? (
+              <Text variant="studio-caption" tone="muted" className="shrink-0" title={TIMER.operatorPaceHint}>
+                {TIMER.operatorPace}
+              </Text>
+            ) : null}
             {phase === 'question' ? (
             <LiveTimerCluster
               durationMs={timer?.durationMs ?? null}
@@ -134,7 +149,7 @@ export function ActionPanel({ density }: ActionPanelProps) {
               frozen={locked || resolved}
               expiredOpen={timer?.expiredOpen ?? false}
               disabledReason={notOpen}
-              kbd={HOTKEYS.defaults['start_timer']}
+              kbd={chord('start_timer')}
               onStart={() => void run('start_timer')}
               onPause={() => void run('pause_timer')}
             />
@@ -145,6 +160,7 @@ export function ActionPanel({ density }: ActionPanelProps) {
             * After it resolves the header keeps the verdict and the next
             * block takes over — a disabled row of finished controls is what
             * made the panel look stuck. */}
+          {result ? <ResultLine result={result} /> : null}
           {phase === 'question' ? (
           <RevealControls
             stemRevealed={session.reveals.stem}
@@ -155,12 +171,18 @@ export function ActionPanel({ density }: ActionPanelProps) {
             autoStem={play.revealModes.question === 'auto'}
             autoAnswers={play.revealModes.answers === 'auto'}
             disabledReason={notOpen}
-            kbd={{ stem: HOTKEYS.defaults['reveal_stem'], option: HOTKEYS.defaults['reveal_next_option'], lock: HOTKEYS.defaults['lock_selection'], outcome: HOTKEYS.defaults['reveal_outcome'] }}
+            outcomeArmed={revealArmed}
+            kbd={{ stem: chord('reveal_stem'), option: chord('reveal_next_option'), lock: chord('lock_selection'), outcome: chord('reveal_outcome') }}
             onRevealStem={() => void run('reveal_stem')}
             onRevealOption={() => void run('reveal_next_option')}
             onLock={() => void run('lock_selection')}
-            onRevealOutcome={() => void run('reveal_outcome')}
+            onRevealOutcome={revealOutcome}
           />
+          ) : null}
+          {revealArmed && phase === 'question' ? (
+            <Text variant="studio-caption" tone="danger">
+              {SESSION.revealUnlocked}
+            </Text>
           ) : null}
           {phase === 'question' ? (
           <div className="flex flex-wrap gap-1.5" aria-label={SESSION.selection}>
@@ -181,7 +203,8 @@ export function ActionPanel({ density }: ActionPanelProps) {
                   disabledReason={notOpen ?? (locked ? SESSION.lockHint : null)}
                   className={isCorrect === true ? 'ring-2 ring-[var(--success)]' : isCorrect === false && selected ? 'ring-2 ring-[var(--danger)]' : ''}
                 >
-                  {`${String.fromCharCode(65 + i)}${compact ? '' : ` · ${o.text}`}`}
+                  {/* The digit is the key that picks it (beta.13): the panel said A, the chord was 1. */}
+                  {`${i < 9 ? SESSION.optionKey(String(i + 1), String.fromCharCode(65 + i)) : String.fromCharCode(65 + i)}${compact ? '' : ` · ${o.text}`}`}
                 </Button>
               )
             })}
@@ -240,15 +263,15 @@ export function ActionPanel({ density }: ActionPanelProps) {
             <Text variant="studio-caption" tone="muted">
               {SESSION.nextQuestion}
             </Text>
-            {sessionLive ? (
+            {sessionLive || pausedReason ? (
               <Text variant="studio-caption" tone="muted">
-                {SESSION.revealFirstToContinue}
+                {pausedReason ?? SESSION.revealFirstToContinue}
               </Text>
             ) : null}
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {play.domains.map((d) => {
-              const reason = d.exhausted ? SESSION.exhausted : sessionLive ? SESSION.revealFirstToContinue : play.ring.currentTeamId === null ? SESSION.noTargets : null
+            {play.domains.map((d, i) => {
+              const reason = d.exhausted ? SESSION.exhausted : (pausedReason ?? (sessionLive ? SESSION.revealFirstToContinue : play.ring.currentTeamId === null ? SESSION.noTargets : null))
               return (
                 <Button
                   key={d.id}
@@ -257,13 +280,24 @@ export function ActionPanel({ density }: ActionPanelProps) {
                   isDisabled={d.exhausted || !canChoose}
                   disabledReason={reason}
                   onPress={() => void run('choose_domain', { domainId: d.id })}
+                  className="max-w-full"
                 >
-                  {`${d.name}${d.nextDifficulty === null || compact ? '' : ` · ${SESSION.domainDifficulty(d.nextDifficulty)}`}`}
+                  {`${i < 9 ? `${i + 1} · ` : ''}${d.name}${d.nextDifficulty === null || compact ? '' : ` · ${SESSION.domainDifficulty(d.nextDifficulty)}`}`}
                 </Button>
               )
             })}
           </div>
+          {/* The rule, where the operator decides what comes next (beta.13). */}
+          <Text variant="studio-caption" tone="muted">
+            {SESSION.nextQuestionHint}
+          </Text>
         </div>
+      ) : null}
+
+      {phase === 'handover' ? (
+        <Text variant="studio-caption" tone="muted">
+          {defaultName ? SESSION.handoverNext(defaultName) : SESSION.handoverNone}
+        </Text>
       ) : null}
 
       <Separator />
@@ -273,7 +307,7 @@ export function ActionPanel({ density }: ActionPanelProps) {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <Text variant="studio-caption" tone={phase === 'handover' ? 'default' : 'muted'}>
-              {phase === 'handover' ? SESSION.giveTokenNow : SESSION.giveToken}
+              {phase === 'handover' ? SESSION.giveTokenNow : phase === 'resolved' ? SESSION.passOptional : SESSION.giveToken}
             </Text>
             {play.operator.consecutiveCorrect > 0 ? (
               <Text variant="studio-caption" tone="accent">
@@ -284,14 +318,16 @@ export function ActionPanel({ density }: ActionPanelProps) {
           <ol className="flex flex-col gap-1" aria-label={RING.title}>
             {entries.map((e) => {
               const role = ringRole(play, e)
-              const blocked = session !== null && !resolved && play.operator.overrideAfterLock === 'refuse_until_reveal'
+              const rowArmed = sameArm(armed, { kind: sessionLive ? 'reveal-and-pass' : 'pass', teamId: e.team.id })
               const variant: RingRowVariant = play.operator.isRehearsal
-                ? 'rehearsal-solo'
+                ? e.phase === 'current'
+                  ? 'rehearsal-solo'
+                  : 'future'
                 : e.phase === 'current'
                   ? 'current'
                   : e.phase === 'history'
                     ? 'history'
-                    : armed === e.team.id
+                    : rowArmed
                       ? 'override-armed'
                       : blocked && e.isLegalTarget
                         ? 'override-blocked'
@@ -308,19 +344,21 @@ export function ActionPanel({ density }: ActionPanelProps) {
                     variant={variant}
                     position={e.index + 1}
                     density={density === 'dense' ? 'compact' : density}
-                    onPress={e.isLegalTarget && open && !blocked ? () => giveToken(e.team.id, e.team.name) : undefined}
+                    onPress={e.isLegalTarget && open && !blocked ? () => giveToken(e.team.id) : undefined}
                     trailing={
                       // What this row *is*, in the operator's own words: the
                       // team the ring serves next reads differently from one a
                       // hand-over would jump to, and a row that cannot be
                       // pressed says why (`ringRole`).
-                      armed === e.team.id ? (
-                        <Text variant="studio-caption" tone="danger">
-                          {SESSION.revealAndPass}
+                      rowArmed ? (
+                        <Text variant="studio-caption" tone="danger" truncate>
+                          {sessionLive ? SESSION.revealAndPassArmed(e.team.name) : SESSION.passArmed(e.team.name)}
                         </Text>
-                      ) : (
-                        <Text variant="studio-caption" tone={role === 'next' ? 'accent' : 'muted'}>
-                          {RING_ROLE[role]}
+                      ) : compact && role !== 'next' && role !== 'holder' && role !== 'again' ? null : (
+                        // Below comfortable only the roles that ask for a press
+                        // keep their words; the rest are on the row's tooltip.
+                        <Text variant="studio-caption" tone={role === 'next' || role === 'again' ? 'accent' : 'muted'} truncate className="shrink-0">
+                          {role === 'holder' && phase === 'resolved' ? RING_ROLE.keeps : RING_ROLE[role]}
                         </Text>
                       )
                     }
@@ -361,6 +399,31 @@ export function ActionPanel({ density }: ActionPanelProps) {
         isPending={pending}
         onConfirm={doConfirm}
       />
+    </div>
+  )
+}
+
+/**
+ * The turn's result, kept after the reveal (beta.13): the verdict, the points
+ * and the bonus, and what they did to the token. Before this a wrong answer's
+ * verdict vanished the moment the token was freed — the moment the operator
+ * had to act on it.
+ */
+function ResultLine({ result }: { result: TurnResult }) {
+  const tokenLine = result.keeper !== null ? SESSION.result.keeps(result.keeper) : result.capReached ? SESSION.result.capReached : SESSION.result.free
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1" data-turn-result={result.verdict}>
+      <MeaningChip meaning={result.verdict === 'correct' ? 'easy' : result.verdict === 'incorrect' ? 'hard' : 'medium'}>
+        {`${SESSION.verdict[result.verdict]} ${SESSION.points(result.points)}`}
+      </MeaningChip>
+      {result.bonus !== null && result.bonus > 0 ? (
+        <Text variant="studio-caption" tone="accent">
+          {SESSION.bonus(result.bonus)}
+        </Text>
+      ) : null}
+      <Text variant="studio-caption" tone={result.keeper !== null ? 'default' : 'warning'}>
+        {tokenLine}
+      </Text>
     </div>
   )
 }

@@ -52,6 +52,10 @@ The same split as Studio's, one layer down. `StageHost` has two channels — `su
 - **`STEP_HZ` is the one number** to trade fidelity for CPU: `STEP_MS`, the px/s and deg/s conversions, `ATTRACT_ACCEL` and the settle all derive from it, so halving it halves `Engine.update` while the bodies keep the same speed in px/second. Kept at 60 because this is the filmed surface.
 - **`will-change: transform` on the shapes is not the GPU cost** and was left alone — measured at two shapes and ~0.74 MB of layer texture on the Question screen.
 
+## Display aids (beta.13)
+
+Stage applies `play-state.view` and never decides it: `stageViewFilter` (contract) is the CSS on **the canvas** (`StageFrame`), not the window, so a letterbox stays black under Invert. The set is the operating systems' — invert with the hue turned back, greyscale, both, dimming 50–100 % — and `docs/research/2026-10-29-display-filters.md` is why there is no colour-blindness "correction" (no published matrices, weak evidence) and no contrast or text-size filter (those are tokens and layout). **Reduce motion** sets `motionConfig.immediate` while it is on and restores it after — results still show and `anim-complete` still reports once — and `DecorField` stops its loop, leaving the shapes where they are.
+
 ## Stage motion model
 
 Every Screen has a base transition to every other Screen (the operator can jump anywhere). **Overlay animations** are drawn on top of the current screen for information the operator skipped (e.g. a turn handoff when jumping Idle→ChooseDomain). They do not remount the screen and do not reset reveal state. Only one overlay plays at a time with at most one pending override queued behind it; a wrong answer never auto-advances Stage.

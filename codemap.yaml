@@ -1108,19 +1108,23 @@ contract:
       DEFAULT_AUDIO: {kind: const, sig: "{ volume, muted, cues } #7971295d"}
       DEFAULT_DECOR_SETTINGS: {doc: "Mild by design: the scatter should read as breathing, not as a screensaver.", kind: const, sig: "{ mode, anchor, drift, attraction, bounce, spin, maxSpeed } #b3974421"}
       DEFAULT_STAGE_LANGUAGE: {kind: const, sig: "= 'en'"}
+      DEFAULT_STAGE_VIEW: {kind: const, sig: "{ filter, brightness, motion } #54747fb7"}
       DecorAnchorSettings: {doc: "An invisible point in a screen's boundary that pulls the bodies in for a while, then pushes them away for a while, forever.", kind: interface, sig: "{ enabled, attractSeconds, repelSeconds, strength }"}
       DecorMotionMode: {doc: "How the decorative bodies move.", kind: type, sig: "'collide' | 'collide-attract'"}
-      EMPTY_PLAY_STATE: {doc: "What Stage draws before the host has anything to send: no Play is loaded, so the wall shows Idle — the wordmark, and nothing derived.", kind: const, sig: "{ contractVersion, playId, status, teams, ring, domains, session, clock, leaderboardRevealedRanks, decor, layout, questionsIssued, currentScreen, overlay, revealModes, audio, language } #b9b1b8b8"}
+      EMPTY_PLAY_STATE: {doc: "What Stage draws before the host has anything to send: no Play is loaded, so the wall shows Idle — the wordmark, and nothing derived.", kind: const, sig: "{ contractVersion, playId, status, teams, ring, domains, session, clock, leaderboardRevealedRanks, decor, layout, questionsIssued, currentScreen, overlay, revealModes, audio, language, view } #a8429089"}
       OperatorState: {doc: "The operator half.", kind: interface, sig: "{ recipeId, legalTokenTargets, defaultNextTeamId, consecutiveCorrect, isRehearsal, canUndo, canRedo, eventCount, showGiveToken, overrideAfterLock, disabled }"}
       OutcomeVerdict: {doc: "Presentational verdict.", kind: type, sig: "'correct' | 'incorrect' | 'partial'"}
       PlayStateForMain: {doc: "What the `main` webview receives on `play-state`: the stripped shape Stage gets, flattened, plus the operator half.", kind: interface, sig: "extends PlayStateForStage { operator }"}
-      PlayStateForStage: {kind: interface, sig: "{ contractVersion, playId, status, teams, ring, domains, session, clock, leaderboardRevealedRanks, decor, layout, questionsIssued, currentScreen, overlay, revealModes, audio, language }"}
+      PlayStateForStage: {kind: interface, sig: "{ contractVersion, playId, status, teams, ring, domains, session, clock, leaderboardRevealedRanks, decor, layout, questionsIssued, currentScreen, overlay, revealModes, audio, language, view }"}
       PlayStatus: {doc: "Spec §5.1.", kind: type, sig: "| 'loaded' | 'playing' | 'paused' | 'completed' | 'abandoned' | 'restarted'"}
+      STAGE_FILTERS: {kind: const, sig: "[4] #e48345ef"}
       STAGE_LANGUAGES: {kind: const, sig: "[2] #768c4e54"}
       StageAudio: {doc: "Control-behaviour audio (spec §2.5, §2.25): live for the whole Play, so a mute or a volume change lands on Stage on the next emission.", kind: interface, sig: "{ volume, muted, cues }"}
       StageDecorSettings: {kind: interface, sig: "{ mode, anchor, drift, attraction, bounce, spin, maxSpeed }"}
       StageDomain: {doc: "A domain on the ChooseDomain board.", kind: interface, sig: "{ id, name, code, remaining, exhausted, nextDifficulty }"}
+      StageFilter: {doc: "The display aids (beta.13): what a teacher turns on for pupils who see poorly, live mid-Play.", kind: type, sig: "'none' | 'invert' | 'greyscale' | 'greyscale-invert'"}
       StageLanguage: {doc: "The language of Stage's *authored* text — HUD labels, screen titles, verdict wording — chosen per recipe (`stage.language`, Game tab).", kind: type, sig: "'en' | 'ro'"}
+      StageMotion: {kind: type, sig: "'full' | 'reduced'"}
       StageOption: {kind: interface, sig: "{ id, text }"}
       StageOutcome: {kind: interface, sig: "{ verdict, pointsAwarded, correctOptionIds, bonusAwarded }"}
       StageOverlay: {doc: "Overlay queue state.", kind: interface, sig: "{ busy, active, pending, enabled, runId }"}
@@ -1130,9 +1134,11 @@ contract:
       StageSession: {doc: "The issued question.", kind: interface, sig: "{ questionId, domainId, stem, options, answerMode, difficulty, selectedOptionIds, lockedOptionIds, outcome, timer, reveals }"}
       StageTeam: {doc: "A team as Stage draws it.", kind: interface, sig: "{ id, name, shortCode, color, logoUrl, detail, score, rank, turnsTaken, active }"}
       StageTimer: {doc: "Null at operator pace (`timer.enabled = false`), which hides the Stage clock entirely (spec §2.4).", kind: interface, sig: "{ durationMs, remainingMs, running, remainingMsAtLock, expiredOpen }"}
+      StageView: {kind: interface, sig: "{ filter, brightness, motion }"}
       currentTeam: {doc: "The team currently holding the token, if any.", kind: function, sig: "(state: PlayStateForStage): StageTeam | null"}
       leaderboard: {doc: "Teams in finishing order: score descending, then the recipe's ring order.", kind: function, sig: "(state: PlayStateForStage): readonly StageTeam[]"}
       roundInvariantHolds: {doc: "The round invariant, as a predicate (spec §5.4).", kind: function, sig: "(state: PlayStateForStage): boolean"}
+      stageViewFilter: {doc: "The CSS `filter` for a view, or `none`.", kind: function, sig: "(view: StageView): string"}
       teamById: {kind: function, sig: "(state: PlayStateForStage, id: string): StageTeam | undefined"}
     packages/contract/src/reveal.ts:
       AnimKey: {doc: "Anything that can report completion.", kind: type, sig: "| `transition:${StageScreen}>${StageScreen}` | `overlay:${OverlayKind}` | `reveal:${RevealKey}`"}
@@ -1224,6 +1230,7 @@ settings:
     - {game_affecting: false, key: stage.mirror_ids, type: GlobalSetting, variant: "GlobalSetting::StageMirrorIds(_)"}
     - {game_affecting: false, key: stage.monitor_id, type: GlobalSetting, variant: "GlobalSetting::StageMonitorId(_)"}
     - {game_affecting: false, key: stage.reattach, type: GlobalSetting, variant: "GlobalSetting::StageReattach(_)"}
+    - {game_affecting: false, key: stage.view, type: GlobalSetting, variant: "GlobalSetting::StageView(_)"}
     - {game_affecting: false, key: stats.fullscreen, type: GlobalSetting, variant: "GlobalSetting::StatsFullscreen(_)"}
     - {game_affecting: false, key: stats.monitor_id, type: GlobalSetting, variant: "GlobalSetting::StatsMonitorId(_)"}
     - {game_affecting: true, key: timer.duration_ms, type: GameSetting, variant: "GameSetting::TimerDurationMs(_)"}
@@ -1747,7 +1754,7 @@ host_api:
     "flags::Chord": {doc: "A keyboard chord, normalized so `Ctrl+Shift+L` and `shift+control+l` are the same binding and therefore conflict (§2.20 tab 3).", kind: struct, sig: "struct Chord(_)"}
     "flags::Chord::as_str": {kind: method, sig: "fn as_str(&self) -> &str"}
     "flags::Chord::parse": {doc: "`None` when the chord has no key, or a modifier it does not recognise — the conflict table cannot hold a binding it cannot compare.", kind: method, sig: "fn parse(raw: &str) -> Option<Chord>"}
-    "flags::ControlSettings": {doc: "Control-behaviour keys: live for the whole Play (§2.5), so none of them is in [`FrozenSettings`] and none of them can move a score.", kind: struct, sig: "struct ControlSettings { override_after_lock: OverrideAfterLock, reveal: RevealSettings, overlay_animations_enabled: bool, viewer_hit_targets: bool, mosaic_density: MosaicDensity, stage_monitor_id: Option<String>, stage_mirror_ids: Vec<String>, stats_monitor_id: Option<String>, stats_fullscreen: bool, stage_reattach: StageReattach, audio: AudioSettings }"}
+    "flags::ControlSettings": {doc: "Control-behaviour keys: live for the whole Play (§2.5), so none of them is in [`FrozenSettings`] and none of them can move a score.", kind: struct, sig: "struct ControlSettings { override_after_lock: OverrideAfterLock, reveal: RevealSettings, overlay_animations_enabled: bool, viewer_hit_targets: bool, mosaic_density: MosaicDensity, stage_monitor_id: Option<String>, stage_mirror_ids: Vec<String>, stats_monitor_id: Option<String>, stats_fullscreen: bool, stage_reattach: StageReattach, audio: AudioSettings, stage_view: StageView }"}
     "flags::ControlSettings::defaults": {doc: "§4.2 defaults: overlays on, hit targets on, reveals operator-timed.", kind: method, sig: "fn defaults() -> Self"}
     "flags::CueKey": {doc: "The eight cue keys of §2.25. The audio seam's interface is the key, never a file: what a key plays is a Settings choice that travels to Stage inside `play-state.audio`, and nothing above the Stage ...", kind: enum, sig: "enum CueKey { Lock | Correct | Wrong | OverlayStart | PlayStart | TimerStart | TimerPause | TimerExpired }"}
     "flags::CueKey::ALL": {kind: const, sig: "const ALL: [CueKey; 8] = [CueKey::Lock, CueKey::Correct, CueKey::Wrong, CueKey::OverlayStart, CueKey::PlayStart,..."}
@@ -1788,6 +1795,7 @@ host_api:
     "flags::FlagService::settings_set_shortcut": {doc: "`settings_set_shortcut`.", kind: method, sig: "fn settings_set_shortcut(&mut self, command: &str, chord: Option<Chord>) -> MatchResult<()>"}
     "flags::FlagService::show_give_token": {doc: "§4.2/§2.6: under `refuse_until_reveal` the GiveToken affordance is disabled while an answer is locked and unrevealed.", kind: method, sig: "fn show_give_token(&self, ctx: RuntimeContext) -> bool"}
     "flags::FlagService::show_timer_controls": {doc: "§4.2: `timer.enabled = false` hides StartTimer and the Stage clock.", kind: method, sig: "fn show_timer_controls(&self) -> bool"}
+    "flags::FlagService::stage_view": {doc: "The display aids `PresentationService` merges into `play-state` (beta.13).", kind: method, sig: "fn stage_view(&self) -> StageView"}
     "flags::FlagService::sync_current_game": {doc: "**The loaded game's document as the library now holds it** (beta.12, A1).", kind: method, sig: "fn sync_current_game(&mut self, game: GameSettings) -> MatchResult<()>"}
     "flags::FlagService::timer_cascade": {doc: "The §2.18 cascade as it stands now — what a Play *would* freeze.", kind: method, sig: "fn timer_cascade(&self) -> TimerCascade"}
     "flags::FlagService::unload_recipe": {doc: "The recipe left Control.", kind: method, sig: "fn unload_recipe(&mut self)"}
@@ -1799,7 +1807,7 @@ host_api:
     "flags::GameSetting::key": {doc: "The §4.2 path.", kind: method, sig: "fn key(&self) -> &'static str"}
     "flags::GameSettings": {doc: "The recipe's B5 document — every key §4.2 marks *Game*, plus the reveal defaults, which are a Game default that Control may then change live.", kind: struct, sig: "struct GameSettings { scoring: ScoringSettings, judging: JudgingSettings, turn: TurnSettings, timer: TimerLevel, reveal: RevealSettings, language: Language, board: BoardSettings }"}
     "flags::GameSettings::game_affecting_differs": {doc: "Do two documents differ in anything an open Play freezes (§2.5)?", kind: method, sig: "fn game_affecting_differs(&self, other: &GameSettings) -> bool"}
-    "flags::GlobalSetting": {doc: "One key of the all-games document.", kind: enum, sig: "enum GlobalSetting { TimerEnabled(bool) | TimerDurationMs(u32) | Game(GameSetting) | OverrideAfterLock(OverrideAfterLock) | Reveal(RevealChannel, RevealMode) | OverlayAnimationsEnabled(bool) | ViewerHitTargets(bool) | MosaicDensity(MosaicDensity) | StageMonitorId(Option<String>) | StageMirrorIds(Vec<String>) | StatsMonitorId(Option<String>) | StatsFullscreen(bool) | StageReattach(StageReattach) | AudioVolume(u8) | AudioMuted(bool) | AudioCue(CueKey, Option<String>) | Feature(FeatureRoot, bool) | ActiveOperatorId(Option<OperatorId>) | UpdatesCheckOnStart(bool) | WindowNativeTitleBar(bool) }"}
+    "flags::GlobalSetting": {doc: "One key of the all-games document.", kind: enum, sig: "enum GlobalSetting { TimerEnabled(bool) | TimerDurationMs(u32) | Game(GameSetting) | OverrideAfterLock(OverrideAfterLock) | Reveal(RevealChannel, RevealMode) | OverlayAnimationsEnabled(bool) | ViewerHitTargets(bool) | MosaicDensity(MosaicDensity) | StageMonitorId(Option<String>) | StageMirrorIds(Vec<String>) | StatsMonitorId(Option<String>) | StatsFullscreen(bool) | StageReattach(StageReattach) | AudioVolume(u8) | AudioMuted(bool) | AudioCue(CueKey, Option<String>) | Feature(FeatureRoot, bool) | ActiveOperatorId(Option<OperatorId>) | UpdatesCheckOnStart(bool) | WindowNativeTitleBar(bool) | StageView(StageView) }"}
     "flags::GlobalSetting::key": {kind: method, sig: "fn key(&self) -> &'static str"}
     "flags::GlobalSettings": {doc: "The all-games document (§11.L L1/L2): first run writes it, the Settings tab and Control Global edit it.", kind: struct, sig: "struct GlobalSettings { timer: TimerLevel, game_defaults: GameSettings, control: ControlSettings, features: FeatureRoots, shortcuts: ShortcutMap, active_operator_id: Option<OperatorId>, updates: UpdateSettings, window: WindowSettings }"}
     "flags::MosaicDensity": {doc: "How dense the Control mosaic packs its panels (§4.2 `control.mosaic_density`).", kind: enum, sig: "enum MosaicDensity { Compact | Comfortable | Spacious }"}
@@ -1813,6 +1821,10 @@ host_api:
     "flags::ShortcutMap::get": {kind: method, sig: "fn get(&self, command: &str) -> Option<&Chord>"}
     "flags::ShortcutMap::is_empty": {kind: method, sig: "fn is_empty(&self) -> bool"}
     "flags::ShortcutMap::iter": {kind: method, sig: "fn iter(&self) -> impl Iterator<Item =(&str, &Chord)>"}
+    "flags::StageFilter": {kind: enum, sig: "enum StageFilter { None | Invert | Greyscale | GreyscaleInvert }"}
+    "flags::StageMotion": {doc: "`reduced`: every reveal and transition jumps to its end, and the decor settles and stays still.", kind: enum, sig: "enum StageMotion { Full | Reduced }"}
+    "flags::StageView": {doc: "How Stage's picture is drawn for the people watching it (beta.13): the display aids a teacher turns on for pupils who see poorly.", kind: struct, sig: "struct StageView { filter: StageFilter, brightness: u8, motion: StageMotion }"}
+    "flags::StageView::validate": {doc: "Under 50 % a projector shows grey on grey; over 100 is not a filter.", kind: method, sig: "fn validate(&self) -> MatchResult<()>"}
     "flags::UpdateSettings": {doc: "The update notice (P12.9).", kind: struct, sig: "struct UpdateSettings { check_on_start: bool }"}
     "flags::WindowSettings": {doc: "Studio's window chrome (beta.10).", kind: struct, sig: "struct WindowSettings { native_title_bar: bool }"}
     "flags::WorkspaceDefaults": {doc: "What each workspace keeps for itself of the all-games document (Beta 2.0): the defaults a new game copies and the timer at the bottom of the §2.18 cascade.", kind: struct, sig: "struct WorkspaceDefaults { timer: TimerLevel, game_defaults: GameSettings }"}
@@ -2116,7 +2128,8 @@ host_api:
     "stage::OverlayRequest": {doc: "An overlay animation: drawn *over* the screen that is up, never remounting it and never resetting reveal, select or lock (§2.6).", kind: enum, sig: "enum OverlayRequest { TokenHandoff { from_team_id: Option<TeamId>, to_team_id: TeamId } | RoundAdvance { round_index: u32 } | MultipleAnswers { option_ids: Vec<OptionId> } | Outcome { verdict: Verdict } | CurrentTeam { team_id: Option<TeamId> } }"}
     "stage::OverlayRequest::anim_key": {doc: "The key Stage reports with `anim-complete` when this overlay finishes.", kind: method, sig: "fn anim_key(&self) -> String"}
     "stage::OverlayRequest::kind": {doc: "The `overlay:<kind>` fragment of the contract's `AnimKey`.", kind: method, sig: "fn kind(&self) -> &'static str"}
-    "stage::PlayStateForStage": {doc: "The whole emission: the game half, flattened, plus the presentation half.", kind: struct, sig: "struct PlayStateForStage { game: StageGameState, decor: StageDecorSettings, layout: StageLayoutNodes, current_screen: StageScreen, overlay: StageOverlay, reveal_modes: RevealSettings, audio: AudioSettings, language: Language }"}
+    "stage::PlayStateForStage": {doc: "The whole emission: the game half, flattened, plus the presentation half.", kind: struct, sig: "struct PlayStateForStage { game: StageGameState, decor: StageDecorSettings, layout: StageLayoutNodes, current_screen: StageScreen, overlay: StageOverlay, reveal_modes: RevealSettings, audio: AudioSettings, language: Language, view: StageView }"}
+    "stage::PlayStateForStage::with_view": {doc: "The same emission with the operator's display aids (beta.13).", kind: method, sig: "fn with_view(self, view: StageView) -> Self"}
     "stage::PlayTick": {doc: "The two numbers a 100 ms tick can move, read without projecting anything.", kind: struct, sig: "struct PlayTick<'a> { play_id: &'a str, remaining_ms: Option<u32>, elapsed_ms: u64, running: bool }"}
     "stage::StageDecorSettings": {doc: "A per-recipe **layout** setting (Screens tab, `recipe_set_layout`), so it may differ between recipes and change mid-Play: it affects nothing scored.", kind: struct, sig: "struct StageDecorSettings { mode: DecorMotionMode, anchor: DecorAnchorSettings, drift: f64, attraction: f64, bounce: f64, spin: f64, max_speed: f64 }"}
     "stage::StageDomain": {kind: struct, sig: "struct StageDomain { id: DomainId, name: String, code: String, remaining: usize, exhausted: bool, next_difficulty: Option<u8> }"}
@@ -2218,7 +2231,7 @@ studio_calls:
     domain_group_rename: [apps/studio/src/organisms/DomainGroupsManager.tsx]
     domain_group_reorder: [apps/studio/src/organisms/DomainGroupsManager.tsx]
     get_state: [apps/studio/src/host/bridge.tsx]
-    give_token: [apps/studio/src/organisms/ActionPanel.tsx, apps/studio/src/organisms/useControlHotkeys.ts]
+    give_token: [apps/studio/src/organisms/ActionPanel.tsx]
     health_get: [apps/studio/src/host/bridge.tsx]
     library_repair: [apps/studio/src/organisms/useNoticeActions.ts]
     lock_selection: [apps/studio/src/organisms/ActionPanel.tsx, apps/studio/src/organisms/useControlHotkeys.ts]
@@ -2234,7 +2247,7 @@ studio_calls:
       - apps/studio/src/pages/NameWorkspacePage.tsx
     pause: [apps/studio/src/organisms/ActionPanel.tsx]
     pause_timer: [apps/studio/src/organisms/ActionPanel.tsx]
-    play_events: [apps/studio/src/host/queries.ts, apps/studio/src/organisms/TimelinePanel.tsx]
+    play_events: [apps/studio/src/host/queries.ts, apps/studio/src/organisms/TimelineStrip.tsx]
     play_list: [apps/studio/src/host/queries.ts]
     play_load: [apps/studio/src/organisms/RecentGames.tsx, apps/studio/src/pages/GamePage.tsx]
     play_start: [apps/studio/src/organisms/ActionPanel.tsx]
@@ -2249,10 +2262,7 @@ studio_calls:
     recipe_set_overlay: [apps/studio/src/organisms/BoardSection.tsx]
     recipe_set_settings: [apps/studio/src/organisms/BoardSection.tsx, apps/studio/src/organisms/RulesSection.tsx]
     recipe_upsert: [apps/studio/src/pages/GamePage.tsx]
-    redo_turn:
-      - apps/studio/src/organisms/ActionPanel.tsx
-      - apps/studio/src/organisms/TimelinePanel.tsx
-      - apps/studio/src/organisms/useControlHotkeys.ts
+    redo_turn: [apps/studio/src/organisms/TimelineStrip.tsx, apps/studio/src/organisms/useControlHotkeys.ts]
     referenced_by: [apps/studio/src/host/queries.ts, apps/studio/src/organisms/useArchive.tsx]
     reorder_ring: [apps/studio/src/organisms/GamePanel.tsx]
     restart: [apps/studio/src/organisms/ActionPanel.tsx]
@@ -2270,6 +2280,7 @@ studio_calls:
       - apps/studio/src/organisms/AboutPanel.tsx
       - apps/studio/src/organisms/ControlTools.tsx
       - apps/studio/src/organisms/SettingsForm.tsx
+      - apps/studio/src/organisms/Viewer.tsx
       - apps/studio/src/organisms/useDisplays.ts
     settings_set_shortcut: [apps/studio/src/organisms/ShortcutsEditor.tsx]
     show_overlay: [apps/studio/src/organisms/StripsPanel.tsx]
@@ -2293,10 +2304,7 @@ studio_calls:
     tag_rename: [apps/studio/src/organisms/QuestionTagsManager.tsx]
     tags_unify: [apps/studio/src/organisms/useNoticeActions.ts]
     transfer_preview: [apps/studio/src/organisms/useTransfer.tsx]
-    undo_turn:
-      - apps/studio/src/organisms/ActionPanel.tsx
-      - apps/studio/src/organisms/TimelinePanel.tsx
-      - apps/studio/src/organisms/useControlHotkeys.ts
+    undo_turn: [apps/studio/src/organisms/TimelineStrip.tsx, apps/studio/src/organisms/useControlHotkeys.ts]
     update_check: [apps/studio/src/host/updates.ts, apps/studio/src/organisms/AboutPanel.tsx]
     update_open_release: [apps/studio/src/organisms/AboutPanel.tsx, apps/studio/src/organisms/useNoticeActions.ts]
     whats_new_get: [apps/studio/src/host/whatsNew.ts]

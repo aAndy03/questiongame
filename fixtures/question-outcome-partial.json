@@ -223,5 +223,10 @@
       "timer_expired": "timer_expired.wav"
     }
   },
-  "language": "en"
+  "language": "en",
+  "view": {
+    "filter": "none",
+    "brightness": 100,
+    "motion": "full"
+  }
 }

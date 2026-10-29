@@ -122,6 +122,7 @@ export function DecorField({ state, screen: presented }: DecorFieldProps) {
     latest.current = world?.read() ?? []
   }
   const elements = useRef<(HTMLDivElement | null)[]>([])
+  const still = state.view.motion === 'reduced'
 
   useEffect(() => {
     if (!world) return
@@ -132,6 +133,8 @@ export function DecorField({ state, screen: presented }: DecorFieldProps) {
     // nobody is filming. The shapes are drawn where the settle put them, which
     // is what the operator is actually checking. Motion is the Stage window's.
     if (isViewerMode()) return
+    // Reduce motion (beta.13): the shapes settle where they are and stay.
+    if (still) return
     let frame = 0
     let last = performance.now()
     const loop = (now: number) => {
@@ -158,7 +161,7 @@ export function DecorField({ state, screen: presented }: DecorFieldProps) {
     // run this effect twice for one world (StrictMode), and a destroyed world
     // would stand still for the rest of the screen.
     return () => cancelAnimationFrame(frame)
-  }, [world])
+  }, [world, still])
 
   return (
     <div

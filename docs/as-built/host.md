@@ -69,6 +69,7 @@ The §4.2 document and the only flag reader. It holds the globals, the recipe in
 - `feat.*` is a **graph**: a child root is off whenever an ancestor is, whatever its own switch says. `require_feature` is the `feature_off` gate.
 - `disabled(ctx)` returns every key that is frozen, inert or feature-off, with the reason — §4.2's "UI disables the illegal sibling first", computed once here rather than four times in Studio.
 - `reveal.*` is the one Game-tab key that does **not** freeze: §4.2 lists it as a Game default *and* Control live.
+- **`stage.view` is Control-behaviour** (beta.13): `StageView { filter, brightness, motion }`, single words on the wire, brightness refused outside 50–100. It lives in `ControlSettings` (`#[serde(default)]`, so an older document reads the defaults) and reaches Stage through `PlayStateForStage::with_view` in the app crate's `stage_state` — `PresentationService::play_state` emits the defaults, so its callers and tests did not change.
 
 ## `CatalogService` (P5)
 

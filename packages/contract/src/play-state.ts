@@ -315,6 +315,40 @@ export const DEFAULT_AUDIO: StageAudio = {
   },
 }
 
+/**
+ * The display aids (beta.13): what a teacher turns on for pupils who see
+ * poorly, live mid-Play. Stage applies them to its root and never decides
+ * them; the Viewer draws the same. The set mirrors what operating systems ship
+ * — `docs/research/2026-10-29-display-filters.md` — and nothing else.
+ */
+export type StageFilter = 'none' | 'invert' | 'greyscale' | 'greyscale-invert'
+export type StageMotion = 'full' | 'reduced'
+
+export interface StageView {
+  readonly filter: StageFilter
+  /** 50–100. */
+  readonly brightness: number
+  readonly motion: StageMotion
+}
+
+export const STAGE_FILTERS: readonly StageFilter[] = ['none', 'invert', 'greyscale', 'greyscale-invert']
+
+export const DEFAULT_STAGE_VIEW: StageView = { filter: 'none', brightness: 100, motion: 'full' }
+
+/**
+ * The CSS `filter` for a view, or `none`. Invert turns hue half a circle back
+ * so lightness flips and colours stay roughly themselves — the CSS form of
+ * the operating systems' "smart" invert.
+ */
+export function stageViewFilter(view: StageView): string {
+  const parts: string[] = []
+  if (view.filter === 'invert') parts.push('invert(1)', 'hue-rotate(180deg)')
+  if (view.filter === 'greyscale') parts.push('grayscale(1)')
+  if (view.filter === 'greyscale-invert') parts.push('grayscale(1)', 'invert(1)')
+  if (view.brightness < 100) parts.push(`brightness(${Math.max(50, view.brightness) / 100})`)
+  return parts.length === 0 ? 'none' : parts.join(' ')
+}
+
 export interface PlayStateForStage {
   readonly contractVersion: number
   /** Identifies the Play so Stage can detect a Restart rather than a redraw. */
@@ -363,6 +397,9 @@ export interface PlayStateForStage {
 
   /** Which authored-copy table Stage reads. Live, from the recipe in Control. */
   readonly language: StageLanguage
+
+  /** The display aids (beta.13). Control-behaviour, live mid-Play. */
+  readonly view: StageView
 }
 
 /**
@@ -397,6 +434,7 @@ export const EMPTY_PLAY_STATE: PlayStateForStage = {
   },
   audio: DEFAULT_AUDIO,
   language: DEFAULT_STAGE_LANGUAGE,
+  view: DEFAULT_STAGE_VIEW,
 }
 
 /**

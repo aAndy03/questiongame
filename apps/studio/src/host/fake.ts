@@ -18,7 +18,7 @@
  * ever reaches the webview as anything but "pinned" (§2.15).
  */
 
-import { DEFAULT_AUDIO, type Command, type EventName, type MonitorInfo, type PlayStateForMain } from '@questiongame/contract'
+import { DEFAULT_AUDIO, DEFAULT_STAGE_VIEW, type Command, type EventName, type MonitorInfo, type PlayStateForMain } from '@questiongame/contract'
 import type { HostError, HostTransport } from './host'
 import type {
   AppInfo,
@@ -42,6 +42,7 @@ import type {
   ItemOf,
   LibraryKind,
   Operator,
+  PlayEvent,
   PlayRecord,
   Question,
   RecipeEdit,
@@ -103,6 +104,8 @@ export interface FakeHost extends HostTransport {
   /** Closed Plays — what `play_list` returns and `wipe_plays` removes. */
   plays: PlayRecord[]
   playState: PlayStateForMain | null
+  /** What `play_events` answers for the Play in Control (beta.13); empty unless a test sets it. */
+  events: PlayEvent[]
   /** What `health_get` answers; a test sets it and then `emit('health', …)`. */
   health: HealthReport
   /**
@@ -191,6 +194,7 @@ const DEFAULT_CONTROL: ControlSettings = {
   stats_fullscreen: true,
   stage_reattach: 'ask',
   audio: DEFAULT_AUDIO,
+  stage_view: DEFAULT_STAGE_VIEW,
 }
 
 const DEFAULT_FEATURES: FeatureRoots = { audio: true, audio_synth: false, search: true, statistics: true }
@@ -1097,6 +1101,15 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
         case 'audio_cue':
           setAudio({ cues: { ...control.audio.cues, [setting.value[0]]: setting.value[1] } })
           break
+        case 'stage_view':
+          if (setting.value.brightness < 50 || setting.value.brightness > 100) refuse('catalog', 'stage.view: brightness is 50-100')
+          control = { ...control, stage_view: setting.value }
+          // The host puts the aids in the next `play-state` (beta.13).
+          if (fake.playState) {
+            fake.playState = { ...fake.playState, view: setting.value }
+            emit('play-state', fake.playState)
+          }
+          break
       }
       return null
     },
@@ -1166,7 +1179,7 @@ displays: ${monitors.length}`,
       const mine = fake.plays.filter((p) => visibleRecipe(p.recipeId))
       return recipeId === null ? mine : mine.filter((p) => p.recipeId === recipeId)
     },
-    play_events: () => [],
+    play_events: () => fake.events,
     update_check: () => {
       if (fake.update === 'offline') refuse('network', 'could not reach GitHub: offline')
       return fake.update
@@ -1989,6 +2002,7 @@ displays: ${monitors.length}`,
     recipes,
     plays: [],
     playState: null,
+    events: [],
     health: { status: 'ok', items: [] },
     stats: EMPTY_STATS,
     statsBy: {},
