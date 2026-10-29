@@ -28,6 +28,7 @@ import { nodeName, nodeScope } from '@/host/nodeName'
 import { usePlayState } from '@/host/playState'
 import { previewOverlay, previewPlay } from '@/host/previewPlay'
 import { useCatalogList, useRecipe, useSettings } from '@/host/queries'
+import { tipLearned } from '@/tips/signals'
 import { ScreensCanvas } from './ScreensCanvas'
 
 export interface LayoutEditorProps {
@@ -301,9 +302,15 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
           hiddenIds={hidden}
           handles={overlay === null}
           guide={guide && !NO_DECOR.has(screen) && overlay === null}
-          onSelect={setSelected}
+          onSelect={(id) => {
+            setSelected(id)
+            if (id) tipLearned('screens-edit')
+          }}
           onNudge={nudge}
-          onAnchor={(anchor) => setBox({ ...layout.screens[screen], anchor })}
+          onAnchor={(anchor) => {
+            setBox({ ...layout.screens[screen], anchor })
+            tipLearned('decor-anchor')
+          }}
           onMeasured={onMeasured}
         />
       </div>

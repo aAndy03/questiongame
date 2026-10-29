@@ -59,6 +59,10 @@ export function skillOf(name: Command, args: Args): string | null {
     case 'undo_turn':
     case 'redo_turn':
       return 'undo-turn'
+    // beta.13: moving the token is knowing when it moves.
+    case 'give_token':
+    case 'reveal_and_pass':
+      return 'token-rule'
     case 'restart':
       return 'restart'
     case 'stats_window':
@@ -69,8 +73,10 @@ export function skillOf(name: Command, args: Args): string | null {
     case 'catalog_copy_to':
     case 'catalog_move_to':
       return 'copy-to-workspace'
-    case 'settings_set_global':
-      return (args?.['setting'] as { key?: unknown } | undefined)?.key === 'window_native_title_bar' ? 'title-bar' : null
+    case 'settings_set_global': {
+      const key = (args?.['setting'] as { key?: unknown } | undefined)?.key
+      return key === 'window_native_title_bar' ? 'title-bar' : key === 'stage_view' ? 'display-aids' : null
+    }
     default:
       return null
   }
@@ -80,5 +86,6 @@ export function skillOf(name: Command, args: Args): string | null {
 export function momentOf(name: Command, args: Args): Moment | null {
   if ((name === 'catalog_upsert' || name === 'catalog_upsert_propagating') && kindOf(args) === 'question') return 'question:saved'
   if (name === 'play_load') return 'control:loaded'
+  if (name === 'reveal_outcome' || name === 'reveal_and_pass') return 'control:revealed'
   return null
 }

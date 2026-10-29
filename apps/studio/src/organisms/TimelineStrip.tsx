@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Icon, IconButton, Skeleton, Text, TransportButton, type IconName } from '@/atoms'
 import { useControlLayoutStore, useTimelineHidden } from '@/chrome/control'
+import { tipLearned } from '@/tips/signals'
 import { TeamMark, TrackMark, TurnCard, type TrackSize, type TrackStep } from '@/molecules'
 import { SESSION, TIMELINE, TRANSPORT } from '@/copy'
 import { useChord } from '@/host/chords'
@@ -128,7 +129,15 @@ function Strip() {
   return (
     <section ref={section} aria-label={TIMELINE.title} className="flex h-[84px] shrink-0 items-stretch gap-2 border-t border-[var(--chrome-line)] px-3" data-timeline-strip data-track-size={size}>
       <div className={['flex shrink-0 items-center gap-1', narrow ? 'flex-col justify-center' : ''].join(' ')}>
-        <IconButton icon="chevronDown" label={TIMELINE.hide} size="sm" onPress={() => setHidden(true)} />
+        <IconButton
+          icon="chevronDown"
+          label={TIMELINE.hide}
+          size="sm"
+          onPress={() => {
+            setHidden(true)
+            tipLearned('timeline-hide')
+          }}
+        />
         {narrow ? (
           <span role="img" aria-label={TIMELINE.events(count)}>
             <Text variant="studio-caption" tone="muted" tabular>
@@ -249,7 +258,10 @@ export function TimelineToggle() {
       className="flex items-center gap-1.5 rounded px-1 outline-none hover:bg-[var(--surface-secondary)] focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
       aria-pressed={!hidden}
       aria-label={hidden ? TIMELINE.show : TIMELINE.hide}
-      onClick={() => setHidden(!hidden)}
+      onClick={() => {
+        setHidden(!hidden)
+        tipLearned('timeline-hide')
+      }}
       data-timeline-toggle={hidden ? 'hidden' : 'shown'}
     >
       <span className={hidden ? 'inline-flex opacity-60' : 'inline-flex text-[var(--accent)]'}>

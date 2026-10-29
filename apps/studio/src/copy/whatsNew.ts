@@ -32,6 +32,55 @@ export interface WhatsNewRelease {
 
 export const WHATS_NEW: readonly WhatsNewRelease[] = [
   {
+    version: '2.0.0-beta.13',
+    notes: {
+      en: [
+        {
+          title: 'Control says what the token is doing',
+          body: 'After every reveal the Action Panel keeps the verdict and the points on screen and says what happened to the token: the team keeps it, it is free, or the cap was reached — and who is next in order. Passing a token the team kept, Reveal & pass, and revealing before Lock (it counts as a wrong answer) ask for a second press, from the panel, the Viewer or the T key alike. The Game panel shows the round being played, such as Round 2 · 1 of 4 played.',
+        },
+        {
+          title: 'A Timeline you can read at a glance',
+          body: 'The Timeline is a strip along the bottom of Control that reads the Play left to right, one card per question with its team and outcome. Its cards shrink to fit as the Play grows, and an undone question is struck through whole. Undo and Redo sit at its end. Hide it to make room; the Timeline switch on the status bar brings it back, and Undo moves to the Action Panel meanwhile. The times and points it showed were wrong before: they are right now.',
+        },
+        {
+          title: 'The Viewer, and display aids on Stage',
+          body: 'The Viewer is a 16:9 frame that keeps almost all of its panel. Under it, one icon per control: Preview quality draws only the Viewer with fewer pixels to spare the computer, and the icons after On Stage help pupils who see poorly, live — Colours (Invert, Greyscale, Grey inverted), Brightness down to half, and Reduce motion. A tinted icon means an aid is on.',
+        },
+        {
+          title: 'Screens shows what Stage will',
+          body: 'The canvas now moves the shapes as Stage does and draws where they stay and the anchor they gather to, which you can drag. Every word or block you can click is outlined and named in words, and the Inspector shows what Stage draws now instead of “Built-in”. Edit the words in English or Romanian, undo with Ctrl+Z, and see when a save failed. The screens are one row at every width, with the overlays in one Overlay picker at its end.',
+        },
+        {
+          title: 'Smaller things',
+          body: 'New tips about when the token moves, display aids, hiding the Timeline and editing Screens, and Help explains them too. Each overlay has its own icon in the Strips, and an overlay that would show something untrue says why it is off. The screens show their place in the show and the keys that step through them.',
+        },
+      ],
+      ro: [
+        {
+          title: 'Control spune ce se întâmplă cu jetonul',
+          body: 'După fiecare dezvăluire, Action Panel păstrează pe ecran verdictul și punctele și spune ce s-a întâmplat cu jetonul: echipa îl păstrează, e liber sau s-a atins limita — și cine urmează în ordine. Pasarea unui jeton pe care echipa l-a păstrat, Reveal & pass și dezvăluirea înainte de Lock (contează ca răspuns greșit) cer o a doua apăsare, din panou, din Viewer sau cu tasta T. Panoul Game arată runda în desfășurare, de exemplu Round 2 · 1 of 4 played.',
+        },
+        {
+          title: 'Un Timeline pe care îl citești dintr-o privire',
+          body: 'Timeline e o bandă în partea de jos a Control care citește Play-ul de la stânga la dreapta, câte un card pe întrebare, cu echipa și rezultatul. Cardurile se micșorează ca să încapă pe măsură ce Play-ul crește, iar o întrebare anulată e tăiată întreagă. Undo și Redo sunt la capătul ei. Ascunde-o ca să faci loc; comutatorul Timeline din bara de stare o aduce înapoi, iar Undo trece între timp în Action Panel. Orele și punctele pe care le arăta erau greșite: acum sunt corecte.',
+        },
+        {
+          title: 'Viewer-ul și ajutoarele de afișare pe Stage',
+          body: 'Viewer-ul e un cadru 16:9 care păstrează aproape tot panoul. Sub el, câte o pictogramă pentru fiecare control: Preview quality desenează doar Viewer-ul cu mai puțini pixeli, ca să cruțe calculatorul, iar pictogramele de după On Stage îi ajută, în direct, pe elevii care văd slab — Colours (Invert, Greyscale, Grey inverted), Brightness până la jumătate și Reduce motion. O pictogramă colorată înseamnă că un ajutor e pornit.',
+        },
+        {
+          title: 'Screens arată ce va arăta Stage',
+          body: 'Canvasul mișcă acum formele ca pe Stage și desenează unde rămân și ancora spre care se adună, pe care o poți trage. Fiecare cuvânt sau bloc pe care poți da clic e conturat și numit în cuvinte, iar Inspector-ul arată ce desenează Stage acum în loc de „Built-in”. Editează cuvintele în engleză sau română, anulează cu Ctrl+Z și vezi când o salvare a eșuat. Ecranele stau pe un singur rând la orice lățime, cu suprapunerile într-un singur selector Overlay la capăt.',
+        },
+        {
+          title: 'Lucruri mai mici',
+          body: 'Sfaturi noi despre când se mută jetonul, ajutoarele de afișare, ascunderea Timeline-ului și editarea în Screens, iar Help le explică și el. Fiecare suprapunere are pictograma ei în Strips, iar una care ar arăta ceva neadevărat spune de ce e oprită. Ecranele își arată locul în show și tastele cu care treci prin ele.',
+        },
+      ],
+    },
+  },
+  {
     version: '2.0.0-beta.12',
     notes: {
       en: [

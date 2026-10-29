@@ -19,3 +19,19 @@ describe('what a command teaches (beta.11)', () => {
     expect(momentOf('catalog_upsert', { item: { kind: 'question', item: {} } })).toBe('question:saved')
   })
 })
+
+/** beta.13: the tips know what Control and Screens teach now. */
+describe('what beta.13 teaches', () => {
+  it('moving the token teaches when it moves, and a reveal is the moment to say so', () => {
+    expect(skillOf('give_token', { teamId: 't' })).toBe('token-rule')
+    expect(skillOf('reveal_and_pass', { teamId: 't' })).toBe('token-rule')
+    expect(momentOf('reveal_outcome', undefined)).toBe('control:revealed')
+    expect(momentOf('reveal_and_pass', { teamId: 't' })).toBe('control:revealed')
+  })
+
+  it('a display aid set is the display-aids skill; another setting is not', () => {
+    expect(skillOf('settings_set_global', { setting: { key: 'stage_view', value: {} } })).toBe('display-aids')
+    expect(skillOf('settings_set_global', { setting: { key: 'window_native_title_bar', value: true } })).toBe('title-bar')
+    expect(skillOf('settings_set_global', { setting: { key: 'timer_duration_ms', value: 1 } })).toBeNull()
+  })
+})

@@ -59,7 +59,8 @@ export const HELP: readonly HelpSection[] = [
           { kind: 'p', text: 'Teams play in turn. The team whose turn it is holds the **token**, and the order they play in is the **ring**, set by the game’s Roster.' },
           { kind: 'p', text: 'A team keeps the token until it answers wrong. After a right answer it plays again: it can stay in the same domain or choose another one.' },
           { kind: 'figure', figure: 'token-ring', caption: 'The ring: one team holds the token, the next in order waits, and a team that has played this round is marked.' },
-          { kind: 'p', text: 'When the token is free, give it to the next team with {{ui:Give token}} in the Action Panel, or press {{hotkey:give_token}}.' },
+          { kind: 'p', text: 'When the token is free, give it to the next team with {{ui:Give token}} in the Action Panel, or press {{hotkey:give_token}}. After every reveal the Action Panel says what happened to it: “keeps the token”, “the token is free” or “cap reached”.' },
+          { kind: 'p', text: 'Passing a token the team kept, Reveal & pass, and revealing before {{ui:Lock}} (it counts as a wrong answer) each ask for a second press, from the panel, the Viewer or the key alike.' },
           { kind: 'note', text: 'A game can end a team’s token after a number of right answers in a row (**Cap after consecutive correct** in Rules), and pay a bonus for a run of them.' },
         ],
       },
@@ -169,6 +170,15 @@ export const HELP: readonly HelpSection[] = [
           },
           { kind: 'p', text: 'The board holds one question per difficulty in each domain, so every domain gets strictly harder as it goes and teams always know what they are choosing. Turn on **Allow repeated difficulties** when you want more than one at a level.' },
           { kind: 'note', text: 'While a game is playing, its name, roster, board and the rules that decide the score (scoring, the timer, the cap and bonus, judging) are frozen: you can still see them, but not change them until the Play ends. Its folder, tags, how reveals happen and the language Stage speaks can still change.' },
+        ],
+      },
+      {
+        id: 'screens',
+        title: 'Screens: what Stage shows',
+        blocks: [
+          { kind: 'p', text: 'The **Screens** tab draws each Stage screen for the game you pick. Click a word or a block on the canvas to change its words, size, colour or place; **Aa** marks words you can edit, in English or Romanian. Changes save by themselves, and Ctrl+Z undoes them.' },
+          { kind: 'p', text: '{{ui:Overlay}}, at the end of the screens, shows an overlay animation over the screen, as Stage will. Outcome and Multiple answers always stand over the Question screen.' },
+          { kind: 'p', text: 'On {{ui:Decor}}, the dials move the loose shapes on the canvas as they will move on Stage. The dashed box is where they stay; the crosshair is the anchor they are drawn to — drag it to move it for this screen.' },
         ],
       },
       {
@@ -323,7 +333,8 @@ export const HELP: readonly HelpSection[] = [
         blocks: [
           { kind: 'p', text: 'The **Viewer** shows exactly what Stage shows. Click a domain or an answer on it to choose it for the team.' },
           { kind: 'p', text: 'The **Action Panel** shows only what you can do now: lock, reveal, give the token. Its ring says who has the token, who is next in order, and who has played this round. Drag the teams still to come to change their order.' },
-          { kind: 'p', text: 'The **Strips** show a Stage screen or an overlay animation by hand, and the **Timeline** lists everything that happened in this Play.' },
+          { kind: 'p', text: 'The **Strips** show a Stage screen or an overlay animation by hand. The **Timeline**, the strip along the bottom, draws the Play left to right — one card per question, with its team and outcome — and its cards shrink to fit as the Play grows.' },
+          { kind: 'p', text: '{{ui:Hide the Timeline}} folds the strip away; {{ui:Timeline}} on the status bar brings it back. While it is away, {{ui:Undo turn}} and {{ui:Redo turn}} sit in the Action Panel.' },
           { kind: 'note', text: 'A click on the Viewer, a button in the Action Panel and a key all do the same thing. Use whichever is closest.' },
         ],
       },
@@ -340,7 +351,16 @@ export const HELP: readonly HelpSection[] = [
         title: 'Undo and redo',
         blocks: [
           { kind: 'p', text: '{{ui:Undo turn}} ({{hotkey:undo_turn}}) takes back the last answered question: its reveal and its points go, the question is back on the board, and the token goes back to the team that held it. {{ui:Redo turn}} ({{hotkey:redo_turn}}) puts it back.' },
-          { kind: 'p', text: 'Nothing is erased: the Timeline keeps the undo as a step of its own. To go back to the start, Restart is cleaner than undoing everything.' },
+          { kind: 'p', text: 'Both buttons sit at the end of the Timeline, or in the Action Panel while the Timeline is hidden. Nothing is erased: the undone question stays on the Timeline, struck through. To go back to the start, Restart is cleaner than undoing everything.' },
+        ],
+      },
+      {
+        id: 'display-aids',
+        title: 'Display aids on Stage',
+        blocks: [
+          { kind: 'p', text: 'Under the Viewer, the icons after {{ui:On Stage}} change what the audience sees, live, for pupils who see poorly: **Colours** (Normal, Invert, Greyscale, Grey inverted), **Brightness** down to half, and **Reduce motion**, which ends reveals at once and stills the shapes.' },
+          { kind: 'p', text: 'A tinted icon means an aid is on, and the aids that are on are spelled out beside them. They stay on, between lessons too, until you turn them off.' },
+          { kind: 'note', text: 'The first icon, {{ui:Preview quality}}, is different: it draws only the Viewer with fewer pixels to spare the computer. Stage is not affected.' },
         ],
       },
       {

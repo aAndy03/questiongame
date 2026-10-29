@@ -33,6 +33,8 @@ export type Moment =
   | 'game:rules'
   | 'control:loaded'
   | 'control:rehearsal'
+  /** beta.13: an outcome was revealed — the moment the token keeps or moves. */
+  | 'control:revealed'
   | 'displays:opened'
 
 export const MOMENTS: readonly Moment[] = [
@@ -54,6 +56,7 @@ export const MOMENTS: readonly Moment[] = [
   'game:rules',
   'control:loaded',
   'control:rehearsal',
+  'control:revealed',
   'displays:opened',
 ]
 
