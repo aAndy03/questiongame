@@ -60,19 +60,19 @@ describe('beta.13: Control and Screens', () => {
 
   it('a display aid reaches the Stage window', async () => {
     await onStudio()
-    const greyscale = await $('[data-viewer-controls]').$('button*=Greyscale')
-    if (await greyscale.isExisting()) await greyscale.click()
-    else {
-      await $('[data-viewer-options]').click()
-      await $('button*=Greyscale').click()
-    }
+    // Each control is an icon that opens a popover (P27.6).
+    await $('[data-viewer-tool="colours"]').click()
+    await $('[data-viewer-popover="colours"]').$('button*=Greyscale').click()
+    await shot('p27-1440-viewer-colours')
+    await browser.keys('Escape')
     await onStage()
     await browser.waitUntil(async () => ((await $('[data-stage-frame]').getAttribute('data-stage-filter')) ?? '').includes('grayscale'), {
       timeoutMsg: 'Stage drew no greyscale',
     })
     await onStudio()
-    const normal = await $('[data-viewer-controls]').$('button*=Normal')
-    if (await normal.isExisting()) await normal.click()
+    await $('[data-viewer-tool="colours"]').click()
+    await $('[data-viewer-popover="colours"]').$('button*=Normal').click()
+    await browser.keys('Escape')
     await onStage()
     await browser.waitUntil(async () => (await stageScreen()) !== null)
     await onStudio()

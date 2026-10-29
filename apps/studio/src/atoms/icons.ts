@@ -122,6 +122,12 @@ export const ICONS = {
   bolt: 'thunderbolt',
   sync: 'arrows-rotate-right',
   circleDashed: 'circle-dashed',
+  // beta.13: the Viewer's toolbar, and the Timeline folding away.
+  quality: 'speedometer',
+  colours: 'palette',
+  brightness: 'sun',
+  motion: 'circle-pause',
+  panelBottom: 'layout-footer',
 } as const
 
 export type IconName = keyof typeof ICONS

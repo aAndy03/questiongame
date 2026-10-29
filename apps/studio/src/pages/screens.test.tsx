@@ -148,11 +148,18 @@ describe('Screens', () => {
     await act(async () => {
       await useNavStore.getState().go({ tab: 'screens' })
     })
-    // beta.13: the overlays are a group of their own, with None first.
+    // beta.13 (P27.6): one row of seven screens, the overlays one picker at its end, None first.
     const tabs = await screen.findByRole('tablist', { name: 'Screens' })
     expect(Array.from(tabs.querySelectorAll('[role="tab"]'))).toHaveLength(7)
-    const overlays = screen.getByRole('tablist', { name: 'Overlays' })
-    expect(Array.from(overlays.querySelectorAll('[role="tab"]')).map((t) => t.textContent)).toEqual(['None', 'Token handoff', 'Round advance', 'Multiple answers', 'Outcome', 'Current team'])
+    expect(screen.queryByRole('tablist', { name: 'Overlays' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /^Overlay/ }))
+    const items = await waitFor(() => {
+      const found = document.querySelectorAll('[role="menu"] [role="menuitemradio"]')
+      if (found.length === 0) throw new Error('no menu')
+      return Array.from(found)
+    })
+    // The two that bring their own screen add "Over Question" after the name.
+    expect(items.map((t) => (t.textContent ?? '').replace(/Over .*$/, ''))).toEqual(['None', 'Token handoff', 'Round advance', 'Multiple answers', 'Outcome', 'Current team'])
   })
 })
 

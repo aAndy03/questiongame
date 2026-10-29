@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Popover } from '@heroui/react'
 import {
   leaderboard,
   STAGE_FRAME,
@@ -12,11 +11,11 @@ import {
   type ViewerNodeRect,
   type ViewerToStage,
 } from '@questiongame/contract'
-import { HitTarget, Icon, Text } from '@/atoms'
+import { HitTarget, Text } from '@/atoms'
 import { VIEWER_QUALITY, useControlLayoutStore, useViewerQuality } from '@/chrome/control'
 import { armOrConfirm, sameArm, useArmStore, type Arm } from '@/chrome/arm'
 import { EmptyState, ViewerControls } from '@/molecules'
-import { CONTROL, RING_ROLE, SESSION, TIMER, VIEWER } from '@/copy'
+import { CONTROL, RING_ROLE, SESSION, TIMER } from '@/copy'
 import { useHostCommand } from '@/host/commands'
 import { hasTauri } from '@/host/host'
 import { usePlayClock, usePlayState } from '@/host/playState'
@@ -30,11 +29,15 @@ import { useSettings } from '@/host/queries'
  * Stage reports. The chrome is in this DOM; the Stage tree gains nothing.
  * Every hit target calls the same `run` the Action Panel and the chords do.
  */
-/** The band under the frame, or the column beside it, the controls need (beta.13). */
-const BAND_MIN = 96
-const COLUMN_MIN = 232
+/**
+ * The band under the frame, or the column beside it, the toolbar needs
+ * (beta.13): one row of icons, or one column of them. The controls open as
+ * popovers, so the frame keeps nearly all of the tile.
+ */
+const BAND_MIN = 44
+const COLUMN_MIN = 52
 
-export function Viewer({ density }: { density: 'comfortable' | 'compact' | 'dense' }) {
+export function Viewer() {
   const play = usePlayState()
   // The Viewer draws Stage, so it needs Stage's clock — but only the clock, and
   // only at the rate Studio publishes it.
@@ -161,10 +164,9 @@ export function Viewer({ density }: { density: 'comfortable' | 'compact' | 'dens
       view={view}
       onView={(next) => void run('settings_set_global', { setting: { key: 'stage_view', value: next } })}
       scale={Math.round(scale * 100)}
-      orientation={placement === 'below' ? 'row' : 'column'}
+      orientation={placement === 'below' ? 'row' : placement === 'beside' ? 'column' : 'over'}
     />
   ) : null
-  const aidsOn = view !== undefined && (view.filter !== 'none' || view.brightness < 100 || view.motion === 'reduced')
 
   return (
     <div
@@ -213,36 +215,12 @@ export function Viewer({ density }: { density: 'comfortable' | 'compact' | 'dens
             onPress={() => press(t)}
           />
         ))}
-        {placement === 'corner' && controls ? (
-          <div className="absolute right-1 top-1">
-            <Popover>
-              <Popover.Trigger
-                className="inline-flex size-7 items-center justify-center rounded bg-[var(--surface)]/90 outline-none hover:bg-[var(--surface-secondary)] focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
-                aria-label={VIEWER.options}
-                data-viewer-options
-              >
-                <span className={aidsOn ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}>
-                  <Icon name="sliders" size="sm" />
-                </span>
-              </Popover.Trigger>
-              <Popover.Content placement="bottom end">
-                <Popover.Dialog aria-label={VIEWER.options}>
-                  <div className="w-72">{controls}</div>
-                </Popover.Dialog>
-              </Popover.Content>
-            </Popover>
-          </div>
-        ) : null}
+        {placement === 'corner' && controls ? <div className="absolute right-1 top-1">{controls}</div> : null}
       </div>
       {placement !== 'corner' && controls ? (
-        <div className={placement === 'beside' ? 'min-w-0 flex-1 overflow-y-auto' : 'w-full min-h-0 overflow-y-auto'} style={placement === 'below' ? { maxWidth: Math.max(size.width, 320) } : undefined}>
+        <div className={placement === 'beside' ? 'shrink-0' : 'w-full min-w-0'} style={placement === 'below' ? { maxWidth: size.width || undefined } : undefined}>
           {controls}
         </div>
-      ) : null}
-      {aidsOn && density !== 'dense' && placement === 'corner' ? (
-        <Text variant="studio-caption" tone="warning" className="sr-only">
-          {VIEWER.aidsOn}
-        </Text>
       ) : null}
     </div>
   )

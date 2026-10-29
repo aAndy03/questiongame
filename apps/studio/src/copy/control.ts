@@ -243,15 +243,23 @@ export const VIEWER = {
   quality: 'Preview quality',
   qualityHint: 'Draws this preview with fewer pixels to spare the computer. Stage is not affected.',
   qualities: { native: 'Native', high: 'High', medium: 'Medium', low: 'Low' },
-  aids: 'Display aids on Stage',
-  aidsHint: 'Changes what the audience sees, live. For pupils who see poorly.',
+  /** The two groups of the toolbar (beta.13): this preview, and the audience's picture. */
+  previewOnly: 'This preview only',
+  onStage: 'On Stage',
+  liveOnStage: 'Live on Stage',
   colours: 'Colours',
+  coloursHint: 'Changes what the audience sees, live. For pupils who see poorly.',
   filters: { none: 'Normal', invert: 'Invert', greyscale: 'Greyscale', 'greyscale-invert': 'Grey inverted' },
   brightness: 'Brightness',
+  brightnessHint: 'Dims Stage for a bright projector or a dark room.',
   motion: 'Reduce motion',
   motionHint: 'Reveals and transitions jump to their end, and the shapes stay still.',
+  on: 'On',
+  off: 'Off',
+  /** The summary word for reduced motion. */
+  still: 'Still',
   scale: (percent: number) => `${percent}%`,
-  aidsOn: 'Display aids are on',
+  scaleLabel: (percent: number) => `Preview at ${percent}% of Stage`,
 } as const
 
 export const STRIPS = {
@@ -271,8 +279,9 @@ export const STRIPS = {
 export const TIMELINE = {
   title: 'Timeline',
   events: (n: number) => (n === 1 ? '1 event' : `${n} events`),
-  expand: 'Expand timeline',
-  collapse: 'Collapse timeline',
+  /** beta.13: the strip folds away completely, like the sidebar. */
+  show: 'Show the Timeline',
+  hide: 'Hide the Timeline',
   empty: 'No events yet',
   unanswered: 'Not answered',
   /** beta.13: the track never says "No events" over a count. */

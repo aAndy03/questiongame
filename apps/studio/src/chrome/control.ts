@@ -88,8 +88,11 @@ interface ControlLayoutState {
   readonly operatorId: string
   readonly layouts: Readonly<Record<string, MosaicNode<PanelId>>>
   readonly viewerQuality: Readonly<Record<string, ViewerQuality>>
+  /** The Timeline strip folded away, per operator (beta.13): shown unless hidden. */
+  readonly timelineHidden: Readonly<Record<string, boolean>>
   setOperator(id: string | null): void
   setViewerQuality(quality: ViewerQuality): void
+  setTimelineHidden(hidden: boolean): void
   setLayout(node: MosaicNode<PanelId> | null): void
   resetLayout(): void
 }
@@ -100,6 +103,10 @@ export const useControlLayoutStore = create<ControlLayoutState>()(
       operatorId: '',
       layouts: {},
       viewerQuality: {},
+      timelineHidden: {},
+      setTimelineHidden(hidden) {
+        set((s) => ({ timelineHidden: { ...s.timelineHidden, [s.operatorId]: hidden } }))
+      },
       setViewerQuality(quality) {
         set((s) => ({ viewerQuality: { ...s.viewerQuality, [s.operatorId]: quality } }))
       },
@@ -116,19 +123,19 @@ export const useControlLayoutStore = create<ControlLayoutState>()(
     {
       name: 'questiongame.studio.control',
       storage: createJSONStorage(() => safeStorage()),
-      partialize: (s) => ({ layouts: s.layouts, viewerQuality: s.viewerQuality }),
+      partialize: (s) => ({ layouts: s.layouts, viewerQuality: s.viewerQuality, timelineHidden: s.timelineHidden }),
       // v1 (beta.13): the Timeline left the mosaic. Saved layouts lose its
       // tile; one that no longer holds every panel goes back to the default.
       version: 1,
       migrate: (persisted, version) => {
         const state = (persisted ?? {}) as { layouts?: Record<string, unknown> }
-        if (version >= 1) return state as { layouts: Record<string, MosaicNode<PanelId>>; viewerQuality: Record<string, ViewerQuality> }
+        if (version >= 1) return state as { layouts: Record<string, MosaicNode<PanelId>>; viewerQuality: Record<string, ViewerQuality>; timelineHidden: Record<string, boolean> }
         const layouts: Record<string, MosaicNode<PanelId>> = {}
         for (const [operator, node] of Object.entries(state.layouts ?? {})) {
           const kept = withoutTimeline(node)
           if (kept) layouts[operator] = kept
         }
-        return { layouts, viewerQuality: {} }
+        return { layouts, viewerQuality: {}, timelineHidden: {} }
       },
     },
   ),
@@ -136,6 +143,10 @@ export const useControlLayoutStore = create<ControlLayoutState>()(
 
 export function useViewerQuality(): ViewerQuality {
   return useControlLayoutStore((s) => s.viewerQuality[s.operatorId] ?? 'native')
+}
+
+export function useTimelineHidden(): boolean {
+  return useControlLayoutStore((s) => s.timelineHidden[s.operatorId] ?? false)
 }
 
 export function useControlLayout(): MosaicNode<PanelId> {

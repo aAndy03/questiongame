@@ -970,7 +970,7 @@ Stage tests are the proof.
 | Level | Components |
 | --- | --- |
 | atoms | — (the fields exist) |
-| molecules | `NodeHandle` (selected box, drag to nudge) · `NodeOutline` · `ScreenTabs` (the seven screens) · `DecorDials` (the DialKit block) · `NodeInspector` (the style form) |
+| molecules | `NodeHandle` (selected box, drag to nudge) · `NodeOutline` · `ScreenTabs` (the seven screens in one row — every name, the picked one's, or glyphs — and the overlay picker at its end, beta.13) · `DecorDials` (the DialKit block) · `NodeInspector` (the style form) |
 | organisms | `ScreensCanvas` (iframe + handles + selection) · `LayoutEditor` (state, debounce, save) |
 | templates | `WorkshopLayout` (toolbar · canvas · inspector column) |
 | pages | `ScreensPage` (replaces the stub) |

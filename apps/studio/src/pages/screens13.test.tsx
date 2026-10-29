@@ -194,7 +194,8 @@ describe('the review of P27.3', () => {
   it('an overlay leaves the screen box alone', async () => {
     const { post } = await openScreens()
     await post([])
-    fireEvent.click(screen.getByRole('tab', { name: 'Outcome' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Overlay/ }))
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: /^Outcome/ }))
     fireEvent.click(screen.getByRole('tab', { name: 'Decor' }))
     expect(await screen.findByText(/an overlay has none of its own/)).toBeTruthy()
     expect(screen.queryByRole('switch', { name: 'Override anchor point' })).toBeNull()

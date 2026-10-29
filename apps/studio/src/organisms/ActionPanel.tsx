@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button, MeaningChip, Separator, Text, TransportButton } from '@/atoms'
 import { ConfirmDialog, EmptyState, RevealControls, RingRow, TimerCluster, type RingRowVariant, type TimerClusterProps } from '@/molecules'
 import { armOrConfirm, sameArm, useArmStore } from '@/chrome/arm'
+import { useTimelineHidden } from '@/chrome/control'
 import { CONTROL, PHASE, RING, RING_ROLE, SESSION, TIMER, TRANSPORT } from '@/copy'
 import { useChord } from '@/host/chords'
 import { useHostCommand } from '@/host/commands'
@@ -33,6 +34,7 @@ export function ActionPanel({ density }: ActionPanelProps) {
   const play = usePlayState()
   const run = useHostCommand()
   const chord = useChord()
+  const timelineHidden = useTimelineHidden()
   // Shared with the Viewer and the chords (`chrome/arm.ts`); the Control
   // hotkeys hook disarms it when the Play moves on.
   const armed = useArmStore((s) => s.armed)
@@ -114,7 +116,14 @@ export function ActionPanel({ density }: ActionPanelProps) {
         ) : play.status === 'paused' ? (
           <TransportButton icon="play" label={TRANSPORT.resume} state="active" withLabel={!compact} onPress={() => void run('resume')} />
         ) : null}
-        {/* Undo and Redo live on the Timeline strip (beta.13), beside what they act on. */}
+        {/* Undo and Redo live on the Timeline strip (beta.13), beside what they
+          * act on — and come back here while the strip is folded away. */}
+        {timelineHidden ? (
+          <>
+            <TransportButton icon="undo" label={TRANSPORT.undo} onPress={() => void run('undo_turn')} isDisabled={!play.operator.canUndo || busy} disabledReason={busy ? TRANSPORT.waitOverlay : !play.operator.canUndo ? TRANSPORT.nothingToUndo : null} kbd={chord('undo_turn')} />
+            <TransportButton icon="redo" label={TRANSPORT.redo} onPress={() => void run('redo_turn')} isDisabled={!play.operator.canRedo || busy} disabledReason={busy ? TRANSPORT.waitOverlay : !play.operator.canRedo ? TRANSPORT.redoAfterUndo : null} kbd={chord('redo_turn')} />
+          </>
+        ) : null}
         <div className="flex-1" />
         {/* A completed Play may be restarted — the board is empty and playing
           * it again is the obvious next act (`MatchService::restart`). Only an

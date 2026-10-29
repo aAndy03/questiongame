@@ -2263,7 +2263,10 @@ studio_calls:
     recipe_set_overlay: [apps/studio/src/organisms/BoardSection.tsx]
     recipe_set_settings: [apps/studio/src/organisms/BoardSection.tsx, apps/studio/src/organisms/RulesSection.tsx]
     recipe_upsert: [apps/studio/src/pages/GamePage.tsx]
-    redo_turn: [apps/studio/src/organisms/TimelineStrip.tsx, apps/studio/src/organisms/useControlHotkeys.ts]
+    redo_turn:
+      - apps/studio/src/organisms/ActionPanel.tsx
+      - apps/studio/src/organisms/TimelineStrip.tsx
+      - apps/studio/src/organisms/useControlHotkeys.ts
     referenced_by: [apps/studio/src/host/queries.ts, apps/studio/src/organisms/useArchive.tsx]
     reorder_ring: [apps/studio/src/organisms/GamePanel.tsx]
     restart: [apps/studio/src/organisms/ActionPanel.tsx]
@@ -2305,7 +2308,10 @@ studio_calls:
     tag_rename: [apps/studio/src/organisms/QuestionTagsManager.tsx]
     tags_unify: [apps/studio/src/organisms/useNoticeActions.ts]
     transfer_preview: [apps/studio/src/organisms/useTransfer.tsx]
-    undo_turn: [apps/studio/src/organisms/TimelineStrip.tsx, apps/studio/src/organisms/useControlHotkeys.ts]
+    undo_turn:
+      - apps/studio/src/organisms/ActionPanel.tsx
+      - apps/studio/src/organisms/TimelineStrip.tsx
+      - apps/studio/src/organisms/useControlHotkeys.ts
     update_check: [apps/studio/src/host/updates.ts, apps/studio/src/organisms/AboutPanel.tsx]
     update_open_release: [apps/studio/src/organisms/AboutPanel.tsx, apps/studio/src/organisms/useNoticeActions.ts]
     whats_new_get: [apps/studio/src/host/whatsNew.ts]

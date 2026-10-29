@@ -109,6 +109,10 @@ export const SCREENS_TAB = {
   screensGroup: 'Screens',
   overlaysGroup: 'Overlays',
   noOverlay: 'None',
+  /** beta.13: the overlays are one picker at the end of the screens' row. */
+  overlayPrompt: 'Overlay',
+  overOn: (screen: string) => `Over ${screen}`,
+  overlayOff: 'Back to the screen alone',
   overlayInspector: 'An overlay has no node to restyle. Its words follow the Stage language; the screen underneath is the one you picked last.',
   decor: 'Decor',
   decorHint: 'The loose shapes. They move on the canvas as on Stage, and save with the game.',

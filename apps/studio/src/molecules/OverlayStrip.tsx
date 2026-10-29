@@ -1,6 +1,7 @@
 import { OVERLAY_KINDS, type OverlayKind, type OverlayRequest } from '@questiongame/contract'
-import { Button, Text, Tooltip, type IconName } from '@/atoms'
+import { Button, Text, Tooltip } from '@/atoms'
 import { OVERLAYS, STRIPS } from '@/copy'
+import { OVERLAY_ICON } from './glyphs'
 
 export interface OverlayStripProps {
   active: OverlayRequest | null
@@ -20,14 +21,8 @@ export interface OverlayStripProps {
  * can aim at; the label is the target, so it stays whole and the row wraps
  * instead.
  */
-/** One glyph per kind (beta.13): five pills under one icon read as one button five times. */
-const ICON: Record<OverlayKind, IconName> = {
-  'token-handoff': 'token',
-  'round-advance': 'sync',
-  'multiple-answers': 'listCheck',
-  outcome: 'correct',
-  'current-team': 'teams',
-}
+/** One glyph per kind (beta.13), shared with the Screens tab. */
+const ICON = OVERLAY_ICON
 
 export function OverlayStrip({ active, pending, enabled, reasons, density = 'comfortable', onShow }: OverlayStripProps) {
   return (

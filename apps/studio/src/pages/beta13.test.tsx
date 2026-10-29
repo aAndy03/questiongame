@@ -202,9 +202,9 @@ describe('the Viewer (P27.2)', () => {
   })
 
   it('a display aid is a Control-behaviour write that reaches play-state', async () => {
-    await openControl(resolved(), 'Colours')
-    const controls = document.querySelector<HTMLElement>('[data-viewer-controls]')!
-    fireEvent.click(within(controls).getByText('Invert'))
+    await openControl(resolved(), 'On Stage')
+    fireEvent.click(document.querySelector<HTMLElement>('[data-viewer-tool="colours"]')!)
+    fireEvent.click(await screen.findByText('Invert'))
     await waitFor(() => expect(calls('settings_set_global').map((c) => (c.args?.['setting'] as { key: string }).key)).toContain('stage_view'))
     const write = calls('settings_set_global').find((c) => (c.args?.['setting'] as { key: string }).key === 'stage_view')
     expect((write?.args?.['setting'] as { value: { filter: string } }).value.filter).toBe('invert')
@@ -212,9 +212,9 @@ describe('the Viewer (P27.2)', () => {
   })
 
   it('preview quality is a per-operator preference that draws fewer pixels, not a setting', async () => {
-    await openControl(resolved(), 'Preview quality')
-    const controls = document.querySelector<HTMLElement>('[data-viewer-controls]')!
-    fireEvent.click(within(controls).getByText('Low'))
+    await openControl(resolved(), 'On Stage')
+    fireEvent.click(document.querySelector<HTMLElement>('[data-viewer-tool="quality"]')!)
+    fireEvent.click(await screen.findByText('Low'))
     await waitFor(() => expect(document.querySelector('[data-viewer-quality]')?.getAttribute('data-viewer-quality')).toBe('low'))
     expect(calls('settings_set_global')).toHaveLength(0)
   })

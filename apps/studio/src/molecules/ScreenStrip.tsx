@@ -1,7 +1,8 @@
 import { ToggleButton, ToggleButtonGroup } from '@heroui/react'
 import { STAGE_SCREENS, type StageScreen } from '@questiongame/contract'
-import { Icon, Kbd, Text, Tooltip, type IconName } from '@/atoms'
+import { Icon, Kbd, Text, Tooltip } from '@/atoms'
 import { SCREENS, STRIPS } from '@/copy'
+import { SCREEN_ICON } from './glyphs'
 
 export interface ScreenStripProps {
   current: StageScreen
@@ -13,15 +14,7 @@ export interface ScreenStripProps {
   onShow: (screen: StageScreen) => void
 }
 
-const ICON: Record<StageScreen, IconName> = {
-  idle: 'circleDashed',
-  teamOrder: 'listCheck',
-  chooseDomain: 'domain',
-  question: 'question',
-  scoreboard: 'statistics',
-  finalLeaderboard: 'flag',
-  currentTeam: 'token',
-}
+const ICON = SCREEN_ICON
 
 /**
  * Every Screen, in show order; the operator may jump anywhere (spec §5.5).

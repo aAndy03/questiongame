@@ -1,7 +1,7 @@
 import { useCallback, useEffect, type ReactNode } from 'react'
 import { Button } from '@/atoms'
 import { EmptyState, MosaicPanel, type MosaicDensityFloor } from '@/molecules'
-import { ActionPanel, GamePanel, RecentGames, StripsPanel, TimelineStrip, Viewer, useControlHotkeys } from '@/organisms'
+import { ActionPanel, GamePanel, InStatusBar, RecentGames, StripsPanel, TimelineStrip, TimelineToggle, Viewer, useControlHotkeys } from '@/organisms'
 import { MosaicLayout } from '@/templates'
 import { useControlLayout, useControlLayoutStore, type PanelId } from '@/chrome/control'
 import { useNavStore } from '@/chrome/nav'
@@ -61,8 +61,12 @@ export function ControlPage() {
       <div className="min-h-0 flex-1">
         <MosaicLayout<PanelId> value={layout} onChange={setLayout} titles={CONTROL.panels} renderTile={renderTile} />
       </div>
-      {/* Fixed height, under every layout: the Timeline is a track, not a tile (beta.13). */}
+      {/* Fixed height, under every layout: the Timeline is a track, not a tile (beta.13).
+        * It folds away completely, and its switch stays in the status bar. */}
       <TimelineStrip />
+      <InStatusBar inline={null}>
+        <TimelineToggle />
+      </InStatusBar>
     </div>
   )
 }
@@ -82,7 +86,7 @@ function useRenderTile(floor: MosaicDensityFloor) {
         case 'viewer':
           return (
             <MosaicPanel floor={floor} padded={false}>
-              {(density) => <Viewer density={density} />}
+              {() => <Viewer />}
             </MosaicPanel>
           )
         case 'game':
