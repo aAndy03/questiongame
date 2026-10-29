@@ -37,6 +37,8 @@ export interface PreviewLook {
   readonly decor?: StageDecorSettings | undefined
   readonly motion?: StageMotion | undefined
   readonly language?: StageLanguage | undefined
+  /** The all-games timer, the cascade's level under the game's (review). */
+  readonly globalTimer?: { readonly enabled: boolean | null; readonly duration_ms: number | null } | undefined
 }
 
 /**
@@ -120,7 +122,7 @@ export function previewPlay(src: PreviewSources, screen: StageScreen, layout: St
           lockedOptionIds: null,
           outcome: null,
           // The game's own clock: none at operator pace, as Stage hides it (beta.13).
-          timer: timerOf(src.recipe),
+          timer: timerOf(src.recipe, look.globalTimer),
           reveals: { stem: true, optionIds: options.map((o) => o.id), outcome: false },
         }
       : null
@@ -146,8 +148,10 @@ export function previewPlay(src: PreviewSources, screen: StageScreen, layout: St
   }
 }
 
-function timerOf(recipe: Recipe): NonNullable<PlayStateForStage['session']>['timer'] {
-  if (recipe.settings.timer.enabled === false) return null
-  const ms = recipe.settings.timer.duration_ms ?? 30_000
+/** The game's level of the §2.18 cascade over the all-games one; no clock at operator pace. */
+function timerOf(recipe: Recipe, globals: PreviewLook['globalTimer']): NonNullable<PlayStateForStage['session']>['timer'] {
+  const enabled = recipe.settings.timer.enabled ?? globals?.enabled ?? true
+  if (!enabled) return null
+  const ms = recipe.settings.timer.duration_ms ?? globals?.duration_ms ?? 30_000
   return { durationMs: ms, remainingMs: ms, running: false, remainingMsAtLock: null, expiredOpen: false }
 }

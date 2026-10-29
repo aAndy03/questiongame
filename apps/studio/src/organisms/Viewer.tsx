@@ -114,14 +114,17 @@ export function Viewer({ density }: { density: 'comfortable' | 'compact' | 'dens
   // of the whole stripped Play ten times a second.
   // Medium and Low quality post the clock less often (beta.13); a start or a
   // stop always goes at once, so the preview never shows a clock that is wrong.
-  const lastTick = useRef({ at: 0, running: false })
+  const lastTick = useRef<{ at: number; running: boolean; countdown: number | null }>({ at: 0, running: false, countdown: null })
   const tickMs = VIEWER_QUALITY[quality].tickMs
   useEffect(() => {
     const target = frame.current?.contentWindow
     if (!target || !ready || !playId) return
     const now = performance.now()
-    if (tickMs > 0 && running === lastTick.current.running && now - lastTick.current.at < tickMs) return
-    lastTick.current = { at: now, running }
+    // Only the elapsed clock is thinned (review): the countdown is the number
+    // the operator reads, and it already moves at most once a second.
+    const countdown = clock.remainingMs
+    if (tickMs > 0 && running === lastTick.current.running && countdown === lastTick.current.countdown && now - lastTick.current.at < tickMs) return
+    lastTick.current = { at: now, running, countdown }
     const message: ViewerToStage = {
       source: VIEWER_SOURCE,
       type: 'tick',
@@ -313,7 +316,9 @@ function nodesToTargets(play: PlayStateForMain, nodes: readonly ViewerNodeRect[]
       const selected = session.selectedOptionIds.includes(option.id)
       const next = session.answerMode === 'multiple' ? (selected ? session.selectedOptionIds.filter((id) => id !== option.id) : [...session.selectedOptionIds, option.id]) : [option.id]
       // Live only while the Play is (beta.12, B13): a closed or unstarted Play is refused.
-      const legal = playOpen && session.lockedOptionIds === null
+      // On the live question only (review): after an unlocked reveal the
+      // resolved session still has no lock, and a press was refused.
+      const legal = playOpen && live !== null && session.lockedOptionIds === null
       out.push({ ...geom, label: option.text, legal, reason: !playOpen ? null : legal ? null : TIMER.locked, selected, command: 'set_selection', args: { optionIds: next } })
     } else if (slot === 'question.stem' && session) {
       out.push({ ...geom, label: SESSION.revealStem, legal: playOpen && !session.reveals.stem, reason: null, selected: session.reveals.stem, command: 'reveal_stem', args: undefined })
@@ -341,7 +346,9 @@ function nodesToTargets(play: PlayStateForMain, nodes: readonly ViewerNodeRect[]
         ? `${team.name} — ${role ? RING_ROLE[role] : ''}`
         : isArmed
           ? live !== null
-            ? SESSION.revealAndPassArmed(team.name)
+            ? live.lockedOptionIds === null && !live.timer?.expiredOpen
+              ? SESSION.revealAndPassUnlocked(team.name)
+              : SESSION.revealAndPassArmed(team.name)
             : SESSION.passArmed(team.name)
           : SESSION.giveTokenTo(team.name)
       const reason = legal ? null : refused && legalTargets.has(team.id) ? SESSION.revealFirst : role ? RING_ROLE[role] : null

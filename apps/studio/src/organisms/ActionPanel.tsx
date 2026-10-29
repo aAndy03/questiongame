@@ -59,6 +59,10 @@ export function ActionPanel({ density }: ActionPanelProps) {
   const entries = ringEntries(play)
   const compact = density !== 'comfortable'
   const result = turnResult(play)
+  // The token was just handed over: the outcome on screen is the last team's.
+  const justGiven = phase === 'resolved' && play.operator.consecutiveCorrect === 0
+  const holderName = play.teams.find((t) => t.id === play.ring.currentTeamId)?.name ?? null
+  const unlocked = sessionLive && !locked && !timer?.expiredOpen
   // The hand-over is drawn while the Play can still take one. On a completed
   // or abandoned Play `give_token` is refused, so the rows would be dead.
   // beta.13: **never hidden while open** — under `refuse_until_reveal` the
@@ -161,6 +165,11 @@ export function ActionPanel({ density }: ActionPanelProps) {
             * block takes over — a disabled row of finished controls is what
             * made the panel look stuck. */}
           {result ? <ResultLine result={result} /> : null}
+          {justGiven && holderName ? (
+            <Text variant="studio-caption" tone="default">
+              {SESSION.result.given(holderName)}
+            </Text>
+          ) : null}
           {phase === 'question' ? (
           <RevealControls
             stemRevealed={session.reveals.stem}
@@ -307,7 +316,7 @@ export function ActionPanel({ density }: ActionPanelProps) {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <Text variant="studio-caption" tone={phase === 'handover' ? 'default' : 'muted'}>
-              {phase === 'handover' ? SESSION.giveTokenNow : phase === 'resolved' ? SESSION.passOptional : SESSION.giveToken}
+              {phase === 'handover' ? SESSION.giveTokenNow : phase === 'resolved' && !justGiven ? SESSION.passOptional : SESSION.giveToken}
             </Text>
             {play.operator.consecutiveCorrect > 0 ? (
               <Text variant="studio-caption" tone="accent">
@@ -352,13 +361,13 @@ export function ActionPanel({ density }: ActionPanelProps) {
                       // pressed says why (`ringRole`).
                       rowArmed ? (
                         <Text variant="studio-caption" tone="danger" truncate>
-                          {sessionLive ? SESSION.revealAndPassArmed(e.team.name) : SESSION.passArmed(e.team.name)}
+                          {sessionLive ? (unlocked ? SESSION.revealAndPassUnlocked(e.team.name) : SESSION.revealAndPassArmed(e.team.name)) : SESSION.passArmed(e.team.name)}
                         </Text>
                       ) : compact && role !== 'next' && role !== 'holder' && role !== 'again' ? null : (
                         // Below comfortable only the roles that ask for a press
                         // keep their words; the rest are on the row's tooltip.
                         <Text variant="studio-caption" tone={role === 'next' || role === 'again' ? 'accent' : 'muted'} truncate className="shrink-0">
-                          {role === 'holder' && phase === 'resolved' ? RING_ROLE.keeps : RING_ROLE[role]}
+                          {role === 'holder' && phase === 'resolved' && !justGiven ? RING_ROLE.keeps : RING_ROLE[role]}
                         </Text>
                       )
                     }

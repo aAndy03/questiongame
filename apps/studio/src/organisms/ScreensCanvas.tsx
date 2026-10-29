@@ -57,6 +57,8 @@ export function ScreensCanvas({ preview, selectedId, overriddenIds, hiddenIds, h
   const [decor, setDecor] = useState<ViewerDecorBox | null>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [dragAnchor, setDragAnchor] = useState<{ x: number; y: number } | null>(null)
+  // Where on the crosshair it was grabbed, so it does not jump to the pointer.
+  const grab = useRef({ dx: 0, dy: 0, moved: false })
 
   useEffect(() => {
     const el = box.current
@@ -109,6 +111,8 @@ export function ScreensCanvas({ preview, selectedId, overriddenIds, hiddenIds, h
       if (e.key !== 'Escape') return
       const t = e.target
       if (t instanceof Element && t.closest('input, textarea, select, [role="dialog"], [role="alertdialog"], [role="listbox"]')) return
+      // A handle left focused but unselected would ignore the arrows (review).
+      if (document.activeElement instanceof HTMLElement && document.activeElement.closest('[data-node-handle]')) document.activeElement.blur()
       onSelect(null)
     }
     window.addEventListener('keydown', onKey)
@@ -128,6 +132,13 @@ export function ScreensCanvas({ preview, selectedId, overriddenIds, hiddenIds, h
   const toCanvas = (fx: number, fy: number) =>
     boundary ? { left: (boundary.x + fx * boundary.width) * scale, top: (boundary.y + fy * boundary.height) * scale } : null
   const point = anchor ? toCanvas(anchor.x, anchor.y) : null
+  // An anchor out in the bleed is drawn at the canvas edge, so it can still
+  // be seen and grabbed (review).
+  const shown = point ? { left: Math.min(Math.max(point.left, 0), size.width), top: Math.min(Math.max(point.top, 0), size.height) } : null
+  const nudgeAnchor = (dx: number, dy: number) => {
+    if (!anchor || !onAnchor) return
+    onAnchor({ x: round2(clamp01(anchor.x + dx)), y: round2(clamp01(anchor.y + dy)) })
+  }
 
   return (
     <div
@@ -180,7 +191,7 @@ export function ScreensCanvas({ preview, selectedId, overriddenIds, hiddenIds, h
             onNudge={(dx, dy) => onNudge(n.id, dx, dy)}
           />
         ))}
-        {guide && point && boundary ? (
+        {guide && shown && point && boundary ? (
           // The anchor: a crosshair the operator can drag (beta.13). It writes
           // the screen's anchor point as fractions of the boundary, on release.
           <div
@@ -189,12 +200,23 @@ export function ScreensCanvas({ preview, selectedId, overriddenIds, hiddenIds, h
             aria-label={SCREENS_TAB.dials.anchorPoint}
             aria-valuetext={`${Math.round((anchor?.x ?? 0) * 100)}%, ${Math.round((anchor?.y ?? 0) * 100)}%`}
             className="absolute z-10 -ml-4 -mt-4 flex size-8 cursor-grab items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
-            style={{ left: point.left, top: point.top }}
+            style={{ left: shown.left, top: shown.top }}
             data-decor-guide="anchor"
+            onKeyDown={(e) => {
+              const step = e.shiftKey ? 0.1 : 0.01
+              if (e.key === 'ArrowLeft') nudgeAnchor(-step, 0)
+              else if (e.key === 'ArrowRight') nudgeAnchor(step, 0)
+              else if (e.key === 'ArrowUp') nudgeAnchor(0, -step)
+              else if (e.key === 'ArrowDown') nudgeAnchor(0, step)
+              else return
+              e.preventDefault()
+            }}
             onPointerDown={(e) => {
               if (!onAnchor) return
               e.preventDefault()
               e.stopPropagation()
+              const rect = e.currentTarget.parentElement!.getBoundingClientRect()
+              grab.current = { dx: e.clientX - rect.left - point.left, dy: e.clientY - rect.top - point.top, moved: false }
               try {
                 e.currentTarget.setPointerCapture?.(e.pointerId)
               } catch {
@@ -205,14 +227,20 @@ export function ScreensCanvas({ preview, selectedId, overriddenIds, hiddenIds, h
             onPointerMove={(e) => {
               if (!dragAnchor || !boundary || scale <= 0) return
               const rect = e.currentTarget.parentElement!.getBoundingClientRect()
-              const fx = ((e.clientX - rect.left) / scale - boundary.x) / boundary.width
-              const fy = ((e.clientY - rect.top) / scale - boundary.y) / boundary.height
+              const fx = ((e.clientX - rect.left - grab.current.dx) / scale - boundary.x) / boundary.width
+              const fy = ((e.clientY - rect.top - grab.current.dy) / scale - boundary.y) / boundary.height
+              grab.current.moved = true
               setDragAnchor({ x: clamp01(fx), y: clamp01(fy) })
             }}
             onPointerUp={() => {
-              if (dragAnchor) onAnchor?.({ x: round2(dragAnchor.x), y: round2(dragAnchor.y) })
+              // A click is not a move: only a drag writes the anchor (review).
+              if (dragAnchor && grab.current.moved) {
+                const next = { x: round2(dragAnchor.x), y: round2(dragAnchor.y) }
+                if (next.x !== decor?.anchor.x || next.y !== decor?.anchor.y) onAnchor?.(next)
+              }
               setDragAnchor(null)
             }}
+            onPointerCancel={() => setDragAnchor(null)}
           >
             <svg viewBox="0 0 32 32" className="size-8 text-[var(--accent)]" aria-hidden>
               <circle cx="16" cy="16" r="7" fill="none" stroke="currentColor" strokeWidth="2.5" />

@@ -80,7 +80,7 @@ export const SCREENS_TAB = {
   resetNode: 'Reset element',
   resetScreen: 'Reset this screen',
   resetScreenTitle: (screen: string) => `Reset ${screen}?`,
-  resetScreenBody: 'Every element on this screen and its boundary box go back to the built-in. The words and the decor dials stay as they are.',
+  resetScreenBody: 'Every element on this screen, its boundary box and the words only it shows go back to the built-in. Shared words (the eyebrow, the domain label) and the decor dials stay as they are.',
   /** Nodes, boundary boxes and words — not the decor dials, so the label does not claim "every" (B7). */
   resetAll: 'Reset screens and words',
   resetAllTitle: 'Reset every screen and word?',
@@ -113,6 +113,7 @@ export const SCREENS_TAB = {
   decor: 'Decor',
   decorHint: 'The loose shapes. They move on the canvas as on Stage, and save with the game.',
   decorNone: 'This screen has no decor shapes. The dials above still apply to every other screen.',
+  decorBoxOverlay: 'Pick a screen to set its box: an overlay has none of its own.',
   decorReset: 'Built-in decor',
   decorResetDone: 'The decor dials are back to the built-in',
   motion: 'Motion',

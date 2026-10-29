@@ -27,7 +27,7 @@ import { useHostCommand } from '@/host/commands'
 import { nodeName, nodeScope } from '@/host/nodeName'
 import { usePlayState } from '@/host/playState'
 import { previewOverlay, previewPlay } from '@/host/previewPlay'
-import { useCatalogList, useRecipe } from '@/host/queries'
+import { useCatalogList, useRecipe, useSettings } from '@/host/queries'
 import { ScreensCanvas } from './ScreensCanvas'
 
 export interface LayoutEditorProps {
@@ -68,6 +68,7 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
   const questions = useCatalogList('question', 'all')
   const run = useHostCommand()
   const inControl = usePlayState((p) => p?.operator.recipeId === recipeId)
+  const settings = useSettings()
 
   const [view, setView] = useState<CanvasView>('idle')
   // The screen the canvas draws — under an overlay, the last screen picked.
@@ -93,8 +94,12 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
 
   // Adopt the recipe's document once per recipe (and after our own save lands
   // as a new rev, which parses to the same draft).
+  // A saved draft that parses to the same document is kept as typed (review):
+  // the stored words are trimmed, so adopting them took the space just typed.
   useEffect(() => {
-    if (recipe.data && !dirty.current) setDraft(parseLayout(recipe.data.layout))
+    if (!recipe.data || dirty.current) return
+    const stored = parseLayout(recipe.data.layout)
+    setDraft((d) => (d !== null && JSON.stringify(parseLayout(d)) === JSON.stringify(stored) ? d : stored))
   }, [recipe.data])
 
   const latest = useRef<StageLayout | null>(null)
@@ -129,19 +134,30 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
     setPending(true)
     debouncedSave(next)
   }
-  const update = (next: StageLayout) => {
-    setHistory((h) => ({ past: [...h.past, layout].slice(-HISTORY), future: [] }))
+  // One Undo step per gesture (review): a slider drag or a held arrow key is
+  // many edits of one thing, so edits with the same key inside a second share
+  // the step taken before the first of them. An edit that changes nothing is
+  // no step and no save.
+  const lastEdit = useRef<{ key: string; at: number } | null>(null)
+  const update = (next: StageLayout, key?: string) => {
+    if (JSON.stringify(next) === JSON.stringify(layout)) return
+    const now = Date.now()
+    const same = key !== undefined && lastEdit.current?.key === key && now - lastEdit.current.at < 1_000
+    lastEdit.current = key === undefined ? null : { key, at: now }
+    if (!same) setHistory((h) => ({ past: [...h.past, layout].slice(-HISTORY), future: [] }))
     commit(next)
   }
   const undo = () => {
     const prev = history.past[history.past.length - 1]
     if (!prev) return
+    lastEdit.current = null
     setHistory((h) => ({ past: h.past.slice(0, -1), future: [layout, ...h.future] }))
     commit(prev)
   }
   const redo = () => {
     const next = history.future[0]
     if (!next) return
+    lastEdit.current = null
     setHistory((h) => ({ past: [...h.past, layout], future: h.future.slice(1) }))
     commit(next)
   }
@@ -163,17 +179,17 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const setNode = (id: string, style: NodeStyle | null) => {
+  const setNode = (id: string, style: NodeStyle | null, key: string = `node:${id}`) => {
     const nodes = { ...layout.nodes }
     if (style === null) delete nodes[id]
     else nodes[id] = style
-    update({ ...layout, nodes })
+    update({ ...layout, nodes }, key)
   }
   const nudge = (id: string, dx: number, dy: number) => {
     const s = layout.nodes[id] ?? {}
-    setNode(id, { ...s, dx: (s.dx ?? 0) + dx, dy: (s.dy ?? 0) + dy })
+    setNode(id, { ...s, dx: (s.dx ?? 0) + dx, dy: (s.dy ?? 0) + dy }, `nudge:${id}`)
   }
-  const setDecor = (decor: StageDecorSettings) => update({ ...layout, decor })
+  const setDecor = (decor: StageDecorSettings) => update({ ...layout, decor }, 'decor')
   // The words being edited are the language picked here (beta.13): the game's
   // own unless the operator switches, which changes nothing on the game.
   const textValues = layout.text[editLanguage] ?? {}
@@ -184,24 +200,25 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
     const text = { ...layout.text }
     if (Object.keys(block).length === 0) delete text[editLanguage]
     else text[editLanguage] = block
-    update({ ...layout, text })
+    update({ ...layout, text }, `text:${editLanguage}:${key}`)
   }
   const setBox = (box: ScreenBox | undefined) => {
     const screens = { ...layout.screens }
     if (box === undefined) delete screens[screen]
     else screens[screen] = box
-    update({ ...layout, screens })
+    update({ ...layout, screens }, `box:${screen}`)
   }
 
   const sources = useMemo(
     () => (recipe.data ? { recipe: recipe.data, teams: teams.data ?? [], domains: domains.data ?? [], questions: questions.data ?? [] } : null),
     [recipe.data, teams.data, domains.data, questions.data],
   )
+  const globalsTimer = settings.data?.globals.timer
   const preview = useMemo(() => {
     if (!sources) return null
-    const look = { decor: layout.decor, motion: motion ? ('full' as const) : ('reduced' as const), language: editLanguage }
+    const look = { decor: layout.decor, motion: motion ? ('full' as const) : ('reduced' as const), language: editLanguage, globalTimer: globalsTimer }
     return overlay ? previewOverlay(sources, overlay, screen, layoutNodes(layout), look) : previewPlay(sources, screen, layoutNodes(layout), look)
-  }, [sources, screen, overlay, layout, motion, editLanguage])
+  }, [sources, screen, overlay, layout, motion, editLanguage, globalsTimer])
   const overridden = useMemo(() => {
     const ids = new Set(Object.keys(layout.nodes))
     // An element whose words were edited counts as changed too (beta.13).
@@ -229,6 +246,9 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
   const onMeasured = useCallback((nodes: readonly ViewerNodeRect[], decor: ViewerDecorBox | null) => {
     setMeasured({ nodes: new Map(nodes.map((n) => [n.id, n])), decor })
   }, [])
+  // What Stage measured belongs to the picture it measured (review): a new
+  // screen or overlay starts with nothing, until Stage posts again.
+  useEffect(() => setMeasured({ nodes: new Map(), decor: null }), [screen, overlay])
 
   const toolbar = (
     <ScreenTabs
@@ -418,6 +438,7 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
         onBoxChange={setBox}
         resolved={measured.decor}
         hasShapes={!NO_DECOR.has(screen)}
+        boxDisabled={overlay !== null}
       />
     </Panel>
   )
@@ -460,7 +481,14 @@ export function LayoutEditor({ recipeId, render }: LayoutEditorProps) {
             const nodes = Object.fromEntries(Object.entries(layout.nodes).filter(([id]) => !id.startsWith(`${screen}.`)))
             const screens = { ...layout.screens }
             delete screens[screen]
-            update({ ...layout, nodes, screens })
+            // Words used on this screen alone go back too; shared ones (the
+            // eyebrow, the domain label) belong to the other screens as well.
+            const shared = new Set((Object.keys(SCREEN_SLOTS) as StageScreen[]).filter((s) => s !== screen).flatMap((s) => [...textKeysOnScreen(s)]))
+            const own = textKeysOnScreen(screen).filter((k) => !shared.has(k))
+            const text = Object.fromEntries(
+              Object.entries(layout.text).map(([lang, block]) => [lang, Object.fromEntries(Object.entries(block ?? {}).filter(([k]) => !own.includes(k as TextKey)))]),
+            )
+            update({ ...layout, nodes, screens, text: parseLayout({ ...layout, text }).text })
           }
           setResetting(null)
         }}

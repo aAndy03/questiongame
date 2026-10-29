@@ -159,7 +159,9 @@ export function demoPlay(name: FixtureName): PlayStateForMain {
       recipeId: 'recipe-demo',
       legalTokenTargets: legal,
       defaultNextTeamId: legal[0] ?? null,
-      consecutiveCorrect: 0,
+      // As the host has it: a correct answer that left the holder holding is a
+      // streak of at least one (beta.13 reads it to tell a keep from a hand-over).
+      consecutiveCorrect: stage.session?.outcome?.verdict === 'correct' && holder !== null ? 1 : 0,
       isRehearsal: stage.teams.length === 1,
       canUndo: stage.questionsIssued > 0,
       canRedo: false,

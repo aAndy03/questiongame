@@ -35,7 +35,11 @@ export function useControlHotkeys(enabled: boolean): void {
   // question, the lock, the outcome or the status (spec §14: an arm is for
   // the state it was made in). Here, because Control mounts this once.
   const disarm = useArmStore((s) => s.disarm)
-  useEffect(() => disarm(), [disarm, play?.ring.currentTeamId, play?.session?.questionId, play?.session?.lockedOptionIds, play?.session?.outcome, play?.status])
+  // Scalars, not the arrays and objects (review): every play-state is a new
+  // parse, so an object here disarmed on any emission — an overlay's ack.
+  const lockKey = play?.session?.lockedOptionIds?.join(',') ?? null
+  const resolvedNow = play?.session?.outcome != null
+  useEffect(() => disarm(), [disarm, play?.ring.currentTeamId, play?.session?.questionId, lockKey, resolvedNow, play?.status])
 
   const screenStep = (dir: -1 | 1) => {
     if (!play) return

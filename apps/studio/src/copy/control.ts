@@ -126,6 +126,8 @@ export const SESSION = {
   result: {
     keeps: (team: string) => `${team} keeps the token`,
     free: 'The token is free',
+    /** The token was just given: the result on screen is the last team's. */
+    given: (team: string) => `${team} has the token. Pick their domain.`,
     capReached: 'Cap reached: the token is free',
   },
   /** `resolved`: passing is an override, never the next step. */
@@ -134,6 +136,8 @@ export const SESSION = {
   handoverNone: 'Give it to a team to continue.',
   passArmed: (team: string) => `Pass to ${team}? Press again`,
   revealAndPassArmed: (team: string) => `Reveal and pass to ${team}? Press again`,
+  /** Reveal & pass before Lock is scored as an empty answer, as Reveal is (review). */
+  revealAndPassUnlocked: (team: string) => `Not locked: counts as wrong. Reveal and pass to ${team}? Press again`,
   /** Reveal before Lock counts as an empty answer (`rules.rs`): arm first. */
   revealUnlocked: 'Not locked: this counts as a wrong answer. Press again to reveal.',
   pausedReason: 'Resume the Play first',
@@ -270,6 +274,7 @@ export const TIMELINE = {
   expand: 'Expand timeline',
   collapse: 'Collapse timeline',
   empty: 'No events yet',
+  unanswered: 'Not answered',
   /** beta.13: the track never says "No events" over a count. */
   loading: 'Reading the timeline…',
   failed: 'The timeline could not be read. It will try again on the next event.',

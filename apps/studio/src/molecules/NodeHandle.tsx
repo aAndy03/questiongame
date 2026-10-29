@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Text } from '@/atoms'
 import { SCREENS_TAB } from '@/copy'
 import { tipLearned } from '@/tips/signals'
@@ -37,6 +37,21 @@ export function NodeHandle({ id, label, x, y, width, height, isSelected, isOverr
   // The drag so far, in canvas px: the box moves with the pointer (beta.13),
   // and the node itself moves once, on release, as one saved change.
   const [offset, setOffset] = useState<{ dx: number; dy: number } | null>(null)
+  // After a drop the box stays where it was let go until Stage reports the
+  // element's new place (review: it snapped back, then forward).
+  const [landing, setLanding] = useState(false)
+  useEffect(() => {
+    setLanding(false)
+    setOffset(null)
+  }, [x, y])
+  useEffect(() => {
+    if (!landing) return
+    const t = setTimeout(() => {
+      setLanding(false)
+      setOffset(null)
+    }, 1_200)
+    return () => clearTimeout(t)
+  }, [landing])
   return (
     <div
       role="button"
@@ -67,8 +82,11 @@ export function NodeHandle({ id, label, x, y, width, height, isSelected, isOverr
       onPointerUp={(e) => {
         const d = drag.current
         drag.current = null
-        setOffset(null)
-        if (!d || !d.moved || scale <= 0) return
+        if (!d || !d.moved || scale <= 0) {
+          setOffset(null)
+          return
+        }
+        setLanding(true)
         onNudge(Math.round((e.clientX - d.x) / scale), Math.round((e.clientY - d.y) / scale))
       }}
       onPointerCancel={() => {
@@ -102,7 +120,7 @@ export function NodeHandle({ id, label, x, y, width, height, isSelected, isOverr
       ].join(' ')}
       style={{ left: x, top: y, width, height, ...(offset ? { transform: `translate(${offset.dx}px, ${offset.dy}px)` } : {}) }}
     >
-      {isSelected ? (
+      {isSelected && !landing ? (
         <span className={['absolute left-0 whitespace-nowrap rounded px-1', y < 20 ? 'top-full mt-0.5' : '-top-5'].join(' ')} style={{ background: 'var(--accent)', color: 'var(--accent-foreground)' }}>
           <Text variant="studio-caption" tone="inherit">
             {offset && scale > 0 ? `${label} · ${Math.round(offset.dx / scale)}, ${Math.round(offset.dy / scale)}` : label}

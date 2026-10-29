@@ -152,6 +152,7 @@ function Item({ item, play }: { item: TrackItem; play: PlayStateForMain }) {
         steps={steps}
         verdict={verdict}
         undone={item.undone}
+        unfinished={item.unfinished}
         detail={detail}
       />
     )

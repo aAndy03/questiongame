@@ -166,7 +166,8 @@ export function TipHost() {
       const main = document.querySelector('main')
       const strip = document.querySelector('[data-timeline-strip]')
       if (!main) return setCorner(null)
-      const bottom = window.innerHeight - (strip?.getBoundingClientRect().top ?? main.getBoundingClientRect().bottom) + 12
+      const edge = Math.min(strip?.getBoundingClientRect().top ?? main.getBoundingClientRect().bottom, window.innerHeight)
+      const bottom = Math.max(12, window.innerHeight - edge + 12)
       setCorner({ left: main.getBoundingClientRect().left + 16, bottom })
     }
     place()

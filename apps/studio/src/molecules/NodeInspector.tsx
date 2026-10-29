@@ -69,7 +69,7 @@ export function NodeInspector({ nodeId, measured, empty, style, onChange, onAppl
         onChange={(v) => set({ fontSize: v ?? undefined })}
         minValue={8}
         maxValue={400}
-        step={2}
+        step={1}
         description={s.fontSize === undefined && measured?.fontSize !== undefined ? SCREENS_TAB.builtInValue(`${px(measured.fontSize)} px`) : undefined}
       />
       <div className="grid grid-cols-[1fr_auto] items-end gap-2">
@@ -105,8 +105,8 @@ export function NodeInspector({ nodeId, measured, empty, style, onChange, onAppl
       <div className="flex flex-col gap-1">
         <Text variant="studio-label">{SCREENS_TAB.size}</Text>
         <div className="grid grid-cols-2 gap-2">
-          <NumberField label={SCREENS_TAB.width} value={s.width ?? px(measured?.width) ?? null} onChange={(v) => set({ width: v ?? undefined })} minValue={1} maxValue={1920} step={4} />
-          <NumberField label={SCREENS_TAB.height} value={s.height ?? px(measured?.height) ?? null} onChange={(v) => set({ height: v ?? undefined })} minValue={1} maxValue={1080} step={4} />
+          <NumberField label={SCREENS_TAB.width} value={s.width ?? px(measured?.width) ?? null} onChange={(v) => set({ width: v ?? undefined })} minValue={1} maxValue={1920} step={1} />
+          <NumberField label={SCREENS_TAB.height} value={s.height ?? px(measured?.height) ?? null} onChange={(v) => set({ height: v ?? undefined })} minValue={1} maxValue={1080} step={1} />
         </div>
       </div>
       <SwitchField label={SCREENS_TAB.hidden} isSelected={Boolean(s.hidden)} onChange={(hidden) => set({ hidden: hidden ? true : undefined })} />

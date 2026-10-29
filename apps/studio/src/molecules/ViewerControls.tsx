@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { STAGE_FILTERS, type StageFilter, type StageView } from '@questiongame/contract'
 import { SegmentedField, SliderField, SwitchField, Text } from '@/atoms'
 import { VIEWER } from '@/copy'
@@ -30,6 +30,17 @@ export function ViewerControls({ quality, onQuality, view, onView, scale, orient
   // of drag would be a settings save and a Stage emission per pixel.
   const [brightness, setBrightness] = useState(view.brightness)
   useEffect(() => setBrightness(view.brightness), [view.brightness])
+  // Two quick changes build on each other (review): each write starts from the
+  // last one sent until the host's play-state has caught up with it.
+  const sent = useRef<StageView | null>(null)
+  useEffect(() => {
+    if (sent.current && JSON.stringify(sent.current) === JSON.stringify(view)) sent.current = null
+  }, [view])
+  const write = (patch: Partial<StageView>) => {
+    const next = { ...(sent.current ?? view), ...patch }
+    sent.current = next
+    onView(next)
+  }
   const row = orientation === 'row'
   return (
     <div className={row ? 'flex flex-wrap items-end gap-x-4 gap-y-2' : 'flex flex-col gap-3'} data-viewer-controls={orientation}>
@@ -54,7 +65,7 @@ export function ViewerControls({ quality, onQuality, view, onView, scale, orient
           label={VIEWER.colours}
           size="sm"
           value={view.filter}
-          onChange={(filter) => onView({ ...view, filter })}
+          onChange={(filter) => write({ filter })}
           options={STAGE_FILTERS.map((f) => ({ value: f, label: VIEWER.filters[f] }))}
         />
         <SliderField
@@ -65,7 +76,7 @@ export function ViewerControls({ quality, onQuality, view, onView, scale, orient
           step={5}
           formatOptions={{ style: 'unit', unit: 'percent', maximumFractionDigits: 0 }}
           onChange={setBrightness}
-          onChangeEnd={(value) => onView({ ...view, brightness: value })}
+          onChangeEnd={(value) => write({ brightness: value })}
           className={row ? 'w-40' : undefined}
         />
         <SwitchField
@@ -73,7 +84,7 @@ export function ViewerControls({ quality, onQuality, view, onView, scale, orient
           description={row ? undefined : VIEWER.motionHint}
           size="sm"
           isSelected={view.motion === 'reduced'}
-          onChange={(on) => onView({ ...view, motion: on ? 'reduced' : 'full' })}
+          onChange={(on) => write({ motion: on ? 'reduced' : 'full' })}
         />
       </div>
       <Text variant="studio-mono" tone="muted" tabular className={row ? 'ml-auto self-center' : undefined}>

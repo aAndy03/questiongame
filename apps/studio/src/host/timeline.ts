@@ -16,7 +16,7 @@ import type { PlayEvent } from './types'
 /** The events a turn holds between its question and its outcome. */
 const STEP_KINDS = new Set(['stem_revealed', 'option_revealed', 'selection_set', 'timer_started', 'timer_paused', 'timer_expired', 'selection_locked'])
 /** Lifecycle events that, during an open question, belong to its card. */
-const IN_TURN_KINDS = new Set(['paused', 'resumed', 'settings_live_changed', 'operator_switched'])
+const IN_TURN_KINDS = new Set(['paused', 'resumed', 'settings_live_changed', 'operator_switched', 'ring_reordered'])
 
 export interface TurnItem {
   readonly kind: 'turn'
@@ -30,6 +30,8 @@ export interface TurnItem {
   /** The outcome, or null while the question is still being played. */
   readonly resolved: PlayEvent | null
   readonly undone: boolean
+  /** Closed without an outcome — the Play ended or restarted under it. */
+  readonly unfinished: boolean
 }
 
 export interface MarkItem {
@@ -65,8 +67,8 @@ export function track(events: readonly PlayEvent[]): TrackItem[] {
   const out: TrackItem[] = []
   let turn: { item: TurnItem; steps: PlayEvent[] } | null = null
   let number = 0
-  const close = () => {
-    if (turn) out.push({ ...turn.item, steps: turn.steps })
+  const close = (final = false) => {
+    if (turn) out.push({ ...turn.item, steps: turn.steps, unfinished: !final && turn.item.resolved === null })
     turn = null
   }
   for (const e of events) {
@@ -86,6 +88,7 @@ export function track(events: readonly PlayEvent[]): TrackItem[] {
           steps: [],
           resolved: null,
           undone: isUndone,
+          unfinished: false,
         },
         steps: [],
       }
@@ -94,13 +97,13 @@ export function track(events: readonly PlayEvent[]): TrackItem[] {
       turn.steps.push(e)
     } else if (turn && type === 'turn_resolved') {
       turn.item = { ...turn.item, resolved: e }
-      close()
+      close(true)
     } else {
       close()
       out.push({ kind: 'mark', key: e.id, event: e, undone: undone(e.seq) })
     }
   }
-  close()
+  close(true)
   return out
 }
 

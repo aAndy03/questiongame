@@ -19,6 +19,8 @@ export interface TurnCardProps {
   verdict: { label: string; meaning: ChipMeaning } | null
   /** Taken out by an undo (the whole span, not one row). */
   undone?: boolean | undefined
+  /** Closed without an outcome: the Play ended or restarted under it. */
+  unfinished?: boolean | undefined
   /** The time it was issued and what happened, for the card's tooltip. */
   detail: string
 }
@@ -27,12 +29,12 @@ export interface TurnCardProps {
  * One question of the Timeline track (beta.13): what was asked, who answered,
  * the steps in order and the outcome — read left to right like the show.
  */
-export function TurnCard({ title, team, steps, verdict, undone, detail }: TurnCardProps) {
+export function TurnCard({ title, team, steps, verdict, undone, unfinished, detail }: TurnCardProps) {
   return (
     <div
       className={[
         'flex h-full w-44 shrink-0 flex-col justify-between gap-0.5 rounded-[calc(var(--radius)/2)] border px-2 py-1',
-        verdict === null && !undone ? 'border-[var(--accent)] bg-[var(--accent)]/6' : 'border-[var(--border)]',
+        verdict === null && !undone && !unfinished ? 'border-[var(--accent)] bg-[var(--accent)]/6' : 'border-[var(--border)]',
         undone ? 'opacity-50' : '',
       ].join(' ')}
       data-track-turn
@@ -60,6 +62,8 @@ export function TurnCard({ title, team, steps, verdict, undone, detail }: TurnCa
           <MeaningChip meaning="frozen">{TIMELINE.undone}</MeaningChip>
         ) : verdict ? (
           <MeaningChip meaning={verdict.meaning}>{verdict.label}</MeaningChip>
+        ) : unfinished ? (
+          <MeaningChip meaning="unset">{TIMELINE.unanswered}</MeaningChip>
         ) : (
           <MeaningChip meaning="active">{TIMELINE.inPlay}</MeaningChip>
         )}

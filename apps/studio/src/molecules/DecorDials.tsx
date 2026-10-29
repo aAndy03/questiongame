@@ -12,6 +12,8 @@ export interface DecorDialsProps {
   resolved?: ViewerDecorBox | null | undefined
   /** False on a screen with no decor shapes (Current team). */
   hasShapes?: boolean | undefined
+  /** An overlay is shown: the box belongs to a screen, so it waits. */
+  boxDisabled?: boolean | undefined
 }
 
 const D = SCREENS_TAB.dials
@@ -29,7 +31,7 @@ const CANVAS_BOX = { x: -160, y: -160, width: 2240, height: 1400 }
  * and saved with the recipe. The sliders are the design system's own
  * (`SliderField`), so the dials read like every other Studio form.
  */
-export function DecorDials({ decor, onDecorChange, screen, box, onBoxChange, resolved, hasShapes = true }: DecorDialsProps) {
+export function DecorDials({ decor, onDecorChange, screen, box, onBoxChange, resolved, hasShapes = true, boxDisabled }: DecorDialsProps) {
   const set = (patch: Partial<StageDecorSettings>) => onDecorChange({ ...decor, ...patch })
   const setAnchor = (patch: Partial<StageDecorSettings['anchor']>) => set({ anchor: { ...decor.anchor, ...patch } })
   const boundary = box?.boundary
@@ -86,7 +88,11 @@ export function DecorDials({ decor, onDecorChange, screen, box, onBoxChange, res
 
       <div className="flex flex-col gap-3 border-t border-[var(--separator)] pt-3">
         <Text variant="studio-label">{`${D.box} · ${SCREENS[screen]}`}</Text>
-        {!hasShapes ? (
+        {boxDisabled ? (
+          <Text variant="studio-caption" tone="muted">
+            {SCREENS_TAB.decorBoxOverlay}
+          </Text>
+        ) : !hasShapes ? (
           <Text variant="studio-caption" tone="muted" data-decor-none>
             {SCREENS_TAB.decorNone}
           </Text>
@@ -104,10 +110,10 @@ export function DecorDials({ decor, onDecorChange, screen, box, onBoxChange, res
         />
         {boundary ? (
           <div className="grid grid-cols-2 gap-2">
-            <NumberField label={D.x} value={boundary.x} onChange={(v) => setBox({ boundary: { ...boundary, x: v ?? 0 } })} minValue={-400} maxValue={1920} step={8} />
-            <NumberField label={D.y} value={boundary.y} onChange={(v) => setBox({ boundary: { ...boundary, y: v ?? 0 } })} minValue={-400} maxValue={1080} step={8} />
-            <NumberField label={D.w} value={boundary.width} onChange={(v) => setBox({ boundary: { ...boundary, width: v ?? 1 } })} minValue={1} maxValue={2800} step={8} />
-            <NumberField label={D.h} value={boundary.height} onChange={(v) => setBox({ boundary: { ...boundary, height: v ?? 1 } })} minValue={1} maxValue={1900} step={8} />
+            <NumberField label={D.x} value={boundary.x} onChange={(v) => setBox({ boundary: { ...boundary, x: v ?? 0 } })} minValue={-400} maxValue={1920} step={1} />
+            <NumberField label={D.y} value={boundary.y} onChange={(v) => setBox({ boundary: { ...boundary, y: v ?? 0 } })} minValue={-400} maxValue={1080} step={1} />
+            <NumberField label={D.w} value={boundary.width} onChange={(v) => setBox({ boundary: { ...boundary, width: v ?? 1 } })} minValue={1} maxValue={2800} step={1} />
+            <NumberField label={D.h} value={boundary.height} onChange={(v) => setBox({ boundary: { ...boundary, height: v ?? 1 } })} minValue={1} maxValue={1900} step={1} />
           </div>
         ) : null}
         <Text variant="studio-caption" tone="muted">

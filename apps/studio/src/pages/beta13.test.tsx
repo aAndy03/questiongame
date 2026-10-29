@@ -219,3 +219,53 @@ describe('the Viewer (P27.2)', () => {
     expect(calls('settings_set_global')).toHaveLength(0)
   })
 })
+
+describe('the review of P27.1–P27.2', () => {
+  it('a token just given does not say the new holder keeps it', async () => {
+    // A was wrong, B was given the token: resolved again, with A's outcome.
+    const base = handover()
+    const given: PlayStateForMain = { ...base, ring: { ...base.ring, currentTeamId: 'team-delta' }, operator: { ...base.operator, consecutiveCorrect: 0 } }
+    expect(turnResult(given)).toBeNull()
+    await openControl(given, 'TEAM DELTA has the token. Pick their domain.')
+    expect(within(panel()).queryByText(/TEAM DELTA keeps the token/)).toBeNull()
+    expect(within(panel()).queryByText('Pass the token (optional)')).toBeNull()
+  })
+
+  it('a correct answer still keeps it while the streak runs', () => {
+    const kept = { ...resolved(), operator: { ...resolved().operator, consecutiveCorrect: 1 } }
+    expect(turnResult(kept)).toMatchObject({ keeper: 'TEAM GAMMA' })
+  })
+
+  it('an armed pass survives a play-state that changes nothing about it', async () => {
+    const kept = { ...resolved(), operator: { ...resolved().operator, consecutiveCorrect: 1 } }
+    await openControl(kept, 'TEAM GAMMA keeps the token')
+    const delta = within(panel()).getAllByText('TEAM DELTA')[0]!.closest<HTMLElement>('[role="button"], button')!
+    fireEvent.click(delta)
+    // A fresh parse of the same state — an overlay's ack, say.
+    act(() => receivePlayState(JSON.parse(JSON.stringify({ ...kept, currentScreen: 'scoreboard' }))))
+    expect(useArmStore.getState().armed).toEqual({ kind: 'pass', teamId: 'team-delta' })
+  })
+
+  it('Reveal & pass before Lock warns that it counts as wrong', async () => {
+    const live = demoPlay('question-issued')
+    await openControl({ ...live, operator: { ...live.operator, overrideAfterLock: 'allow' } }, 'Reveal outcome')
+    const row = within(panel()).getAllByText(live.teams.find((t) => t.id === live.operator.defaultNextTeamId)!.name)[0]!.closest<HTMLElement>('[role="button"], button')!
+    fireEvent.click(row)
+    expect(await within(panel()).findByText(/Not locked: counts as wrong/)).toBeTruthy()
+  })
+
+  it('a reorder during a question stays in its card; an abandoned question is not "In play"', () => {
+    const items = track([
+      ev(1, 'play_started'),
+      ev(2, 'question_issued', { domain: 'd', question: 'q', team: 't', timer_duration_ms: null }),
+      ev(3, 'ring_reordered', { order: [] }),
+      ev(4, 'turn_resolved', { verdict: 'correct', points_awarded: 1, bonus_awarded: null, token_ends: false }),
+      ev(5, 'question_issued', { domain: 'd', question: 'q2', team: 't', timer_duration_ms: null }),
+      ev(6, 'play_abandoned'),
+    ])
+    const turns = items.filter((i) => i.kind === 'turn')
+    expect(turns).toHaveLength(2)
+    expect(turns[0]!.kind === 'turn' && turns[0]!.resolved).not.toBeNull()
+    expect(turns[1]!.kind === 'turn' && turns[1]!.unfinished).toBe(true)
+  })
+})

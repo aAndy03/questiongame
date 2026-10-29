@@ -159,3 +159,44 @@ describe('saving, undoing, applying', () => {
     expect(Object.keys(done.layout.nodes)).not.toContain('finalLeaderboard.row.team-1')
   })
 })
+
+describe('the review of P27.3', () => {
+  it('a held arrow key is one Undo step, not one per press', async () => {
+    const { post } = await openScreens()
+    await post([{ id: 'idle.wordmark', x: 100, y: 100, width: 400, height: 120 }])
+    const handle = await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[data-node-id="idle.wordmark"]')
+      if (!el) throw new Error('no handle')
+      return el
+    })
+    fireEvent.focus(handle)
+    for (let i = 0; i < 5; i++) fireEvent.keyDown(handle, { key: 'ArrowRight' })
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+    await waitFor(() => expect(saves().length).toBeGreaterThan(0), { timeout: 2000 })
+    expect(parseLayout(saves().at(-1)!.args?.['layout']).nodes['idle.wordmark']).toBeUndefined()
+  })
+
+  it('a click on the anchor without a move writes nothing', async () => {
+    const { post } = await openScreens()
+    await post([], { boundary: { x: -160, y: -160, width: 2240, height: 1400 }, anchor: { x: 0.72, y: 0.5 } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Decor' }))
+    const anchor = await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[data-decor-guide="anchor"]')
+      if (!el) throw new Error('no anchor')
+      return el
+    })
+    fireEvent.pointerDown(anchor, { clientX: 10, clientY: 10, pointerId: 1 })
+    fireEvent.pointerUp(anchor, { clientX: 10, clientY: 10, pointerId: 1 })
+    await new Promise((r) => setTimeout(r, 600))
+    expect(saves()).toHaveLength(0)
+  })
+
+  it('an overlay leaves the screen box alone', async () => {
+    const { post } = await openScreens()
+    await post([])
+    fireEvent.click(screen.getByRole('tab', { name: 'Outcome' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Decor' }))
+    expect(await screen.findByText(/an overlay has none of its own/)).toBeTruthy()
+    expect(screen.queryByRole('switch', { name: 'Override anchor point' })).toBeNull()
+  })
+})

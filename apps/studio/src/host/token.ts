@@ -29,6 +29,10 @@ export function turnResult(play: PlayStateForMain | null): TurnResult | null {
   const phase = controlPhase(play)
   const outcome = play?.session?.outcome ?? null
   if (!play || !outcome || (phase !== 'resolved' && phase !== 'handover')) return null
+  // The projection keeps the resolved session until the next question, so a
+  // token given after a wrong answer is `resolved` again with the *last*
+  // team's outcome (review). The holder kept it only if their streak runs.
+  if (phase === 'resolved' && play.operator.consecutiveCorrect === 0) return null
   const keeper = play.ring.currentTeamId === null ? null : (play.teams.find((t) => t.id === play.ring.currentTeamId)?.name ?? null)
   return {
     verdict: outcome.verdict,
