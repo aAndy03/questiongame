@@ -32,6 +32,55 @@ export interface WhatsNewRelease {
 
 export const WHATS_NEW: readonly WhatsNewRelease[] = [
   {
+    version: '2.0.0-beta.12',
+    notes: {
+      en: [
+        {
+          title: 'Questions onto domains, more easily',
+          body: 'Copy or move… on several ticked questions now offers Add to domain… and Move to domain…, as one question’s menu does. While you drag, the chip says how many are already in the domain under the pointer, before you let go. A question shown under two domains can be dragged from either, and “in 2 domains” counts each domain once.',
+        },
+        {
+          title: 'Rules that reach the show',
+          body: 'Rules you change after loading a game now apply when you press Start Play, and Restart uses the rules as they are. During a Play a game’s scoring and timer stay fixed, whoever tries to change them. Undo while paused keeps the show paused.',
+        },
+        {
+          title: 'Defaults for every rule',
+          body: 'Settings sets everything a game’s Rules can: how long the speed bonus lasts and its steps, repeated difficulties and the Stage language, for new games. The timer in Control’s settings is in seconds, as on the Game page.',
+        },
+        {
+          title: 'Lists that keep up',
+          body: 'Statistics, a game’s Plays, recent games and what each workspace holds update by themselves. Search ignores accents everywhere — pamant finds Pământ — in pickers and managers too. Archived teams, domains and questions on a game show their names, marked Archived.',
+        },
+        {
+          title: 'Smaller things',
+          body: 'Manage workspaces stays open while a game is loaded. Games can be duplicated several at a time, and Operators can be archived in bulk. A question’s menu has the tag, group and difficulty edits. Help and tips show your own key bindings. Screens says when a save failed and asks before resetting. More tips, about groups, folders and workspaces, and the tip card has an edge again.',
+        },
+      ],
+      ro: [
+        {
+          title: 'Întrebările în domenii, mai ușor',
+          body: 'Copy or move… pe mai multe întrebări bifate oferă acum Add to domain… și Move to domain…, ca meniul unei singure întrebări. În timp ce tragi, eticheta spune câte sunt deja în domeniul de sub cursor, înainte să le lași. O întrebare afișată sub două domenii poate fi trasă de oriunde, iar „în 2 domenii” numără fiecare domeniu o singură dată.',
+        },
+        {
+          title: 'Reguli care ajung în show',
+          body: 'Regulile schimbate după ce ai încărcat un joc se aplică acum când apeși Start Play, iar Restart folosește regulile așa cum sunt. În timpul unui Play, punctajul și cronometrul jocului rămân fixe, oricine ar încerca să le schimbe. Undo în pauză lasă show-ul în pauză.',
+        },
+        {
+          title: 'Valori implicite pentru fiecare regulă',
+          body: 'Settings stabilește tot ce pot Rules-urile unui joc: cât durează bonusul de viteză și treptele lui, dificultățile repetate și limba de pe Stage, pentru jocurile noi. Cronometrul din setările Control e în secunde, ca pe pagina jocului.',
+        },
+        {
+          title: 'Liste care țin pasul',
+          body: 'Statistics, Play-urile unui joc, jocurile recente și ce conține fiecare workspace se actualizează singure. Căutarea ignoră diacriticele peste tot — pamant găsește Pământ — și în ferestrele de alegere și în manageri. Echipele, domeniile și întrebările arhivate dintr-un joc își arată numele, marcate Archived.',
+        },
+        {
+          title: 'Lucruri mai mici',
+          body: 'Manage workspaces rămâne deschis cât timp e încărcat un joc. Jocurile pot fi duplicate câte mai multe deodată, iar operatorii pot fi arhivați în bloc. Meniul unei întrebări are editările de tag, grup și dificultate. Help și sfaturile arată tastele tale. Screens spune când o salvare a eșuat și întreabă înainte de reset. Mai multe sfaturi, despre grupuri, foldere și workspace-uri, iar cardul sfatului are din nou margine.',
+        },
+      ],
+    },
+  },
+  {
     version: '2.0.0-beta.11',
     notes: {
       en: [
