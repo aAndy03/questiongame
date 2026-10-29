@@ -54,7 +54,12 @@ describe('Screens', () => {
         }),
       )
     })
-    const handle = await screen.findByLabelText('idle.wordmark')
+    // Named in words since beta.13 ("Idle ▸ Wordmark"); the id is on the handle.
+    const handle = (await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[data-node-id="idle.wordmark"]')
+      if (!el) throw new Error('no handle')
+      return el
+    }))
     fireEvent.pointerDown(handle, { clientX: 0, clientY: 0, pointerId: 1 })
     fireEvent.pointerUp(handle, { clientX: 0, clientY: 0, pointerId: 1 })
     // Nudge with the keyboard: two presses, one save.
@@ -124,11 +129,11 @@ describe('Screens', () => {
         }),
       )
     })
-    const handle = await screen.findByLabelText('idle.eyebrow')
+    const handle = (await waitFor(() => { const el = document.querySelector<HTMLElement>('[data-node-id="idle.eyebrow"]'); if (!el) throw new Error('no handle'); return el }))
     fireEvent.pointerDown(handle, { clientX: 0, clientY: 0, pointerId: 1 })
     fireEvent.pointerUp(handle, { clientX: 0, clientY: 0, pointerId: 1 })
 
-    const field = await screen.findByLabelText('Eyebrow (every header)')
+    const field = await screen.findByLabelText('Eyebrow (every screen’s header)')
     fireEvent.change(field, { target: { value: 'HOPE CHALLENGE X AMiCUS' } })
 
     await waitFor(() => expect(fake.calls.filter((c) => c.name === 'recipe_set_layout')).toHaveLength(1), { timeout: 2000 })
@@ -143,10 +148,11 @@ describe('Screens', () => {
     await act(async () => {
       await useNavStore.getState().go({ tab: 'screens' })
     })
-    const tabs = await screen.findByLabelText('Screens')
-    const names = Array.from(tabs.querySelectorAll('[role="tab"]')).map((t) => t.textContent)
-    expect(names).toHaveLength(12)
-    expect(names.slice(7)).toEqual(['Overlay · Token handoff', 'Overlay · Round advance', 'Overlay · Multiple answers', 'Overlay · Outcome', 'Overlay · Current team'])
+    // beta.13: the overlays are a group of their own, with None first.
+    const tabs = await screen.findByRole('tablist', { name: 'Screens' })
+    expect(Array.from(tabs.querySelectorAll('[role="tab"]'))).toHaveLength(7)
+    const overlays = screen.getByRole('tablist', { name: 'Overlays' })
+    expect(Array.from(overlays.querySelectorAll('[role="tab"]')).map((t) => t.textContent)).toEqual(['None', 'Token handoff', 'Round advance', 'Multiple answers', 'Outcome', 'Current team'])
   })
 })
 

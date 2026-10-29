@@ -58,6 +58,11 @@ atoms → molecules → organisms → templates → pages   (eslint-enforced, on
 - **The canvas is the Viewer again** (same iframe, same protocol) fed a preview Play from `host/previewPlay.ts`; `NodeHandle`s are Studio DOM and never enter the saved document. Decor nodes get no handle — the dials tune them.
 - **Auto-save** is one `recipe_set_layout` per 400ms debounce, one `rev`; `LayoutEditor` keeps the draft dirty until the host confirms.
 - **DialKit is not used** (it needs its own panel to render); dials are `SliderField`.
+- **The canvas is a preview of the game, not of the defaults** (beta.13): `previewPlay(src, screen, nodes, look)` takes the game's `decor`, the canvas's `motion` and the language being edited, so a dial changes what the canvas draws. The canvas iframe is `?viewer&hold&simulate` — `simulate` is the only viewer that runs the decor loop; Control's Viewer still never does (P11.10).
+- **Stage reports, Studio never imports** (beta.13): the `nodes` message carries each element's measured `text` and `fontSize` and the screen's resolved `decor` box (boundary in frame px, anchor as fractions). The Inspector's *Now:* and *Built-in: n px*, the steppers' starting values, the override seeds and the anchor guide all come from it — never from Stage's tables, which stay behind the design-system boundary. **A text field has no placeholder** (as-built stage rule): what Stage draws is said beside it.
+- **Elements are named in words** (`host/nodeName.ts`), the id small under the name; handles are labelled the same, so a test reaches a handle by `data-node-id`, not by its id as a label.
+- **Undo on Screens is the visit's** (`LayoutEditor` history, 100 edits): Undo/Redo and Ctrl+Z / Ctrl+Shift+Z commit the earlier draft through the same debounced save; nothing is undone on the host.
+- **Apply to all screens matches the slot's kind** (`applyToAllScreens`): an `entity` row and a `ranked` row share the name `row` and never each other's key.
 
 ## Settings, first run, notices, audio, health as built (P10)
 

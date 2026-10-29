@@ -1,4 +1,5 @@
 import { Label, Slider } from '@heroui/react'
+import { Text } from './Text'
 import { DisabledReason } from './Tooltip'
 import { defined } from './props'
 
@@ -14,6 +15,8 @@ export interface SliderFieldProps {
   isDisabled?: boolean | undefined
   disabledReason?: string | null | undefined
   formatOptions?: Intl.NumberFormatOptions | undefined
+  /** One line under the slider: what the number means (beta.13). */
+  description?: string | null | undefined
   className?: string | undefined
 }
 
@@ -29,6 +32,7 @@ export function SliderField({
   isDisabled,
   disabledReason,
   formatOptions,
+  description,
   className,
 }: SliderFieldProps) {
   const disabled = Boolean(isDisabled) || Boolean(disabledReason)
@@ -56,5 +60,14 @@ export function SliderField({
       </Slider.Track>
     </Slider>
   )
-  return <DisabledReason reason={disabled ? disabledReason : null} block>{field}</DisabledReason>
+  const wrapped = <DisabledReason reason={disabled ? disabledReason : null} block>{field}</DisabledReason>
+  if (!description) return wrapped
+  return (
+    <div className="flex flex-col gap-1">
+      {wrapped}
+      <Text variant="studio-caption" tone="muted">
+        {description}
+      </Text>
+    </div>
+  )
 }

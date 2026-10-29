@@ -20,6 +20,23 @@ export interface ViewerNodeRect {
   readonly y: number
   readonly width: number
   readonly height: number
+  /**
+   * What the node draws now, measured (beta.13): its words, trimmed, and its
+   * computed font size in frame px. The Screens Inspector shows them instead
+   * of "Built-in" — measured, so Studio never imports Stage's tables.
+   */
+  readonly text?: string | undefined
+  readonly fontSize?: number | undefined
+}
+
+/**
+ * The screen's decor box as Stage resolved it (beta.13): the boundary in
+ * frame px, and the anchor as fractions of it — the built-in or the game's
+ * override. The Screens canvas draws them and seeds an override from them.
+ */
+export interface ViewerDecorBox {
+  readonly boundary: { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
+  readonly anchor: { readonly x: number; readonly y: number }
 }
 
 /** Studio → the Stage iframe. */
@@ -39,7 +56,7 @@ export type ViewerToStage =
 /** The Stage iframe → Studio. */
 export type StageToViewer =
   | { readonly source: typeof VIEWER_SOURCE; readonly type: 'ready' }
-  | { readonly source: typeof VIEWER_SOURCE; readonly type: 'nodes'; readonly nodes: readonly ViewerNodeRect[] }
+  | { readonly source: typeof VIEWER_SOURCE; readonly type: 'nodes'; readonly nodes: readonly ViewerNodeRect[]; readonly decor?: ViewerDecorBox | null | undefined }
 
 export function isViewerMessage(data: unknown): data is ViewerToStage | StageToViewer {
   return typeof data === 'object' && data !== null && (data as { source?: unknown }).source === VIEWER_SOURCE

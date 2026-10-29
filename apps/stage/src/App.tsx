@@ -6,7 +6,7 @@ import {
   type FixtureName,
   type PlayStateForStage,
 } from '@questiongame/contract'
-import { STAGE_FRAME, VIEWER_SOURCE, isViewerMessage, type StageToViewer, type ViewerNodeRect } from '@questiongame/contract'
+import { STAGE_FRAME, VIEWER_SOURCE, isViewerMessage, type StageToViewer, type ViewerDecorBox, type ViewerNodeRect } from '@questiongame/contract'
 import { CUE_PACK_BASE } from '@questiongame/design-stage/audio/manifest'
 import { howlerAudio } from '@/audio/howler'
 import { silentAudio } from '@/audio/silent'
@@ -99,9 +99,23 @@ export function ViewerFed({ host }: { host: StageHost }) {
         const id = el.dataset['nodeId']
         if (!id) continue
         const r = el.getBoundingClientRect()
-        nodes.push({ id, x: r.left / scale, y: r.top / scale, width: r.width / scale, height: r.height / scale })
+        // What it draws, measured (beta.13): the Inspector shows these
+        // instead of "Built-in". Font size is computed style — frame px.
+        const text = el.textContent?.replace(/\s+/g, ' ').trim().slice(0, 160)
+        const fontSize = Number.parseFloat(getComputedStyle(el).fontSize)
+        nodes.push({
+          id,
+          x: r.left / scale,
+          y: r.top / scale,
+          width: r.width / scale,
+          height: r.height / scale,
+          ...(text ? { text } : {}),
+          ...(Number.isFinite(fontSize) ? { fontSize } : {}),
+        })
       }
-      const message: StageToViewer = { source: VIEWER_SOURCE, type: 'nodes', nodes }
+      const field = root.querySelector<HTMLElement>('[data-decor-boundary]')
+      const decor = field ? decorBoxOf(field) : null
+      const message: StageToViewer = { source: VIEWER_SOURCE, type: 'nodes', nodes, decor }
       window.parent.postMessage(message, '*')
     }
     // Once after the state lands, and again after transitions settle.
@@ -135,6 +149,14 @@ export function ViewerFed({ host }: { host: StageHost }) {
       </div>
     </div>
   )
+}
+
+/** The decor field's resolved box, from its data attributes. */
+function decorBoxOf(field: HTMLElement): ViewerDecorBox | null {
+  const b = (field.dataset['decorBoundary'] ?? '').split(',').map(Number)
+  const a = (field.dataset['decorAnchor'] ?? '').split(',').map(Number)
+  if (b.length !== 4 || a.length !== 2 || [...b, ...a].some((n) => !Number.isFinite(n))) return null
+  return { boundary: { x: b[0]!, y: b[1]!, width: b[2]!, height: b[3]! }, anchor: { x: a[0]!, y: a[1]! } }
 }
 
 // ------------------------------------------------------- the no-host fallback

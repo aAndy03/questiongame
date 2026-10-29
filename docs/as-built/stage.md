@@ -46,6 +46,9 @@ The same split as Studio's, one layer down. `StageHost` has two channels — `su
 
 ## The Viewer does not simulate (P11.10)
 
+*Since beta.13 one viewer does:* the Screens canvas loads `?viewer&hold&simulate` (`isSimulateMode`), so the dials show what they do. It is never open during a show. `DecorField` marks its resolved box (`data-decor-boundary`, `data-decor-anchor`) for the canvas's guide, and `ViewerFed` reports it with the node rects, each with its measured words and font size.
+
+
 `DecorField` returns before starting its loop in viewer mode. The Viewer was running a **second full matter-js world at 60 Hz** — same bodies, same collisions — for as long as Control was open, in an iframe nobody films. The shapes are drawn where the settle put them, which is what the operator is checking; motion belongs to the Stage window.
 
 - **The Stage window pauses while `document.hidden`**, resetting its frame clock on the way back so it resumes rather than catching up on a burst.

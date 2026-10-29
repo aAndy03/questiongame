@@ -73,7 +73,7 @@ export { TrackMark, TurnCard, type TrackMarkProps, type TrackStep, type TurnCard
 export { ScreenTabs, canvasOverlay, canvasScreen, type CanvasView, type ScreenTabsProps } from './ScreenTabs'
 export { TextInspector, type TextInspectorProps } from './TextInspector'
 export { NodeHandle, type NodeHandleProps } from './NodeHandle'
-export { NodeInspector, type NodeInspectorProps } from './NodeInspector'
+export { NodeInspector, NodeTitle, type NodeInspectorProps } from './NodeInspector'
 export { DecorDials, type DecorDialsProps } from './DecorDials'
 export { SettingsGroup, type SettingsGroupProps } from './SettingsGroup'
 export { DifficultyMapField, type DifficultyMapFieldProps } from './DifficultyMapField'

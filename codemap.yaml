@@ -1083,7 +1083,7 @@ contract:
       ScreenBox: {kind: interface, sig: "{ boundary?, anchor? }"}
       StageLayout: {kind: interface, sig: "extends StageLayoutNodes { version, decor }"}
       StageLayoutNodes: {doc: "What Stage receives on `play-state.layout`: everything but `decor`, which has its own field.", kind: interface, sig: "{ nodes, screens, text }"}
-      applyToAllScreens: {doc: "\"Apply to all screens\": the same style under the same slot (and key) on every screen that has that slot.", kind: function, sig: "(layout: StageLayout, nodeId: NodeId, style: NodeStyle | null): { layout: StageLayout; written: NodeId[] }"}
+      applyToAllScreens: {doc: "\"Apply to all screens\": the same style under the same slot (and key) on every screen that has that slot **of the same kind**.", kind: function, sig: "(layout: StageLayout, nodeId: NodeId, style: NodeStyle | null): { layout: StageLayout; written: NodeId[] }"}
       layoutNodes: {doc: "`nodes` + `screens` + `text` — what rides `play-state`.", kind: function, sig: "(layout: StageLayout): StageLayoutNodes"}
       parseLayout: {doc: "Parse a stored document.", kind: function, sig: "(raw: unknown): StageLayout"}
       parseNodeStyle: {kind: function, sig: "(raw: unknown): NodeStyle | null"}
@@ -1172,9 +1172,10 @@ contract:
       textKeysForNode: {doc: "The text keys a node edits; empty for a node whose words are all derived or translated only.", kind: function, sig: "(id: NodeId): readonly TextKey[]"}
     packages/contract/src/viewer.ts:
       STAGE_FRAME: {doc: "The frame Stage lays out in; the Viewer scales it to its box.", kind: const, sig: "{ width, height } #0bd5bdf3"}
-      StageToViewer: {doc: "The Stage iframe → Studio.", kind: type, sig: "| { readonly source: typeof VIEWER_SOURCE; readonly type: 'ready' } | { readonly source: typeof VIEWER_SOURCE; readonly type: 'nodes'; readonly nodes: readonly ViewerNodeRect[] }"}
+      StageToViewer: {doc: "The Stage iframe → Studio.", kind: type, sig: "| { readonly source: typeof VIEWER_SOURCE; readonly type: 'ready' } | { readonly source: typeof VIEWER_SOURCE; readonly type: 'nodes'; readonly nodes: readonly ViewerNodeRect[]; readonly decor?: Vi... #530fd604"}
       VIEWER_SOURCE: {kind: const, sig: "= 'questiongame.viewer'"}
-      ViewerNodeRect: {doc: "A node's box in Stage frame coordinates (1920×1080), before scaling.", kind: interface, sig: "{ id, x, y, width, height }"}
+      ViewerDecorBox: {doc: "The screen's decor box as Stage resolved it (beta.13): the boundary in frame px, and the anchor as fractions of it — the built-in or the game's override.", kind: interface, sig: "{ boundary, anchor }"}
+      ViewerNodeRect: {doc: "A node's box in Stage frame coordinates (1920×1080), before scaling.", kind: interface, sig: "{ id, x, y, width, height, text?, fontSize? }"}
       ViewerToStage: {doc: "Studio → the Stage iframe.", kind: type, sig: "| { readonly source: typeof VIEWER_SOURCE; readonly type: 'play-state'; readonly state: PlayStateForStage } /** * The countdown alone (P11.9). Control posts the whole state only when it * changed; ... #3cfa2fce"}
       isViewerMessage: {kind: function, sig: "(data: unknown): data is ViewerToStage | StageToViewer"}
   stage_commands: [overlay_ack_complete, stage_ready, stage_report, client_log, perf_report]
@@ -2564,6 +2565,7 @@ stage:
     fixture: [apps/stage/src/App.tsx]
     hold: [apps/stage/src/host/host.ts]
     mirror: [apps/stage/src/host/host.ts]
+    simulate: [apps/stage/src/host/host.ts]
     viewer: [apps/stage/src/host/host.ts]
 packages:
   design-stage:
@@ -3185,6 +3187,7 @@ e2e:
     beta-stable-running.e2e.ts: "null"
     beta-start-empty.e2e.ts: "null"
     beta5.e2e.ts: "[]"
+    control13.e2e.ts: "[]"
     drag-domains.e2e.ts: "[]"
     first-run.e2e.ts: "null"
     games.e2e.ts: "[]"
@@ -3204,6 +3207,10 @@ e2e:
     e2e/specs/beta-stable-running.e2e.ts: ["questiongame Beta while questiongame is running > asks to close it first, then copies"]
     e2e/specs/beta-start-empty.e2e.ts: ["questiongame Beta, started empty > goes to first run"]
     e2e/specs/beta5.e2e.ts: ["beta.5 > duplicates a team here, and lists workspaces with search"]
+    e2e/specs/control13.e2e.ts:
+      - "beta.13: Control and Screens > Screens names what can be clicked"
+      - "beta.13: Control and Screens > a turn to its verdict says what the token does, and the Timeline draws it"
+      - "beta.13: Control and Screens > a display aid reaches the Stage window"
     e2e/specs/drag-domains.e2e.ts:
       - "drag questions onto a domain > adds on a release over a domain, and writes nothing on a release elsewhere"
       - "drag questions onto a domain > a slow click, held still, opens the row rather than starting a drag"

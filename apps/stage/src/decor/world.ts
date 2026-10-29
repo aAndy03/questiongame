@@ -299,7 +299,7 @@ export function anchorPhase(settings: StageDecorSettings, elapsedSteps: number):
   if (!anchor.enabled) return 'off'
   const cycle = anchor.attractSeconds + anchor.repelSeconds
   if (cycle <= 0) return 'off'
-  const t = (elapsedSteps / 60) % cycle
+  const t = (elapsedSteps / STEP_HZ) % cycle
   return t < anchor.attractSeconds ? 'attract' : 'repel'
 }
 

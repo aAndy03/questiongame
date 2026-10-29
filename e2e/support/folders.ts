@@ -18,6 +18,8 @@ export const E2E_IDENTIFIER = 'org.questiongame.e2e'
 const SEEDS: Readonly<Record<string, readonly string[] | null>> = {
   'first-run.e2e.ts': null,
   'show.e2e.ts': [],
+  // beta.13: the Demo; a turn played, the Timeline, a display aid, Screens.
+  'control13.e2e.ts': [],
   'load-refusal.e2e.ts': ['--broken-board'],
   'upgrade.e2e.ts': [],
   // Stable 1.1: the Demo and 120 more questions, a list longer than a page.

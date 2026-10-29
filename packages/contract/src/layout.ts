@@ -162,7 +162,13 @@ export function layoutNodes(layout: StageLayout): StageLayoutNodes {
 
 /**
  * "Apply to all screens": the same style under the same slot (and key) on
- * every screen that has that slot. Returns the node ids written.
+ * every screen that has that slot **of the same kind**. Returns the node ids
+ * written.
+ *
+ * The kind matters (beta.13): a team row (`entity`, keyed by team id) and a
+ * final-leaderboard row (`ranked`, keyed by place) share the slot name, and
+ * copying one onto the other wrote `finalLeaderboard.row.<uuid>` — an
+ * override that matched nothing and still counted as a change.
  */
 export function applyToAllScreens(layout: StageLayout, nodeId: NodeId, style: NodeStyle | null): { layout: StageLayout; written: NodeId[] } {
   const parsed = parseNodeId(nodeId)
@@ -171,7 +177,7 @@ export function applyToAllScreens(layout: StageLayout, nodeId: NodeId, style: No
   const written: NodeId[] = []
   for (const screen of STAGE_SCREENS) {
     const slots = SCREEN_SLOTS[screen] as Record<string, string>
-    if (!(parsed.slot in slots)) continue
+    if (slots[parsed.slot] !== parsed.kind) continue
     const id = parsed.key === null ? `${screen}.${parsed.slot}` : `${screen}.${parsed.slot}.${parsed.key}`
     if (style === null) delete nodes[id]
     else nodes[id] = style

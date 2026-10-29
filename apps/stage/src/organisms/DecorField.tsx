@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useScreenBox } from '@/layout'
-import { isViewerMode } from '@/host/host'
+import { isSimulateMode, isViewerMode } from '@/host/host'
 import { nodeId, type ScreenBox, type PlayStateForStage, type StageDecorSettings, type StageScreen } from '@questiongame/contract'
 import { DecorShape, type DecorShapeBody } from '@/atoms'
 import {
@@ -9,6 +9,7 @@ import {
   decorAsset,
   decorOpacity,
   decorTransform,
+  resolveBoundary,
   seedFromPlay,
   type DecorBoundary,
   type DecorWorld,
@@ -132,7 +133,7 @@ export function DecorField({ state, screen: presented }: DecorFieldProps) {
     // Control was open — the same bodies, the same collisions, in an iframe
     // nobody is filming. The shapes are drawn where the settle put them, which
     // is what the operator is actually checking. Motion is the Stage window's.
-    if (isViewerMode()) return
+    if (isViewerMode() && !isSimulateMode()) return
     // Reduce motion (beta.13): the shapes settle where they are and stay.
     if (still) return
     let frame = 0
@@ -170,6 +171,13 @@ export function DecorField({ state, screen: presented }: DecorFieldProps) {
       data-decor-seed={seed}
       data-decor-mode={settings.mode}
       data-decor-solids={solids.length}
+      // The resolved box, for the Screens canvas's guide (beta.13).
+      {...(spec
+        ? {
+            'data-decor-boundary': boxAttr(resolveBoundary(spec)),
+            'data-decor-anchor': `${spec.anchor?.x ?? 0.5},${spec.anchor?.y ?? 0.5}`,
+          }
+        : {})}
       style={{ position: 'absolute', inset: 0 }}
     >
       {latest.current.map((p) => {
@@ -201,6 +209,8 @@ export function DecorField({ state, screen: presented }: DecorFieldProps) {
 }
 
 /** The recipe's per-screen decor box (Screens tab) wins over the manifest's. */
+const boxAttr = (b: DecorBoundary) => `${b.x},${b.y},${b.width},${b.height}`
+
 function withScreenBox<T extends { boundary?: DecorBoundary | undefined; anchor?: { x: number; y: number } | undefined } | null>(
   spec: T,
   box: ScreenBox | undefined,

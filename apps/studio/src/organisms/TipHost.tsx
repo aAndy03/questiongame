@@ -153,6 +153,27 @@ export function TipHost() {
     }
   }, [playOpen, rehearsal])
 
+  // On Control and Screens the right-hand column is where the work is (the
+  // Action Panel, the Inspector): the tip stands at the main column's left
+  // instead, and on Control above the Timeline strip (beta.13).
+  const [corner, setCorner] = useState<{ left: number; bottom: number } | null>(null)
+  useEffect(() => {
+    if (route.tab !== 'control' && route.tab !== 'screens') {
+      setCorner(null)
+      return
+    }
+    const place = () => {
+      const main = document.querySelector('main')
+      const strip = document.querySelector('[data-timeline-strip]')
+      if (!main) return setCorner(null)
+      const bottom = window.innerHeight - (strip?.getBoundingClientRect().top ?? main.getBoundingClientRect().bottom) + 12
+      setCorner({ left: main.getBoundingClientRect().left + 16, bottom })
+    }
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [route.tab, current])
+
   const still = useReducedMotion()
   /** Each close counts once: the card's timer may fire during the exit animation. */
   const close = (tip: Tip, step: (now: number) => void) => {
@@ -165,7 +186,14 @@ export function TipHost() {
   return (
     // The live region is here and always mounted, so a tip put into it is
     // read out (a region that arrives already filled is not, review).
-    <div role="status" aria-live="polite" aria-label={TIPS_COPY.region} className="pointer-events-none fixed bottom-10 right-4 z-40 flex flex-col items-end" data-tip-host>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label={TIPS_COPY.region}
+      className={['pointer-events-none fixed z-40 flex flex-col', corner ? 'items-start' : 'bottom-10 right-4 items-end'].join(' ')}
+      style={corner ? { left: corner.left, bottom: corner.bottom } : undefined}
+      data-tip-host
+    >
       <AnimatePresence>
         {current ? (
           <motion.div

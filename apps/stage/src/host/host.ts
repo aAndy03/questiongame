@@ -250,6 +250,15 @@ export function isHoldMode(): boolean {
   return isViewerMode() && new URLSearchParams(window.location.search).has('hold')
 }
 
+/**
+ * `?viewer&hold&simulate` (beta.13): the Screens canvas runs the decor's
+ * frame loop, so its dials show what they do. Control's Viewer never does
+ * (P11.10); Screens is never open during a show, so it costs nothing filmed.
+ */
+export function isSimulateMode(): boolean {
+  return isViewerMode() && new URLSearchParams(window.location.search).has('simulate')
+}
+
 export function isViewerMode(): boolean {
   return (
     typeof window !== 'undefined' &&

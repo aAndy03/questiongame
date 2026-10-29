@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SelectField, Text } from '@/atoms'
+import { SelectField, Skeleton, Text } from '@/atoms'
 import { EmptyState } from '@/molecules'
 import { LayoutEditor } from '@/organisms'
 import { WorkshopLayout } from '@/templates'
@@ -42,9 +42,11 @@ function ScreensFor() {
   )
 
   if (!recipeId) {
+    // Loading is not "no games" (beta.13): the list said there were none
+    // for as long as it took to arrive.
     return (
       <WorkshopLayout toolbar={picker} inspector={null}>
-        <EmptyState kind="empty" what="games" detail={SCREENS_TAB.noGames} />
+        {recipes.isPending ? <Skeleton shape="card" className="h-full" /> : <EmptyState kind="empty" what="games" detail={SCREENS_TAB.noGames} />}
       </WorkshopLayout>
     )
   }

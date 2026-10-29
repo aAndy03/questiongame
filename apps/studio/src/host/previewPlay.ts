@@ -6,7 +6,18 @@
  * operator restyles a node.
  */
 
-import { EMPTY_PLAY_STATE, type OverlayKind, type OverlayRequest, type PlayStateForStage, type StageScreen, type StageTeam } from '@questiongame/contract'
+import {
+  DEFAULT_DECOR_SETTINGS,
+  EMPTY_PLAY_STATE,
+  type OverlayKind,
+  type OverlayRequest,
+  type PlayStateForStage,
+  type StageDecorSettings,
+  type StageLanguage,
+  type StageMotion,
+  type StageScreen,
+  type StageTeam,
+} from '@questiongame/contract'
 import type { StageLayoutNodes } from '@questiongame/contract'
 import type { Domain, Question, Recipe, Team } from './types'
 
@@ -18,13 +29,24 @@ export interface PreviewSources {
 }
 
 /**
+ * What the canvas draws the preview with besides the layout (beta.13): the
+ * game's decor dials — the preview had the defaults, so no dial did anything
+ * on the canvas — whether the shapes move, and which language's words show.
+ */
+export interface PreviewLook {
+  readonly decor?: StageDecorSettings | undefined
+  readonly motion?: StageMotion | undefined
+  readonly language?: StageLanguage | undefined
+}
+
+/**
  * The same stand-in Play with one overlay on air over `screen`. The canvas
  * iframe runs in hold mode, so the overlay is drawn at rest rather than
  * played. `outcome` is half-screen and only means anything over a question,
  * so it takes the Question screen whatever was picked.
  */
-export function previewOverlay(src: PreviewSources, kind: OverlayKind, screen: StageScreen, layout: StageLayoutNodes): PlayStateForStage {
-  const base = previewPlay(src, kind === 'outcome' || kind === 'multiple-answers' ? 'question' : screen, layout)
+export function previewOverlay(src: PreviewSources, kind: OverlayKind, screen: StageScreen, layout: StageLayoutNodes, look: PreviewLook = {}): PlayStateForStage {
+  const base = previewPlay(src, kind === 'outcome' || kind === 'multiple-answers' ? 'question' : screen, layout, look)
   const first = base.teams[0]?.id ?? null
   const second = base.teams[1]?.id ?? first
   const options = base.session?.options.map((o) => o.id) ?? []
@@ -39,7 +61,7 @@ export function previewOverlay(src: PreviewSources, kind: OverlayKind, screen: S
   return { ...base, overlay: { busy: true, active: request, pending: null, enabled: true, runId: 1 } }
 }
 
-export function previewPlay(src: PreviewSources, screen: StageScreen, layout: StageLayoutNodes): PlayStateForStage {
+export function previewPlay(src: PreviewSources, screen: StageScreen, layout: StageLayoutNodes, look: PreviewLook = {}): PlayStateForStage {
   const byTeam = new Map(src.teams.map((t) => [t.id, t]))
   const teams: StageTeam[] = []
   src.recipe.teams.forEach((id, i) => {
@@ -52,7 +74,9 @@ export function previewPlay(src: PreviewSources, screen: StageScreen, layout: St
         shortCode: o?.shortCode ?? t.shortCode,
         color: o?.color ?? t.color,
         logoUrl: null,
-        detail: null,
+        // The team's notes, as the host's snapshot reads them — with `null`
+        // here the Detail label could never be seen on the canvas (beta.13).
+        detail: t.notes ?? null,
         score: Math.max(0, 500 - i * 120),
         rank: i + 1,
         turnsTaken: i === 0 ? 2 : 1,
@@ -95,7 +119,8 @@ export function previewPlay(src: PreviewSources, screen: StageScreen, layout: St
           selectedOptionIds: [],
           lockedOptionIds: null,
           outcome: null,
-          timer: { durationMs: 30_000, remainingMs: 30_000, running: false, remainingMsAtLock: null, expiredOpen: false },
+          // The game's own clock: none at operator pace, as Stage hides it (beta.13).
+          timer: timerOf(src.recipe),
           reveals: { stem: true, optionIds: options.map((o) => o.id), outcome: false },
         }
       : null
@@ -112,8 +137,17 @@ export function previewPlay(src: PreviewSources, screen: StageScreen, layout: St
     layout,
     questionsIssued: 5,
     currentScreen: screen,
-    // The canvas draws the recipe's own language; a row written before the
-    // key existed reads as English, the way the host reads it.
-    language: src.recipe.settings.language ?? 'en',
+    // The canvas draws the recipe's own language unless the operator is
+    // editing another (beta.13); a row written before the key existed reads
+    // as English, the way the host reads it.
+    language: look.language ?? src.recipe.settings.language ?? 'en',
+    decor: look.decor ?? DEFAULT_DECOR_SETTINGS,
+    view: { ...EMPTY_PLAY_STATE.view, motion: look.motion ?? 'full' },
   }
+}
+
+function timerOf(recipe: Recipe): NonNullable<PlayStateForStage['session']>['timer'] {
+  if (recipe.settings.timer.enabled === false) return null
+  const ms = recipe.settings.timer.duration_ms ?? 30_000
+  return { durationMs: ms, remainingMs: ms, running: false, remainingMsAtLock: null, expiredOpen: false }
 }
