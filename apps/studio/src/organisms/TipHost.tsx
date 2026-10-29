@@ -156,7 +156,7 @@ export function TipHost() {
   // On Control and Screens the right-hand column is where the work is (the
   // Action Panel, the Inspector): the tip stands at the main column's left
   // instead, and on Control above the Timeline strip (beta.13).
-  const [corner, setCorner] = useState<{ left: number; bottom: number } | null>(null)
+  const [corner, setCorner] = useState<{ left?: number; right?: number; bottom: number } | null>(null)
   useEffect(() => {
     if (route.tab !== 'control' && route.tab !== 'screens') {
       setCorner(null)
@@ -168,7 +168,11 @@ export function TipHost() {
       if (!main) return setCorner(null)
       const edge = Math.min(strip?.getBoundingClientRect().top ?? main.getBoundingClientRect().bottom, window.innerHeight)
       const bottom = Math.max(12, window.innerHeight - edge + 12)
-      setCorner({ left: main.getBoundingClientRect().left + 16, bottom })
+      // Screens: beside the Inspector, over the canvas's right edge — the
+      // decor margin — rather than the wordmark and the switches on its left.
+      const aside = route.tab === 'screens' ? main.querySelector('aside') : null
+      if (aside) setCorner({ right: window.innerWidth - aside.getBoundingClientRect().left + 16, bottom: bottom + 32 })
+      else setCorner({ left: main.getBoundingClientRect().left + 16, bottom })
     }
     place()
     window.addEventListener('resize', place)
@@ -191,8 +195,8 @@ export function TipHost() {
       role="status"
       aria-live="polite"
       aria-label={TIPS_COPY.region}
-      className={['pointer-events-none fixed z-40 flex flex-col', corner ? 'items-start' : 'bottom-10 right-4 items-end'].join(' ')}
-      style={corner ? { left: corner.left, bottom: corner.bottom } : undefined}
+      className={['pointer-events-none fixed z-40 flex flex-col', corner ? (corner.right !== undefined ? 'items-end' : 'items-start') : 'bottom-10 right-4 items-end'].join(' ')}
+      style={corner ? { left: corner.left, right: corner.right, bottom: corner.bottom } : undefined}
       data-tip-host
     >
       <AnimatePresence>

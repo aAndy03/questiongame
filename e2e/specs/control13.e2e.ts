@@ -60,7 +60,7 @@ describe('beta.13: Control and Screens', () => {
 
   it('a display aid reaches the Stage window', async () => {
     await onStudio()
-    const greyscale = await $('[data-viewer-controls] button*=Greyscale')
+    const greyscale = await $('[data-viewer-controls]').$('button*=Greyscale')
     if (await greyscale.isExisting()) await greyscale.click()
     else {
       await $('[data-viewer-options]').click()
@@ -71,7 +71,7 @@ describe('beta.13: Control and Screens', () => {
       timeoutMsg: 'Stage drew no greyscale',
     })
     await onStudio()
-    const normal = await $('[data-viewer-controls] button*=Normal')
+    const normal = await $('[data-viewer-controls]').$('button*=Normal')
     if (await normal.isExisting()) await normal.click()
     await onStage()
     await browser.waitUntil(async () => (await stageScreen()) !== null)

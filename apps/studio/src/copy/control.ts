@@ -309,6 +309,8 @@ export const TIMELINE = {
     play_completed: 'Play completed',
     play_abandoned: 'Play abandoned',
     play_restarted: 'Play restarted',
+    /** Who sat down at the Play: the first operator, or a change mid-Play. */
+    operator_switched: 'Operator',
     settings_live_changed: 'Setting changed',
   } as Readonly<Record<string, string>>,
 } as const

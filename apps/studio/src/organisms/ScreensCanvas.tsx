@@ -143,14 +143,17 @@ export function ScreensCanvas({ preview, selectedId, overriddenIds, hiddenIds, h
   return (
     <div
       ref={box}
-      className="flex h-full w-full items-center justify-center rounded-[var(--radius)]"
+      className="flex h-full w-full items-center justify-center overflow-hidden rounded-[var(--radius)]"
       style={{ background: 'var(--surface-tertiary)' }}
       data-screens-canvas
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) onSelect(null)
       }}
     >
-      <div className="group/canvas relative overflow-hidden" style={{ width: size.width || undefined, height: size.height || undefined }}>
+      {/* Not clipped to the picture: the decor boundary has a 160 px bleed,
+        * and the guide shows it over the canvas's margin — the canvas box,
+        * not the page, is the clip (beta.13). */}
+      <div className="group/canvas relative" style={{ width: size.width || undefined, height: size.height || undefined }}>
         {/* `hold`: an overlay on the canvas stands still instead of playing out (P11.16).
           * `simulate`: the decor moves, as on Stage (beta.13). */}
         <iframe ref={frame} title={SHELL.canvas} src="/stage/?viewer&hold&simulate" className="block border-0" style={{ width: size.width, height: size.height, background: 'white' }} tabIndex={-1} aria-hidden />
